@@ -1,0 +1,74 @@
+import Foundation
+
+struct UserProfile: Codable, Identifiable, Hashable {
+    let id: UUID
+    var displayName: String?
+    var avatarUrl: String?
+    let createdAt: Date?
+}
+
+struct UserProfileInsert: Encodable {
+    let id: UUID
+    let displayName: String?
+}
+
+struct UserProfileUpdate: Encodable {
+    let displayName: String
+}
+
+struct UserVisit: Codable, Identifiable, Hashable {
+    let id: UUID
+    let userId: UUID
+    let groundId: UUID
+    let visitedAt: Date
+    let notes: String?
+    let photoUrls: [String]
+    let createdAt: Date?
+}
+
+struct UserVisitInsert: Encodable {
+    let groundId: UUID
+    let userId: UUID
+    let notes: String?
+}
+
+struct UserMatchAttendance: Codable, Identifiable, Hashable {
+    let id: UUID
+    let userId: UUID
+    let matchId: UUID
+    let notes: String?
+    let photoUrls: [String]
+    let createdAt: Date?
+}
+
+struct UserMatchAttendanceInsert: Encodable {
+    let matchId: UUID
+    let userId: UUID
+}
+
+struct AchievementDefinition: Codable, Identifiable, Hashable {
+    struct RuleParams: Codable, Hashable {
+        let count: Int?
+    }
+
+    let id: UUID
+    let code: String
+    let title: String
+    let description: String
+    let icon: String?
+    let ruleType: String
+    let ruleParams: RuleParams
+    let createdAt: Date?
+}
+
+struct UserAchievement: Codable, Identifiable, Hashable {
+    let id: UUID
+    let userId: UUID
+    let achievementId: UUID
+    let unlockedAt: Date
+}
+
+struct UserAchievementInsert: Encodable {
+    let achievementId: UUID
+    let userId: UUID
+}
