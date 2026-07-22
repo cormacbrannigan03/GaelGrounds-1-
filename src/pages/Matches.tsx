@@ -17,6 +17,7 @@ type MatchRow = {
 export default function Matches() {
   const [matches, setMatches] = useState<MatchCardData[]>([])
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'results'>('all')
+  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -84,14 +85,37 @@ export default function Matches() {
   }, [])
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return matches
-    if (filter === 'upcoming') return matches.filter((m) => isUpcoming(m.played_at, Boolean(m.home_score && m.away_score)))
-    return matches.filter((m) => Boolean(m.home_score && m.away_score))
-  }, [matches, filter])
+    let list = matches
+    if (filter === 'upcoming') list = list.filter((m) => isUpcoming(m.played_at, Boolean(m.home_score && m.away_score)))
+    else if (filter === 'results') list = list.filter((m) => Boolean(m.home_score && m.away_score))
+
+    const q = search.trim().toLowerCase()
+    if (q) {
+      list = list.filter(
+        (m) =>
+          m.homeName.toLowerCase().includes(q) ||
+          m.awayName.toLowerCase().includes(q) ||
+          (m.competition ?? '').toLowerCase().includes(q) ||
+          (m.groundName ?? '').toLowerCase().includes(q) ||
+          new Date(m.played_at).getFullYear().toString() === q,
+      )
+    }
+
+    return list
+  }, [matches, filter, search])
 
   return (
     <div className="page">
       <h1>Fixtures &amp; results</h1>
+      <p className="muted">
+        Missed checking in on the day? Find the match below and check in any time — even years later.
+      </p>
+      <input
+        className="search-input"
+        placeholder="Search by team, competition, ground or year…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
       <div className="filter-tabs">
         <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>
           All
