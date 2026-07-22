@@ -1,0 +1,141 @@
+import { useEffect, useState, useCallback } from 'react'
+import { supabase } from '../lib/supabaseClient'
+import { useAuth } from '../context/AuthContext'
+import { useAchievements } from '../hooks/useAchievements'
+import { formatShortDate } from '../lib/format'
+
+type Visit = {
+  id: string
+  user_id: string
+  visited_at: string
+  notes: string | null
+  display_name: string | null
+}
+
+export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
+  const { user } = useAuth()
+  const { evaluate } = useAchievements(user?.id)
+  const [visits, setVisits] = useState<Visit[]>([])
+  const [myVisitId, setMyVisitId] = useState<string | null>(null)
+  const [notes, setNotes] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [unlockedToast, setUnlockedToast] = useState<string[] | null>(null)
+
+  const loadVisits = useCallback(async () => {
+    const { data: rows } = await supabase
+      .from('user_visits')
+      .select('id, user_id, visited_at, notes')
+      .eq('ground_id', groundId)
+      .order('visited_at', { ascending: false })
+      .limit(25)
+
+    if (!rows) {
+      setVisits([])
+      return
+    }
+
+    const userIds = [...new Set(rows.map((r) => r.user_id))]
+    const { data: profiles } = userIds.length
+      ? await supabase.from('user_profiles').select('id, display_name').in('id', userIds)
+      : { data: [] }
+    const nameById = new Map((profiles ?? []).map((p) => [p.id, p.display_name]))
+
+    setVisits(rows.map((r) => ({ ...r, display_name: nameById.get(r.user_id) ?? null })))
+    setMyVisitId(rows.find((r) => r.user_id === user?.id)?.id ?? null)
+  }, [groundId, user?.id])
+
+  useEffect(() => {
+    setLoading(true)
+    loadVisits().finally(() => setLoading(false))
+
+    const channel = supabase
+      .channel(`ground-visits-${groundId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_visits', filter: `ground_id=eq.${groundId}` },
+        () => loadVisits(),
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [groundId, loadVisits])
+
+  async function handleCheckIn() {
+    if (!user) return
+    setBusy(true)
+    const { error } = await supabase
+      .from('user_visits')
+      .insert({ ground_id: groundId, user_id: user.id, notes: notes.trim() || null })
+    if (!error) {
+      setNotes('')
+      const newlyUnlocked = await evaluate()
+      if (newlyUnlocked.length > 0) setUnlockedToast(newlyUnlocked)
+    }
+    setBusy(false)
+  }
+
+  async function handleUndo() {
+    if (!myVisitId) return
+    setBusy(true)
+    await supabase.from('user_visits').delete().eq('id', myVisitId)
+    setBusy(false)
+  }
+
+  return (
+    <div className="checkin-panel">
+      <div className="checkin-header">
+        <div>
+          <h3>Visitors</h3>
+          <p className="muted">Updates live as fans check in</p>
+        </div>
+      </div>
+
+      {user && !myVisitId && (
+        <div className="checkin-form">
+          <input
+            type="text"
+            placeholder="Add a note (optional) — e.g. 'Here for the Munster final'"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+          <button className="btn btn-primary btn-lg" disabled={busy} onClick={handleCheckIn}>
+            📍 Check in here
+          </button>
+        </div>
+      )}
+      {user && myVisitId && (
+        <button className="btn btn-outline" disabled={busy} onClick={handleUndo}>
+          ✓ Checked in — tap to undo
+        </button>
+      )}
+
+      {unlockedToast && (
+        <div className="toast toast-achievement" onClick={() => setUnlockedToast(null)}>
+          🏆 Achievement unlocked: {unlockedToast.join(', ')}
+        </div>
+      )}
+
+      {loading ? (
+        <p className="muted">Loading visitors…</p>
+      ) : visits.length === 0 ? (
+        <p className="muted">No check-ins yet — be the first!</p>
+      ) : (
+        <ul className="attendee-list">
+          {visits.map((v) => (
+            <li key={v.id}>
+              <span className="avatar-dot" />
+              <span>
+                {v.display_name ?? 'A fan'} <span className="muted small">· {formatShortDate(v.visited_at)}</span>
+                {v.notes && <div className="muted small">"{v.notes}"</div>}
+              </span>
+              {v.user_id === user?.id && <span className="you-tag">you</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
