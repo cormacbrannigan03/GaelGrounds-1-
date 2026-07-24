@@ -1,10 +1,13 @@
 import SwiftUI
+import Supabase
 
 struct MatchDetailView: View {
     let matchId: UUID
 
     @State private var summary: MatchSummary?
     @State private var isLoading = true
+    @State private var realtimeChannel: RealtimeChannelV2?
+    @State private var realtimeTask: Task<Void, Never>?
 
     var body: some View {
         ScrollView {
@@ -22,7 +25,15 @@ struct MatchDetailView: View {
         }
         .navigationTitle("Match")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await load() }
+        .task {
+            await load(showSpinner: true)
+            let (channel, task) = RealtimeWatcher.watch(table: "matches", filter: "id=eq.\(matchId.uuidString)") {
+                Task { await load(showSpinner: false) }
+            }
+            realtimeChannel = channel
+            realtimeTask = task
+        }
+        .onDisappear { RealtimeWatcher.stop(channel: realtimeChannel, task: realtimeTask) }
     }
 
     @ViewBuilder
@@ -63,9 +74,9 @@ struct MatchDetailView: View {
         }
     }
 
-    private func load() async {
-        isLoading = true
-        defer { isLoading = false }
+    private func load(showSpinner: Bool) async {
+        if showSpinner { isLoading = true }
+        defer { if showSpinner { isLoading = false } }
         do {
             let match: Match = try await Supa.client
                 .from("matches")

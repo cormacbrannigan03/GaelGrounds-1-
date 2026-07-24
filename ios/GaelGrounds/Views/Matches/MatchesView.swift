@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct MatchesView: View {
     private enum Filter { case all, upcoming, results }
@@ -7,6 +8,8 @@ struct MatchesView: View {
     @State private var filter: Filter = .all
     @State private var search = ""
     @State private var isLoading = true
+    @State private var realtimeChannel: RealtimeChannelV2?
+    @State private var realtimeTask: Task<Void, Never>?
 
     private var filtered: [MatchSummary] {
         var list = matches
@@ -62,7 +65,13 @@ struct MatchesView: View {
         .navigationDestination(for: MatchRoute.self) { route in
             MatchDetailView(matchId: route.id)
         }
-        .task { await load() }
+        .task {
+            await load()
+            let (channel, task) = RealtimeWatcher.watch(table: "matches") { Task { await load() } }
+            realtimeChannel = channel
+            realtimeTask = task
+        }
+        .onDisappear { RealtimeWatcher.stop(channel: realtimeChannel, task: realtimeTask) }
         .refreshable { await load() }
     }
 

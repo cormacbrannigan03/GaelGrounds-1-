@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct DashboardView: View {
     @EnvironmentObject private var auth: AuthViewModel
@@ -8,6 +9,8 @@ struct DashboardView: View {
     @State private var matchesAttended = 0
     @State private var achievementsUnlocked = 0
     @State private var isLoading = true
+    @State private var realtimeChannel: RealtimeChannelV2?
+    @State private var realtimeTask: Task<Void, Never>?
 
     var body: some View {
         ScrollView {
@@ -60,13 +63,19 @@ struct DashboardView: View {
         .navigationDestination(for: MatchesRouteTag.self) { _ in
             MatchesView()
         }
-        .task { await load() }
-        .refreshable { await load() }
+        .task {
+            await load(showSpinner: true)
+            let (channel, task) = RealtimeWatcher.watch(table: "matches") { Task { await load(showSpinner: false) } }
+            realtimeChannel = channel
+            realtimeTask = task
+        }
+        .onDisappear { RealtimeWatcher.stop(channel: realtimeChannel, task: realtimeTask) }
+        .refreshable { await load(showSpinner: false) }
     }
 
-    private func load() async {
-        isLoading = true
-        defer { isLoading = false }
+    private func load(showSpinner: Bool) async {
+        if showSpinner { isLoading = true }
+        defer { if showSpinner { isLoading = false } }
 
         do {
             let matches = try await MatchService.fetchUpcomingAndLive()

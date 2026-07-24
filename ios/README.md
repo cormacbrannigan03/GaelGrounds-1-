@@ -55,6 +55,12 @@ confirmation for this project in the Supabase dashboard under
   `Views/Grounds/GroundCheckInPanel.swift` subscribe to Postgres changes via
   `client.realtimeV2.channel(...).postgresChange(...)`, so check-ins from
   other users appear without a refresh.
+- **Live match/fixture updates** — Dashboard, MatchesView and
+  MatchDetailView subscribe to the `matches` table the same way (via the
+  shared `Services/RealtimeWatcher.swift` helper), so results and new
+  fixtures written by the server-side `sync-matches` ingestion pipeline
+  (`supabase/functions/sync-matches/`) appear without the app needing to
+  poll or know anything about where the data came from.
 - **Counties → teams → grounds → roll of honour**, **fixtures/results with
   search**, and a **profile** with stats + achievements — one-to-one with
   the feature set of the web app.
