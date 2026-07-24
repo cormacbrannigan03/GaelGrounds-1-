@@ -249,3 +249,27 @@ Connacht SFC 2024 has the same London/New York gap as 2025 (2 of the 3
 quarter-finals excluded). Leinster SFC 2024's Louth v Wexford quarter-final
 has a confirmed matchup/winner but no confirmed score, same treatment as
 the older finals noted above.
+
+**Round-by-round 2023 provincial-to-final coverage**: same six
+competitions, one season further back. Munster GAA's official event pages
+again made Munster SFC and Munster SHC 2023 fully confirmed (all 14
+matches). Leinster SHC 2023 came out **14 of 15 round-robin pairings**
+confirmed — Galway v Westmeath (Round 3) has a confirmed winner (Galway,
+via elimination against the final standings table: Galway finished
+3 wins/2 draws/0 losses and their other four 2023 results are each
+individually confirmed) but no confirmed score. One reversed-winner catch
+in Leinster SFC 2023: a search claimed "Westmeath winning 1-11 to Louth's
+2-10" in the quarter-final, which is arithmetically backwards (16 > 14);
+corrected to Louth as the winner, matching Louth's independently-confirmed
+comeback-from-8-down and their run to the final.
+
+Connacht SFC 2023 is the most London/New York-affected season yet: of the
+6 pre-final matches, 3 involved London or New York (Sligo v London
+quarter-final, New York v Leitrim quarter-final, Sligo v New York
+semi-final) and are excluded, leaving only 2 insertable matches plus the
+final.
+
+Ulster SFC 2023's final went to penalties after a draw (Armagh 0-18 Derry
+1-15 AET); the drawn scoreline is recorded as the match result with Derry
+as the winner, since the schema has no separate field for a penalty
+shoot-out result.
