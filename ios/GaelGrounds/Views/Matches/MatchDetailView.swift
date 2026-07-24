@@ -40,16 +40,23 @@ struct MatchDetailView: View {
     private func header(for summary: MatchSummary) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(summary.competition ?? "Gaelic Games")
+                Text([summary.competition, summary.round].compactMap { $0 }.joined(separator: " · "))
                     .font(.caption.bold())
                     .foregroundStyle(.brandGold)
                     .textCase(.uppercase)
-                if summary.isLive {
-                    Text("● LIVE")
+                if let season = summary.season {
+                    Text(String(season))
                         .font(.caption2.bold())
                         .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(Color.brandLive, in: Capsule())
-                        .foregroundStyle(.white)
+                        .background(.background.secondary, in: Capsule())
+                        .foregroundStyle(.secondary)
+                }
+                if summary.status == .postponed || summary.status == .cancelled {
+                    Text(summary.status == .postponed ? "Postponed" : "Cancelled")
+                        .font(.caption2.bold())
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Color.orange.opacity(0.18), in: Capsule())
+                        .foregroundStyle(.orange)
                 }
             }
 
@@ -62,10 +69,13 @@ struct MatchDetailView: View {
                     .foregroundStyle(.brandGreenLight)
             }
 
-            Text(Formatting.matchDate(summary.playedAt)).foregroundStyle(.secondary)
+            Text(Formatting.fixtureDateTime(date: summary.matchDate, throwInTime: summary.throwInTime))
+                .foregroundStyle(.secondary)
 
             if let groundName = summary.groundName {
                 Text("📍 \(groundName)").foregroundStyle(.secondary)
+            } else {
+                Text("📍 Venue to be confirmed").foregroundStyle(.secondary)
             }
         }
         .padding(.leading, 12)

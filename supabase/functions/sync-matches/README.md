@@ -29,10 +29,15 @@ supabase/functions/sync-matches/
    `adapter.fetchUpdates(lastSyncedAt, ctx)` on each.
 3. Every match an adapter returns goes through
    `shared/normalize.ts::upsertMatch` — same function for every provider —
-   which resolves the county/ground names to UUIDs (via
-   `provider_team_aliases` / `provider_ground_aliases`, self-populating on
-   first match) and upserts into `matches`, keyed on
+   which resolves the county/ground/competition names to UUIDs (via
+   `provider_team_aliases` / `provider_ground_aliases` /
+   `provider_competition_aliases`, self-populating on first match), computes
+   `status` and `winner`, and upserts into `matches`, keyed on
    `(source_provider, source_ref)` so re-syncing never duplicates a match.
+   This app doesn't track live in-play scores — every match is either an
+   upcoming fixture (`status = 'scheduled'`, no score) or a completed result
+   (`status = 'completed'`, final score + winner); `postponed`/`cancelled`
+   only ever come from a provider explicitly saying so.
 4. Every run is logged to `data_sync_runs` (created/updated/unchanged/
    skipped counts, or an error).
 5. `matches` and `honours` are in the `supabase_realtime` publication, so
@@ -86,10 +91,13 @@ closing promptly so random internet traffic can't trigger syncs.
 1. Upload your file to the private `data-imports` Storage bucket (Studio's
    Storage UI, or the API with the service_role key).
 2. Required header row (extra columns ignored, order doesn't matter):
-   `external_ref,sport_code,competition,home_team,away_team,ground,played_at,home_score,away_score`
+   `external_ref,sport_code,competition,season,round,home_team,away_team,ground,match_date,throw_in_time,home_score,away_score`
    — `sport_code` is one of `gaelic_football | hurling | camogie |
-   ladies_football`; leave `home_score`/`away_score` blank for a fixture
-   that hasn't been played.
+   ladies_football`; `season` is the GAA year (e.g. `2026`); `round` is free
+   text (`Final`, `Semi-Final`, `Round 3`...) and can be blank; `match_date`
+   is `YYYY-MM-DD`; `throw_in_time` is `HH:MM` (24h) and can be blank if not
+   yet confirmed; leave `home_score`/`away_score` blank for a fixture that
+   hasn't been played.
 3. Trigger the import:
    ```bash
    curl -X POST \
@@ -109,9 +117,9 @@ couldn't be resolved — check `provider_team_aliases`/
 
 ```sql
 insert into manual_match_submissions
-  (external_ref, sport_code, competition, home_team_name, away_team_name, ground_name, played_at)
+  (external_ref, sport_code, competition, season, round, home_team_name, away_team_name, ground_name, match_date, throw_in_time)
 values
-  ('manual-2026-08-10-dub-kerry', 'gaelic_football', 'Test Match', 'Dublin', 'Kerry', 'Croke Park', '2026-08-10T15:30:00Z');
+  ('manual-2026-08-10-dub-kerry', 'gaelic_football', 'Tailteann Cup', 2026, 'Final', 'Dublin', 'Kerry', 'Croke Park', '2026-08-10', '15:30');
 ```
 
 To process it immediately rather than waiting for the next cron tick:
@@ -135,11 +143,41 @@ select * from cron.job_run_details order by start_time desc limit 20; -- cron's 
 
 ## This has been tested end to end
 
-Deployed and live-tested against the real database during development: a
-row was inserted into `manual_match_submissions` for "Cavan v Monaghan at
-Kingspan Breffni Park", the function was invoked, and it correctly resolved
-both county names and the ground name to their UUIDs, created the `matches`
-row, and marked the submission `applied` — then the test data was removed.
-The scaffold providers (ScoreBeo/ClubZap) are, honestly, untested beyond
-"returns an empty array safely when not configured," since there's no real
-API to test against yet.
+Deployed and live-tested against the real database during development,
+twice: once for the original (matchup/score-only) schema, and again after
+adding `competitions`/`season`/`round`/`match_date`/`throw_in_time`/`status`/
+`winner`. Each time, a row was inserted into `manual_match_submissions`, the
+function was invoked, and it correctly resolved the county names, ground
+name, and competition name to their UUIDs, created the `matches` row with
+every field populated, and marked the submission `applied` — then the test
+data was removed. The scaffold providers (ScoreBeo/ClubZap) are, honestly,
+untested beyond "returns an empty array safely when not configured," since
+there's no real API to test against yet.
+
+## Data accuracy
+
+The `competitions` table and the researched historical results
+(National Football/Hurling League, All-Ireland SFC/SHC, Tailteann Cup, Joe
+McDonagh/Christy Ring/Nickey Rackard/Lory Meagher Cups, and the provincial
+championships) were populated via web search against real GAA results, not
+invented. Coverage is deliberately **finals-only, not exhaustive** — full
+round-by-round league and group-stage data for 5 seasons across this many
+competitions is well beyond what can be hand-verified reliably; that volume
+of data is exactly what this ingestion pipeline exists to eventually pull
+from a real fixtures API (ScoreBeo/ClubZap) or bulk CSV import instead. A
+few results were left with a confirmed matchup/winner but no confirmed
+exact score or date, rather than guess — `match_date`/`home_score`/
+`away_score` are null on those rows.
+
+**One important correction made during this work**: three matches seeded
+early in this project as plausible-looking demo fixtures for 2026
+("Armagh v Tyrone", "Cork v Limerick", "Dublin v Kerry") turned out not to
+match what actually happened in the real 2026 championship once verified —
+they were fabricated placeholders, not researched data. They were deleted
+and replaced with the real 2026 All-Ireland series results/fixture (Limerick
+beat Galway in the hurling final; the football semi-finals were Kerry v
+Dublin and Mayo v Louth; the final is Kerry v Mayo). If you find other rows
+that look off, `matches.source_provider = 'manual'` with a null `source_ref`
+marks the original hand-seeded demo data (as opposed to anything synced by
+this pipeline, which always carries a `source_ref`) — that's the data most
+likely to warrant a second look.

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
-import type { RawProviderMatch, UpsertResult } from "./types.ts";
+import type { MatchStatus, RawProviderMatch, UpsertResult } from "./types.ts";
 
 /**
  * Resolve a provider's free-text county name to a county_teams.id for the
@@ -79,12 +79,72 @@ export async function resolveGroundId(
   return ground.id as string;
 }
 
+/** Same resolution pattern as teams/grounds, for the free-text competition name. */
+export async function resolveCompetitionId(
+  supabase: SupabaseClient,
+  providerCode: string,
+  competitionName: string,
+): Promise<string | null> {
+  const trimmed = competitionName.trim();
+  if (!trimmed) return null;
+
+  const { data: alias } = await supabase
+    .from("provider_competition_aliases")
+    .select("competition_id")
+    .eq("provider_code", providerCode)
+    .eq("external_name", trimmed)
+    .maybeSingle();
+  if (alias) return alias.competition_id as string;
+
+  const { data: competition } = await supabase
+    .from("competitions")
+    .select("id")
+    .ilike("name", trimmed)
+    .maybeSingle();
+  if (!competition) return null;
+
+  await supabase
+    .from("provider_competition_aliases")
+    .insert({ provider_code: providerCode, external_name: trimmed, competition_id: competition.id })
+    .then(() => undefined, () => undefined);
+
+  return competition.id as string;
+}
+
+/** GAA score notation is "goals-points" (e.g. "1-14" = 1*3 + 14 = 17 total). Mirrors the SQL gaa_score_total() function. */
+function gaaScoreTotal(score: string | null | undefined): number | null {
+  if (!score || !/^\d+-\d+$/.test(score)) return null;
+  const [goals, points] = score.split("-").map(Number);
+  return goals * 3 + points;
+}
+
+function computeWinner(homeScore: string | null | undefined, awayScore: string | null | undefined): "home" | "away" | "draw" | null {
+  const home = gaaScoreTotal(homeScore);
+  const away = gaaScoreTotal(awayScore);
+  if (home === null || away === null) return null;
+  if (home > away) return "home";
+  if (away > home) return "away";
+  return "draw";
+}
+
+/** Accepts 'HH:MM' or 'HH:MM:SS' (Postgres `time` columns round-trip with seconds); returns 'HH:MM:SS'. */
+function normalizeTime(time: string | null | undefined): string {
+  if (!time) return "15:00:00";
+  const parts = time.split(":");
+  return parts.length === 2 ? `${time}:00` : time;
+}
+
+function inferStatus(raw: RawProviderMatch): MatchStatus {
+  if (raw.status) return raw.status;
+  return raw.homeScore != null && raw.awayScore != null ? "completed" : "scheduled";
+}
+
 /**
  * Idempotently write one provider match into `matches`, keyed on
  * (source_provider, source_ref). Every provider funnels through this same
  * function — it's the one place that knows how a RawProviderMatch becomes a
- * `matches` row, so every provider gets identical dedup, name-resolution,
- * and change-detection behaviour for free.
+ * `matches` row, so every provider gets identical dedup, name/competition
+ * resolution, and change-detection behaviour for free.
  */
 export async function upsertMatch(
   supabase: SupabaseClient,
@@ -102,13 +162,16 @@ export async function upsertMatch(
   }
 
   const groundId = raw.groundName ? await resolveGroundId(supabase, providerCode, raw.groundName) : null;
+  const competitionId = await resolveCompetitionId(supabase, providerCode, raw.competition);
 
   const { data: existing } = await supabase
     .from("matches")
-    .select("id, home_score, away_score, played_at, competition, ground_id")
+    .select("id, home_score, away_score, match_date, throw_in_time, competition, ground_id, status")
     .eq("source_provider", providerCode)
     .eq("source_ref", raw.externalRef)
     .maybeSingle();
+
+  const playedAt = raw.matchDate ? new Date(`${raw.matchDate}T${normalizeTime(raw.throwInTime)}`).toISOString() : null;
 
   const row = {
     match_type: "county" as const,
@@ -116,9 +179,16 @@ export async function upsertMatch(
     away_county_team_id: awayCountyTeamId,
     ground_id: groundId,
     competition: raw.competition,
-    played_at: raw.playedAt,
+    competition_id: competitionId,
+    season: raw.season,
+    round: raw.round ?? null,
+    match_date: raw.matchDate,
+    throw_in_time: raw.throwInTime ?? null,
+    played_at: playedAt,
+    status: inferStatus(raw),
     home_score: raw.homeScore ?? null,
     away_score: raw.awayScore ?? null,
+    winner: computeWinner(raw.homeScore, raw.awayScore),
     source_provider: providerCode,
     source_ref: raw.externalRef,
     source_synced_at: new Date().toISOString(),
@@ -133,9 +203,11 @@ export async function upsertMatch(
   const changed =
     existing.home_score !== row.home_score ||
     existing.away_score !== row.away_score ||
-    existing.played_at !== row.played_at ||
+    existing.match_date !== row.match_date ||
+    existing.throw_in_time !== row.throw_in_time ||
     existing.competition !== row.competition ||
-    existing.ground_id !== row.ground_id;
+    existing.ground_id !== row.ground_id ||
+    existing.status !== row.status;
 
   if (!changed) {
     // Still bump source_synced_at so staleness is observable, but skip the

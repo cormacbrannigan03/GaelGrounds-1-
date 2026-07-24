@@ -11,12 +11,15 @@ const VALID_SPORT_CODES: readonly SportCode[] = ["gaelic_football", "hurling", "
  * bucket and parses it directly, so it's fully working today.
  *
  * Expected header row (order doesn't matter, extra columns are ignored):
- *   external_ref,sport_code,competition,home_team,away_team,ground,played_at,home_score,away_score
+ *   external_ref,sport_code,competition,season,round,home_team,away_team,ground,match_date,throw_in_time,home_score,away_score
  *
  * - external_ref: any string unique to this fixture, used for dedup on
  *   re-import (e.g. "csv-2026-championship-r1-dublin-meath").
  * - sport_code: one of gaelic_football | hurling | camogie | ladies_football
- * - played_at: ISO 8601 (e.g. 2026-08-10T15:30:00Z)
+ * - season: the GAA year this competition run belongs to, e.g. 2026
+ * - round: optional, e.g. "Final", "Semi-Final", "Round 3" — free text
+ * - match_date: 'YYYY-MM-DD'
+ * - throw_in_time: optional, 'HH:MM' 24h — leave blank if not yet confirmed
  * - home_score/away_score: GAA notation ("1-14"), leave blank for a fixture
  *   that hasn't been played yet.
  *
@@ -60,15 +63,18 @@ function parseCsv(text: string): RawProviderMatch[] {
     externalRef: col("external_ref"),
     sportCode: col("sport_code"),
     competition: col("competition"),
+    season: col("season"),
+    round: col("round"),
     homeTeam: col("home_team"),
     awayTeam: col("away_team"),
     ground: col("ground"),
-    playedAt: col("played_at"),
+    matchDate: col("match_date"),
+    throwInTime: col("throw_in_time"),
     homeScore: col("home_score"),
     awayScore: col("away_score"),
   };
 
-  const required: (keyof typeof idx)[] = ["externalRef", "sportCode", "competition", "homeTeam", "awayTeam", "playedAt"];
+  const required: (keyof typeof idx)[] = ["externalRef", "sportCode", "competition", "season", "homeTeam", "awayTeam", "matchDate"];
   const missing = required.filter((key) => idx[key] === -1);
   if (missing.length > 0) {
     throw new Error(`CSV is missing required column(s): ${missing.join(", ")}`);
@@ -85,17 +91,27 @@ function parseCsv(text: string): RawProviderMatch[] {
       continue;
     }
 
+    const season = Number(get(idx.season));
+    if (!Number.isInteger(season)) {
+      console.log(`[csv] row ${i + 1}: skipping, invalid season "${get(idx.season)}"`);
+      continue;
+    }
+
     const homeScore = get(idx.homeScore);
     const awayScore = get(idx.awayScore);
+    const throwInTime = idx.throwInTime >= 0 ? get(idx.throwInTime) : "";
 
     matches.push({
       externalRef: get(idx.externalRef),
       sportCode: sportCode as SportCode,
       competition: get(idx.competition),
+      season,
+      round: idx.round >= 0 ? get(idx.round) || null : null,
       homeTeamName: get(idx.homeTeam),
       awayTeamName: get(idx.awayTeam),
       groundName: idx.ground >= 0 ? get(idx.ground) || null : null,
-      playedAt: get(idx.playedAt),
+      matchDate: get(idx.matchDate),
+      throwInTime: throwInTime || null,
       homeScore: homeScore || null,
       awayScore: awayScore || null,
     });

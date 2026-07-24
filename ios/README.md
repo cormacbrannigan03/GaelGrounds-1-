@@ -64,6 +64,13 @@ confirmation for this project in the Supabase dashboard under
 - **Counties → teams → grounds → roll of honour**, **fixtures/results with
   search**, and a **profile** with stats + achievements — one-to-one with
   the feature set of the web app.
+- **Fixture/result model matches how the backend actually structures
+  matches**: `Models/Match.swift` carries `competitionId`/`season`/`round`/
+  `matchDate`/`throwInTime`/`province`/`status`/`winner` rather than a single
+  timestamp. There's no "live" badge or in-play score concept anywhere in
+  the app — this app only ever shows an upcoming fixture (no score) or a
+  completed result (final score); `status` comes from the server, it's never
+  guessed from the current time on-device.
 - The Supabase URL and anon key are hardcoded in `Config/SupabaseConfig.swift`
   (same reasoning as the web app: the anon key is safe client-side, every
   table is behind Row Level Security).

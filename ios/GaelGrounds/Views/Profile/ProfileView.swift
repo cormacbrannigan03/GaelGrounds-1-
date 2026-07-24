@@ -9,7 +9,8 @@ private struct VisitedGroundRow: Identifiable {
 private struct AttendedMatchRow: Identifiable {
     let id: UUID
     let competition: String?
-    let playedAt: Date
+    let matchDate: Date?
+    let throwInTime: String?
     let homeName: String
     let awayName: String
 }
@@ -88,7 +89,7 @@ struct ProfileView: View {
                                 ForEach(matches) { m in
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("\(m.homeName) v \(m.awayName)").font(.subheadline.bold())
-                                        Text("\(m.competition ?? "Gaelic Games") · \(Formatting.matchDate(m.playedAt))")
+                                        Text("\(m.competition ?? "Gaelic Games") · \(Formatting.fixtureDateTime(date: m.matchDate, throwInTime: m.throwInTime))")
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                     }
@@ -188,7 +189,7 @@ struct ProfileView: View {
                 let summaryById = Dictionary(uniqueKeysWithValues: summaries.map { ($0.id, $0) })
                 matches = attendance.compactMap { a in
                     guard let s = summaryById[a.matchId] else { return nil }
-                    return AttendedMatchRow(id: a.id, competition: s.competition, playedAt: s.playedAt, homeName: s.homeName, awayName: s.awayName)
+                    return AttendedMatchRow(id: a.id, competition: s.competition, matchDate: s.matchDate, throwInTime: s.throwInTime, homeName: s.homeName, awayName: s.awayName)
                 }
             } else {
                 matches = []

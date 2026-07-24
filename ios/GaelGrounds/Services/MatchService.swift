@@ -9,21 +9,20 @@ enum MatchService {
         try await Supa.client
             .from("matches")
             .select()
-            .order("played_at", ascending: false)
+            .order("match_date", ascending: false, nullsFirst: false)
             .execute()
             .value
     }
 
-    static func fetchUpcomingAndLive(sinceHoursAgo: Double = 2.5) async throws -> [Match] {
-        let cutoff = Date().addingTimeInterval(-sinceHoursAgo * 60 * 60)
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        return try await Supa.client
+    /// The next handful of upcoming fixtures — status is set server-side by
+    /// the sync pipeline, so this is a plain query, not a time-window guess.
+    static func fetchUpcoming(limit: Int = 6) async throws -> [Match] {
+        try await Supa.client
             .from("matches")
             .select()
-            .gte("played_at", value: formatter.string(from: cutoff))
-            .order("played_at", ascending: true)
-            .limit(6)
+            .eq("status", value: "scheduled")
+            .order("match_date", ascending: true, nullsFirst: false)
+            .limit(limit)
             .execute()
             .value
     }
@@ -68,12 +67,18 @@ enum MatchService {
             MatchSummary(
                 id: match.id,
                 competition: match.competition,
-                playedAt: match.playedAt,
+                season: match.season,
+                round: match.round,
+                matchDate: match.matchDate,
+                throwInTime: match.throwInTime,
                 homeScore: match.homeScore,
                 awayScore: match.awayScore,
+                winner: match.winner,
+                status: match.status,
                 homeName: teamName(match.homeCountyTeamId),
                 awayName: teamName(match.awayCountyTeamId),
                 groundName: match.groundId.flatMap { groundNameById[$0] },
+                province: match.province,
                 attendeeCount: attendanceCountByMatch[match.id] ?? 0
             )
         }

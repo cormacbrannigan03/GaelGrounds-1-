@@ -4,7 +4,7 @@ import Supabase
 struct DashboardView: View {
     @EnvironmentObject private var auth: AuthViewModel
 
-    @State private var liveAndUpcoming: [MatchSummary] = []
+    @State private var upcoming: [MatchSummary] = []
     @State private var groundsVisited = 0
     @State private var matchesAttended = 0
     @State private var achievementsUnlocked = 0
@@ -35,19 +35,19 @@ struct DashboardView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Live & upcoming").font(.title3.bold())
+                        Text("Upcoming fixtures").font(.title3.bold())
                         Spacer()
                         NavigationLink("See all fixtures →", value: MatchesRouteTag())
                     }
 
                     if isLoading {
                         ProgressView()
-                    } else if liveAndUpcoming.isEmpty {
-                        Text("No live or upcoming matches right now — check back soon.")
+                    } else if upcoming.isEmpty {
+                        Text("No upcoming fixtures right now — check back soon.")
                             .foregroundStyle(.secondary)
                     } else {
                         VStack(spacing: 10) {
-                            ForEach(liveAndUpcoming) { match in
+                            ForEach(upcoming) { match in
                                 MatchCardView(match: match)
                             }
                         }
@@ -78,8 +78,8 @@ struct DashboardView: View {
         defer { if showSpinner { isLoading = false } }
 
         do {
-            let matches = try await MatchService.fetchUpcomingAndLive()
-            liveAndUpcoming = try await MatchService.resolveSummaries(matches)
+            let matches = try await MatchService.fetchUpcoming()
+            upcoming = try await MatchService.resolveSummaries(matches)
         } catch {
             print("Dashboard load failed: \(error)")
         }

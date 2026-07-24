@@ -26,7 +26,7 @@ struct MatchesView: View {
                 || m.awayName.lowercased().contains(q)
                 || (m.competition ?? "").lowercased().contains(q)
                 || (m.groundName ?? "").lowercased().contains(q)
-                || String(Calendar.current.component(.year, from: m.playedAt)) == q
+                || m.season.map(String.init) == q
         }
     }
 
