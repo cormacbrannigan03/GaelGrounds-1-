@@ -218,3 +218,34 @@ Two gaps are worth calling out explicitly:
   re-checked for the same year-bleed risk** and would benefit from a spot
   re-verification pass using explicit `"2025"`-qualified queries before being
   treated as fully trustworthy.
+
+**Round-by-round 2024 provincial-to-final coverage**: the same six
+competitions (Leinster/Munster/Ulster/Connacht SFC, Leinster/Munster SHC)
+were then done for 2024, at the user's request to extend one season back
+before deciding on 2021–2023. This pass benefited from two things the 2025
+pass didn't have: the season is now old enough that recency-biased search
+contamination mostly pulls in *other* old seasons rather than "live" ones,
+and Munster GAA's official site (munster.gaa.ie) turned out to publish a
+dedicated, dated event page per fixture with the final score in the title —
+using that as the primary source made Munster SFC and Munster SHC 2024
+(all 14 matches) the highest-confidence data gathered in this project so
+far. Leinster SHC 2024 came out **14 of 15 round-robin pairings** confirmed
+(a big improvement on 2025's 2 of 15) — the lone gap, Galway v Dublin Round
+5, is excluded rather than guessed because every search for it kept
+resurfacing an unrelated *2026* Galway–Dublin match with an almost
+identical dramatic finish (injury-time winning goal at Pearse Stadium),
+making the real 2024 result impossible to isolate.
+
+This phase also **incidentally cross-checked several of the 2025 football
+scores flagged as unverified above**: searching for 2024 results repeatedly
+surfaced the correct 2025 scores as a side effect (e.g. the 2025 Ulster SFC
+final, Donegal 2-23 Armagh 0-28, and the 2025 Connacht SFC final, Galway
+1-17 Mayo 1-15, both reappeared with explicit `/2025/`-dated sources while
+chasing their 2024 equivalents) — those specific figures can now be treated
+as confirmed rather than merely "not yet re-checked." The rest of the 2025
+football provincial data is still unverified for year-bleed risk.
+
+Connacht SFC 2024 has the same London/New York gap as 2025 (2 of the 3
+quarter-finals excluded). Leinster SFC 2024's Louth v Wexford quarter-final
+has a confirmed matchup/winner but no confirmed score, same treatment as
+the older finals noted above.

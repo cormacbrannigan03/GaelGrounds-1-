@@ -5,10 +5,10 @@
 -- originally applied directly via apply_migration.
 with rows(sport_code, competition_code, round, home_county, away_county, ground_name, match_date, home_score, away_score) as (
   values
-    ('football', 'munster_sfc', 'Quarter-Final', 'Cork', 'Limerick', null, date '2025-04-05', '0-24', '0-13'),
-    ('football', 'munster_sfc', 'Quarter-Final', 'Tipperary', 'Waterford', null, date '2025-04-05', '1-22', '1-19'),
-    ('football', 'munster_sfc', 'Semi-Final', 'Clare', 'Tipperary', 'Cusack Park (Ennis)', date '2025-04-19', '2-18', '1-15'),
-    ('football', 'munster_sfc', 'Semi-Final', 'Kerry', 'Cork', 'Páirc Uí Chaoimh', date '2025-04-19', '3-21', '1-25'),
+    ('gaelic_football', 'munster_sfc', 'Quarter-Final', 'Cork', 'Limerick', null, date '2025-04-05', '0-24', '0-13'),
+    ('gaelic_football', 'munster_sfc', 'Quarter-Final', 'Tipperary', 'Waterford', null, date '2025-04-05', '1-22', '1-19'),
+    ('gaelic_football', 'munster_sfc', 'Semi-Final', 'Clare', 'Tipperary', 'Cusack Park (Ennis)', date '2025-04-19', '2-18', '1-15'),
+    ('gaelic_football', 'munster_sfc', 'Semi-Final', 'Kerry', 'Cork', 'Páirc Uí Chaoimh', date '2025-04-19', '3-21', '1-25'),
 
     ('hurling', 'munster_shc', 'Round 1', 'Clare', 'Cork', 'Cusack Park (Ennis)', date '2025-04-20', '3-21', '2-24'),
     ('hurling', 'munster_shc', 'Round 1', 'Tipperary', 'Limerick', 'Semple Stadium', date '2025-04-20', '2-23', '2-23'),

@@ -37,8 +37,8 @@ from rows r
 join public.competitions c on c.code = 'leinster_sfc'
 join public.counties hc on hc.name = r.home_county
 join public.counties ac on ac.name = r.away_county
-join public.county_teams hct on hct.county_id = hc.id and hct.sport_code = 'football'
-join public.county_teams act on act.county_id = ac.id and act.sport_code = 'football'
+join public.county_teams hct on hct.county_id = hc.id and hct.sport_code = 'gaelic_football'
+join public.county_teams act on act.county_id = ac.id and act.sport_code = 'gaelic_football'
 left join public.grounds g on g.name = r.ground_name;
 
 -- Final (Louth 3-14 Meath 1-18) was already present in the database from an
