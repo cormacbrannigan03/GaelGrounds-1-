@@ -514,6 +514,24 @@ main {
   gap: 0.15rem;
 }
 
+.honours-group {
+  margin-bottom: 1.5rem;
+}
+
+.honours-group h3 {
+  margin-top: 0.5rem;
+}
+
+.honours-group .honours-list li {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
 /* Forms */
 .search-input,
 input[type='text'],

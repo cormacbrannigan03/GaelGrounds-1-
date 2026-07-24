@@ -10,7 +10,7 @@ type Attendee = {
   display_name: string | null
 }
 
-export default function CheckInPanel({ matchId }: { matchId: string }) {
+export default function CheckInPanel({ matchId, isPast = false }: { matchId: string; isPast?: boolean }) {
   const { user } = useAuth()
   const { evaluate } = useAchievements(user?.id)
   const [attendees, setAttendees] = useState<Attendee[]>([])
@@ -83,17 +83,17 @@ export default function CheckInPanel({ matchId }: { matchId: string }) {
     <div className="checkin-panel">
       <div className="checkin-header">
         <div>
-          <h3>Who's here</h3>
-          <p className="muted">Updates live as fans check in</p>
+          <h3>{isPast ? 'Who was there' : "Who's here"}</h3>
+          <p className="muted">{isPast ? 'Check in any time, even after the final whistle' : 'Updates live as fans check in'}</p>
         </div>
         {user &&
           (myAttendanceId ? (
             <button className="btn btn-outline" disabled={busy} onClick={handleCheckOut}>
-              ✓ Checked in — tap to undo
+              ✓ {isPast ? 'Logged as attended' : 'Checked in'} — tap to undo
             </button>
           ) : (
             <button className="btn btn-primary btn-lg" disabled={busy} onClick={handleCheckIn}>
-              📍 Check in
+              {isPast ? '🕘 I was there' : '📍 Check in'}
             </button>
           ))}
       </div>

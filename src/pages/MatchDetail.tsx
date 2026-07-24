@@ -101,7 +101,7 @@ export default function MatchDetail() {
         )}
       </div>
 
-      <CheckInPanel matchId={match.id} />
+      <CheckInPanel matchId={match.id} isPast={hasScore || (!live && new Date(match.played_at).getTime() < Date.now())} />
     </div>
   )
 }

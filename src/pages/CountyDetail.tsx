@@ -7,7 +7,13 @@ import { SPORT_LABELS, SPORT_ICONS } from '../lib/format'
 type County = { id: string; name: string; province: Enums<'province'>; primary_colour: string | null }
 type TeamRow = { id: string; sport_code: Enums<'sport_code'>; founded_year: number | null; current_manager: string | null }
 type GroundRow = { id: string; name: string; capacity: number | null }
-type HonourRow = { id: string; competition_name: string; year: number; honour_type: Enums<'honour_type'> }
+type HonourRow = {
+  id: string
+  competition_name: string
+  year: number
+  honour_type: Enums<'honour_type'>
+  county_team_id: string | null
+}
 
 export default function CountyDetail() {
   const { id } = useParams<{ id: string }>()
@@ -37,7 +43,7 @@ export default function CountyDetail() {
       if (teamIds.length > 0) {
         const { data: honourData } = await supabase
           .from('honours')
-          .select('id, competition_name, year, honour_type')
+          .select('id, competition_name, year, honour_type, county_team_id')
           .in('county_team_id', teamIds)
           .order('year', { ascending: false })
         if (!cancelled) setHonours(honourData ?? [])
@@ -91,14 +97,36 @@ export default function CountyDetail() {
 
       {honours.length > 0 && (
         <section>
-          <h2>Honours</h2>
-          <ul className="honours-list">
-            {honours.map((h) => (
-              <li key={h.id}>
-                <strong>{h.year}</strong> — {h.competition_name}
-              </li>
-            ))}
-          </ul>
+          <h2>Roll of honour</h2>
+          {teams.map((team) => {
+            const teamHonours = honours.filter((h) => h.county_team_id === team.id)
+            if (teamHonours.length === 0) return null
+
+            const byCompetition = new Map<string, number[]>()
+            for (const h of teamHonours) {
+              const years = byCompetition.get(h.competition_name) ?? []
+              years.push(h.year)
+              byCompetition.set(h.competition_name, years)
+            }
+
+            return (
+              <div key={team.id} className="honours-group">
+                <h3>
+                  {SPORT_ICONS[team.sport_code]} {SPORT_LABELS[team.sport_code]}
+                </h3>
+                <ul className="honours-list">
+                  {[...byCompetition.entries()].map(([competition, years]) => (
+                    <li key={competition}>
+                      <strong>
+                        {competition} ({years.length})
+                      </strong>
+                      <span className="muted small">{years.sort((a, b) => b - a).join(', ')}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
         </section>
       )}
     </div>
