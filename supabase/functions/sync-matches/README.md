@@ -181,3 +181,40 @@ that look off, `matches.source_provider = 'manual'` with a null `source_ref`
 marks the original hand-seeded demo data (as opposed to anything synced by
 this pipeline, which always carries a `source_ref`) — that's the data most
 likely to warrant a second look.
+
+**Round-by-round 2025 provincial-to-final coverage (AI football/hurling
+only)**: after the finals-only pass above, a second pass added full
+round-by-round results for the 2025 All-Ireland SFC and SHC provincial
+championships (Leinster, Munster, Ulster, Connacht SFC; Leinster and Munster
+SHC), per the project owner's request to narrow scope to these two
+competitions for one season before deciding whether to extend further back.
+Each result was verified via a targeted "Team A v Team B" search
+cross-checked against 2+ independently-named sources (RTÉ, Irish Examiner,
+Irish Times, GAA.ie, county GAA sites) and sanity-checked so no winner is
+ever recorded with a lower `gaa_score_total()` than the loser.
+
+Two gaps are worth calling out explicitly:
+
+- **Connacht SFC is incomplete.** London and New York compete in this
+  championship and the schema has no way to represent them as county teams,
+  so any match involving either is excluded rather than guessed. This is an
+  open schema question for the project owner, not yet resolved.
+- **Leinster SHC 2025 is only partially covered** (two round-robin fixtures
+  plus the final; the other ten round-robin pairings among Kilkenny, Galway,
+  Dublin, Wexford, Offaly and Antrim are missing). This competition's
+  research hit a specific, repeatable failure mode worth documenting: **the
+  current date is well into the 2026 GAA season, so recency-biased searches
+  for "2025" results kept surfacing 2026-season matches instead** — same
+  fixture pairings, similar-looking scorelines, wrong year. Several searches
+  returned a plausible score with no year signal at all; only sources whose
+  URL or byline carried an explicit `2025` date were trusted in the end. This
+  produced multiple false leads before being caught (e.g. a "Kilkenny 3-22
+  Galway 1-20, 25 May" round-robin claim that was actually the real Final's
+  scoreline attached to the wrong date; an "Offaly 2-21 Wexford 2-15"
+  result that was the *2026* meeting, not 2025; a Galway–Dublin score whose
+  every source URL was dated `/2026/`). Given this failure mode wasn't
+  anticipated going in, **the football provincial data inserted in this same
+  phase (Leinster/Munster/Ulster/Connacht SFC) has not been specifically
+  re-checked for the same year-bleed risk** and would benefit from a spot
+  re-verification pass using explicit `"2025"`-qualified queries before being
+  treated as fully trustworthy.
