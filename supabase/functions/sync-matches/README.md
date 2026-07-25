@@ -380,3 +380,17 @@ confirmed score. Some throw-in times captured for the preliminary
 quarter-finals and one Group 2 round, courtesy of dedicated fixture
 articles; most group-stage rounds don't have a findable time.
 
+**2025 All-Ireland SHC: complete, and structurally different from
+football.** Hurling's All-Ireland series has no group stage of its own —
+it feeds directly off the Leinster/Munster round-robin standings.
+Champions go straight to the semi-finals, runners-up to the
+quarter-finals, and each province's 3rd-place finisher (Dublin from
+Leinster, Tipperary from Munster in 2025) joins the top two Joe McDonagh
+Cup finishers (Kildare, Laois) in the preliminary quarter-finals. That
+makes the full non-final bracket just 6 matches, all confirmed with no
+score gaps, plus the pre-existing final.
+
+Both codes' 2025 All-Ireland series are now fully in the database. Per
+the "2025 only, then reassess" agreement, earlier seasons of the
+All-Ireland series (2021-2024, both codes) have not been started.
+
