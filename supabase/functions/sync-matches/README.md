@@ -314,3 +314,48 @@ Munster SFC and Munster SHC 2022, and Leinster SFC 2022, came through
 cleanly by contrast (same high-confidence official-event-page sourcing as
 2023/2024), with only one score gap (Leinster SFC's Westmeath v Laois
 quarter-final: winner confirmed, score not).
+
+**Round-by-round 2021 provincial-to-final coverage — a genuinely different
+format**: 2021 was the COVID-delayed championship, played in a compressed
+June-August window largely behind closed doors. Research first had to
+establish that **the provincial hurling championships used a straight
+knockout format that year**, not the round-robin used in every other
+season covered by this project — a temporary reversion to the pre-2018
+system. That made Munster SHC and Leinster SHC 2021 much smaller brackets
+(4 and 5 matches respectively, vs. 11 in round-robin years) with byes for
+the strongest teams straight to the semi-finals. The football
+championships kept their usual preliminary-round/quarter-final/semi-final/
+final shape.
+
+Behind-closed-doors matches also meant far less promotional media, so
+throw-in times were barely findable this season — most rows are null.
+
+Three gaps, each with a confirmed matchup/winner but no confirmed score,
+came from the same recurring problem as previous seasons — a fixture
+(Louth v Kildare, or Mayo v Roscommon) resurfacing another year's result
+instead of 2021's: Leinster SFC's Dublin v Carlow (QF) and Kildare v Louth
+(SF), and Connacht SFC's Mayo v Roscommon (SF).
+
+**Ulster SFC 2021** repeated 2022's problem in an unusually clear-cut way:
+the exact same batch of quarter-final scores (Derry v Antrim, Monaghan v
+Cavan, Armagh v Fermanagh, Down v Donegal) that had already been rejected
+during 2022 research resurfaced verbatim for a 2021 query, with April
+dates that don't even fall inside 2021's actual July championship window.
+This is clearly recycled/mismatched content rather than genuine results
+for any specific year it's been tried against, so — as with 2022 — only
+the final is recorded for Ulster SFC 2021.
+
+**Connacht SFC 2021** was the one season with no London/New York gap at
+all: both withdrew for 2020 and 2021 due to COVID travel restrictions, so
+all 5 Connacht counties competed directly and the bracket (Galway had the
+bye to the final) is fully covered bar the one Mayo v Roscommon score
+noted above.
+
+One data-quality note worth flagging explicitly: **this project's earlier,
+pre-this-session baseline data included a factual error, now caught and
+fixed** — the 2021 Ulster SFC final's ground was recorded as Healy Park;
+research this round confirmed via ulster.gaa.ie that it was actually
+played at Croke Park (a COVID-era neutral/capacity choice). This raises
+the possibility that other never-revisited baseline rows from before this
+project's rigorous-verification phase began could have similar errors;
+none have been found, but none have been specifically audited either.
