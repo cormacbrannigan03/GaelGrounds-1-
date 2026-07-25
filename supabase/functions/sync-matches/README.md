@@ -273,3 +273,44 @@ Ulster SFC 2023's final went to penalties after a draw (Armagh 0-18 Derry
 1-15 AET); the drawn scoreline is recorded as the match result with Derry
 as the winner, since the schema has no separate field for a penalty
 shoot-out result.
+
+**Round-by-round 2022 provincial-to-final coverage, now with throw-in
+times**: at the project owner's request, this pass also captures
+`throw_in_time` (not just `match_date`) and double-checks ground names.
+Throw-in times are meaningfully harder to source than scores/dates/venues:
+they only ever appear in pre-match preview articles (never in post-match
+recaps, which is where the bulk of this project's data comes from), and
+those previews are far less durably indexed. Coverage ended up patchy and
+concentrated on the biggest games — semi-finals and finals mostly have a
+dedicated "throw-in time" preview article (irishnews.com and
+irishexaminer.com both run a recurring "Team v Team: throw-in time, TV
+details" series); quarter-finals and round-robin fixtures usually don't.
+Munster GAA's own event pages occasionally embed a time range (e.g. "4:00
+pm - 6:00 pm") directly in the fixture listing, which was the single best
+source found. No time was ever guessed — it's null wherever no source
+confirmed one.
+
+This season also surfaced the worst source contamination yet, on two
+fronts:
+
+- **Ulster SFC 2022** — every quarter-final/semi-final search returned
+  contradictory or wrong-year results, including one case where a search
+  itself flagged the problem: "Donegal did play Down in Ulster
+  Championship semi-finals, but these matches occurred in different years
+  (2023, 2025, and 2026), not in 2022." Rather than guess a bracket that
+  couldn't be pinned down, only the preliminary round (Donegal 2-20 Cavan
+  1-15) and the final are recorded; the quarter-finals and semi-finals are
+  left out entirely for this season.
+- **Leinster SHC 2022** — Round 1 (3 matches) and one Round 2 match
+  (Kilkenny v Laois) are confirmed; the remaining nine round-robin
+  fixtures hit the same kind of contradictions and are left out.
+- **Connacht SFC 2022** was the first season back after COVID with both
+  London and New York competing, and every pre-final match this project
+  could verify (e.g. Mayo v London) involved one of them — so under the
+  existing London/New York schema-gap policy, nothing before the final was
+  insertable this season at all.
+
+Munster SFC and Munster SHC 2022, and Leinster SFC 2022, came through
+cleanly by contrast (same high-confidence official-event-page sourcing as
+2023/2024), with only one score gap (Leinster SFC's Westmeath v Laois
+quarter-final: winner confirmed, score not).
