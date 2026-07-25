@@ -359,3 +359,24 @@ played at Croke Park (a COVID-era neutral/capacity choice). This raises
 the possibility that other never-revisited baseline rows from before this
 project's rigorous-verification phase began could have similar errors;
 none have been found, but none have been specifically audited either.
+
+## The All-Ireland series itself (beyond the finals)
+
+Everything above covers the provincial championships. The All-Ireland
+series is a genuinely bigger undertaking — since 2023 it's a 16-team,
+4-group round-robin (24 group games alone) plus preliminary
+quarter-finals, quarter-finals and semi-finals; pre-2023 seasons used a
+different qualifier-based format entirely. Per the project owner, this is
+being done one season at a time, most recent first, with a checkpoint
+after each.
+
+**2025 All-Ireland SFC: complete.** All 35 matches — 4 groups of 6, 4
+preliminary quarter-finals, 4 quarter-finals, 2 semi-finals, plus the
+final already in the database — sourced primarily from gaa.ie, rte.ie,
+and munster.gaa.ie's event pages (which cover Kerry/Munster-side fixtures
+for football too, not just Munster's own competitions). Only one score
+gap: Armagh v Derry (Group 4) has a confirmed winner (Armagh) but no
+confirmed score. Some throw-in times captured for the preliminary
+quarter-finals and one Group 2 round, courtesy of dedicated fixture
+articles; most group-stage rounds don't have a findable time.
+
