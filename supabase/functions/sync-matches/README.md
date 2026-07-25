@@ -390,7 +390,28 @@ Cup finishers (Kildare, Laois) in the preliminary quarter-finals. That
 makes the full non-final bracket just 6 matches, all confirmed with no
 score gaps, plus the pre-existing final.
 
-Both codes' 2025 All-Ireland series are now fully in the database. Per
-the "2025 only, then reassess" agreement, earlier seasons of the
-All-Ireland series (2021-2024, both codes) have not been started.
+Both codes' 2025 All-Ireland series are now fully in the database.
+
+**2024 All-Ireland SFC: complete.** All 35 matches — 4 groups of 6, 4
+preliminary quarter-finals, 4 quarter-finals, 2 semi-finals, plus the
+final already in the database — with zero score gaps, sourced primarily
+from munster.gaa.ie's event pages and dated gaa.ie/rte.ie/irishtimes.com
+articles. Mayo v Derry (preliminary quarter-final) finished level after
+extra time (1-12 to 0-15, 15-15); the schema has no penalty-shootout
+field, so the drawn scoreline is recorded with `winner` corrected to
+Derry, who won on penalties.
+
+**2024 All-Ireland SHC: complete, same structure as 2025.** Munster
+champion Limerick and Leinster champion Kilkenny went straight to the
+semi-finals; runners-up Clare (Munster) and Dublin (Leinster) went to the
+quarter-finals; 3rd-place finishers Cork (Munster) and Wexford (Leinster)
+joined Joe McDonagh Cup teams Offaly and Laois in the preliminary
+quarter-finals. All 6 non-final matches confirmed with no score gaps,
+plus the pre-existing final (Clare 3-29 Cork 1-34 AET).
+
+Both codes' 2024 All-Ireland series are now fully in the database. Per
+the "one season at a time, then reassess" agreement, earlier seasons of
+the All-Ireland series (2021-2023, both codes) have not been started —
+those pre-2023 seasons used a different qualifier-based format, not
+groups, and would need separate research logic.
 
