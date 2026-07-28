@@ -30,6 +30,11 @@ struct UserVisitInsert: Encodable {
     let groundId: UUID
     let userId: UUID
     let notes: String?
+    let photoUrls: [String] = []
+}
+
+struct UserVisitPhotoUpdate: Encodable {
+    let photoUrls: [String]
 }
 
 struct UserMatchAttendance: Codable, Identifiable, Hashable {

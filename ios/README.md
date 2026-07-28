@@ -55,6 +55,14 @@ confirmation for this project in the Supabase dashboard under
   `Views/Grounds/GroundCheckInPanel.swift` subscribe to Postgres changes via
   `client.realtimeV2.channel(...).postgresChange(...)`, so check-ins from
   other users appear without a refresh.
+- **User-submitted ground photos** — `GroundCheckInPanel` also has a Photos
+  section: `PhotosPicker` lets a signed-in user pick a photo, which is
+  re-encoded as JPEG and uploaded to the public `ground-photos` storage
+  bucket by `Services/GroundPhotoService.swift`, then attached to that
+  user's `user_visits.photo_urls` row for the ground (adding a photo also
+  counts as checking in, if you haven't already). The gallery shown is
+  every visitor's photos for that ground, aggregated client-side from the
+  same `user_visits` rows the check-in list already loads.
 - **Live match/fixture updates** — Dashboard, MatchesView and
   MatchDetailView subscribe to the `matches` table the same way (via the
   shared `Services/RealtimeWatcher.swift` helper), so results and new
@@ -84,7 +92,9 @@ small fix on first build:
 
 1. **The `supabase-swift` API surface.** Method names used here
    (`signInWithPassword`, `client.from(_:)`, `client.realtimeV2.channel(_:)`,
-   `.postgresChange(AnyAction.self, ...)`, `SupabaseClientOptions(db: .init(decoder:encoder:))`)
+   `.postgresChange(AnyAction.self, ...)`, `SupabaseClientOptions(db: .init(decoder:encoder:))`,
+   and — new in the ground-photos feature — `client.storage.from(_:).upload(_:data:options:)`
+   and `.getPublicURL(path:)`)
    were checked against the current SDK docs/source, but this library has
    renamed things across major versions before. If Xcode flags a signature
    mismatch, check `Sources/Supabase/Types.swift` and `Sources/Auth/AuthClient.swift`

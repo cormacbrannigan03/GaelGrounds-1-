@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 import Supabase
 
 private struct Visitor: Identifiable, Hashable {
@@ -22,6 +23,12 @@ struct GroundCheckInPanel: View {
     @State private var unlockedTitles: [String]?
     @State private var realtimeTask: Task<Void, Never>?
     @State private var channel: RealtimeChannelV2?
+
+    @State private var photoURLs: [String] = []
+    @State private var myPhotoURLs: [String] = []
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var isUploadingPhoto = false
+    @State private var photoError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -52,6 +59,57 @@ struct GroundCheckInPanel: View {
                         .tint(.brandGreen)
                         .controlSize(.large)
                         .disabled(isBusy)
+                    }
+                }
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Photos").font(.headline)
+                        Text("Shared by fans who've been here").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if auth.isSignedIn {
+                        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                            Label("Add photo", systemImage: "camera")
+                                .font(.subheadline)
+                        }
+                        .disabled(isUploadingPhoto)
+                    }
+                }
+
+                if isUploadingPhoto {
+                    ProgressView("Uploading…")
+                }
+
+                if let photoError {
+                    Text(photoError).font(.caption).foregroundStyle(.red)
+                }
+
+                if photoURLs.isEmpty {
+                    Text("No photos yet — be the first to add one!").foregroundStyle(.secondary)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(photoURLs, id: \.self) { urlString in
+                                AsyncImage(url: URL(string: urlString)) { phase in
+                                    switch phase {
+                                    case .success(let image):
+                                        image.resizable().scaledToFill()
+                                    case .failure:
+                                        Color.gray.opacity(0.2)
+                                    default:
+                                        ProgressView()
+                                    }
+                                }
+                                .frame(width: 120, height: 90)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .clipped()
+                            }
+                        }
                     }
                 }
             }
@@ -103,6 +161,10 @@ struct GroundCheckInPanel: View {
         .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
         .task { await start() }
         .onDisappear { stop() }
+        .onChange(of: selectedPhotoItem) { newItem in
+            guard let newItem else { return }
+            Task { await addPhoto(from: newItem) }
+        }
     }
 
     private func start() async {
@@ -154,8 +216,44 @@ struct GroundCheckInPanel: View {
                 Visitor(id: $0.id, userId: $0.userId, displayName: nameById[$0.userId] ?? nil, visitedAt: $0.visitedAt, notes: $0.notes)
             }
             myVisitId = rows.first { $0.userId == auth.userId }?.id
+            myPhotoURLs = rows.first { $0.userId == auth.userId }?.photoUrls ?? []
+            photoURLs = rows.flatMap(\.photoUrls)
         } catch {
             print("loadVisitors failed: \(error)")
+        }
+    }
+
+    private func addPhoto(from item: PhotosPickerItem) async {
+        guard let userId = auth.userId else { return }
+        isUploadingPhoto = true
+        photoError = nil
+        defer {
+            isUploadingPhoto = false
+            selectedPhotoItem = nil
+        }
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
+                photoError = "Couldn't load that photo — try another."
+                return
+            }
+            let url = try await GroundPhotoService.upload(rawImageData: data, userId: userId, groundId: groundId)
+
+            if let myVisitId {
+                try await Supa.client
+                    .from("user_visits")
+                    .update(UserVisitPhotoUpdate(photoUrls: myPhotoURLs + [url]))
+                    .eq("id", value: myVisitId)
+                    .execute()
+            } else {
+                try await Supa.client
+                    .from("user_visits")
+                    .insert(UserVisitInsert(groundId: groundId, userId: userId, notes: nil, photoUrls: [url]))
+                    .execute()
+            }
+            await loadVisitors()
+        } catch {
+            photoError = "Upload failed — please try again."
+            print("addPhoto failed: \(error)")
         }
     }
 
