@@ -45,10 +45,10 @@ export default function Matches() {
 
       const countyIds = [...new Set((teams ?? []).map((t) => t.county_id))]
       const { data: counties } = countyIds.length
-        ? await supabase.from('counties').select('id, name').in('id', countyIds)
+        ? await supabase.from('counties').select('id, name, primary_colour, secondary_colour').in('id', countyIds)
         : { data: [] as any[] }
 
-      const countyNameById = new Map((counties ?? []).map((c) => [c.id, c.name]))
+      const countyById = new Map((counties ?? []).map((c) => [c.id, c]))
       const teamById = new Map((teams ?? []).map((t) => [t.id, t]))
       const groundNameById = new Map((grounds ?? []).map((g) => [g.id, g.name]))
 
@@ -59,14 +59,24 @@ export default function Matches() {
       const cards: MatchCardData[] = rows.map((m) => {
         const home = m.home_county_team_id ? teamById.get(m.home_county_team_id) : null
         const away = m.away_county_team_id ? teamById.get(m.away_county_team_id) : null
+        const homeCounty = home ? countyById.get(home.county_id) : null
+        const awayCounty = away ? countyById.get(away.county_id) : null
         return {
           id: m.id,
           competition: m.competition,
           played_at: m.played_at,
           home_score: m.home_score,
           away_score: m.away_score,
-          homeName: home ? countyNameById.get(home.county_id) ?? 'TBC' : 'TBC',
-          awayName: away ? countyNameById.get(away.county_id) ?? 'TBC' : 'TBC',
+          homeName: homeCounty?.name ?? 'TBC',
+          awayName: awayCounty?.name ?? 'TBC',
+          homeColours:
+            homeCounty?.primary_colour && homeCounty?.secondary_colour
+              ? { primary: homeCounty.primary_colour, secondary: homeCounty.secondary_colour }
+              : null,
+          awayColours:
+            awayCounty?.primary_colour && awayCounty?.secondary_colour
+              ? { primary: awayCounty.primary_colour, secondary: awayCounty.secondary_colour }
+              : null,
           groundName: m.ground_id ? groundNameById.get(m.ground_id) ?? null : null,
           attendeeCount: attendanceByMatch.get(m.id) ?? 0,
         }

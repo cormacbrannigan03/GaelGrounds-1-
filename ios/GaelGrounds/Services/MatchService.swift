@@ -49,18 +49,19 @@ enum MatchService {
         let counties: [County] = countyIds.isEmpty ? [] : try await Supa.client
             .from("counties").select().in("id", values: countyIds).execute().value
 
-        let countyNameById = Dictionary(uniqueKeysWithValues: counties.map { ($0.id, $0.name) })
+        let countyById = Dictionary(uniqueKeysWithValues: counties.map { ($0.id, $0) })
         let teamById = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
         let groundNameById = Dictionary(uniqueKeysWithValues: grounds.map { ($0.id, $0.name) })
 
         var attendanceCountByMatch: [UUID: Int] = [:]
         for a in attendance { attendanceCountByMatch[a.matchId, default: 0] += 1 }
 
+        func county(_ teamId: UUID?) -> County? {
+            guard let teamId, let team = teamById[teamId] else { return nil }
+            return countyById[team.countyId]
+        }
         func teamName(_ teamId: UUID?) -> String {
-            guard let teamId, let team = teamById[teamId], let name = countyNameById[team.countyId] else {
-                return "TBC"
-            }
-            return name
+            county(teamId)?.name ?? "TBC"
         }
 
         return matches.map { match in
@@ -77,6 +78,8 @@ enum MatchService {
                 status: match.status,
                 homeName: teamName(match.homeCountyTeamId),
                 awayName: teamName(match.awayCountyTeamId),
+                homeColours: county(match.homeCountyTeamId)?.colours,
+                awayColours: county(match.awayCountyTeamId)?.colours,
                 groundName: match.groundId.flatMap { groundNameById[$0] },
                 province: match.province,
                 attendeeCount: attendanceCountByMatch[match.id] ?? 0
