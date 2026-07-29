@@ -8,6 +8,18 @@ struct County: Codable, Identifiable, Hashable {
     let primaryColour: String?
     let secondaryColour: String?
     let createdAt: Date?
+
+    var colours: CountyColours? {
+        guard let primaryColour, let secondaryColour else { return nil }
+        return CountyColours(primary: primaryColour, secondary: secondaryColour)
+    }
+}
+
+/// A county's two jersey colours, hex strings straight from the database
+/// (e.g. "#00703C"). Used to wash match banners with each side's colours.
+struct CountyColours: Hashable {
+    let primary: String
+    let secondary: String
 }
 
 struct CountyTeam: Codable, Identifiable, Hashable {

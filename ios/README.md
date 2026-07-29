@@ -72,6 +72,17 @@ confirmation for this project in the Supabase dashboard under
 - **Counties → teams → grounds → roll of honour**, **fixtures/results with
   search**, and a **profile** with stats + achievements — one-to-one with
   the feature set of the web app.
+- **County-colour match banners** — `Views/Components/MatchCardView.swift`
+  washes each side of a fixture/result card with that county's own colours
+  (`counties.primary_colour`/`secondary_colour`): primary colour at that
+  team's edge, fading through the county's secondary colour to fully
+  transparent by the card's midpoint, so the card's own background shows
+  through rather than a hardcoded white — this is what keeps it looking
+  right in dark mode too. `Color(hex:)` (`Utilities/Theme.swift`) parses
+  the stored hex strings; `MatchService.resolveSummaries` resolves each
+  side's `CountyColours` alongside the team name it already looked up.
+  Club fixtures (no county colours tracked) and any county missing colour
+  data just render with no wash.
 - **Fixture/result model matches how the backend actually structures
   matches**: `Models/Match.swift` carries `competitionId`/`season`/`round`/
   `matchDate`/`throwInTime`/`province`/`status`/`winner` rather than a single

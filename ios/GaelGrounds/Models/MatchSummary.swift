@@ -18,6 +18,10 @@ struct MatchSummary: Identifiable, Hashable {
     let status: MatchStatus
     let homeName: String
     let awayName: String
+    /// Nil for club fixtures (no colours tracked for clubs) or if either
+    /// county is missing colour data.
+    let homeColours: CountyColours?
+    let awayColours: CountyColours?
     let groundName: String?
     let province: Province?
     let attendeeCount: Int
