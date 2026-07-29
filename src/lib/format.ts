@@ -1,5 +1,16 @@
 import type { Enums } from './database.types'
 
+export type CountyColours = { primary: string; secondary: string }
+
+/** Converts a "#RRGGBB" hex string to an "r, g, b" triplet for use inside CSS rgba(). */
+export function hexToRgbTriplet(hex: string): string {
+  const clean = hex.replace('#', '')
+  const r = parseInt(clean.slice(0, 2), 16)
+  const g = parseInt(clean.slice(2, 4), 16)
+  const b = parseInt(clean.slice(4, 6), 16)
+  return `${r}, ${g}, ${b}`
+}
+
 export const SPORT_LABELS: Record<Enums<'sport_code'>, string> = {
   gaelic_football: 'Gaelic Football',
   hurling: 'Hurling',

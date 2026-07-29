@@ -274,12 +274,21 @@ main {
 
 .card {
   display: block;
-  background: var(--surface);
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1rem;
   box-shadow: var(--shadow);
   color: var(--text);
+}
+
+/* Per-match county-colour wash, set inline via MatchCard's `style` prop
+   (see sideWash() in components/MatchCard.tsx) -- layers as background-image
+   over .card's background-color, so it fades into --surface at the
+   card's midpoint rather than a hardcoded white, and looks right in dark
+   mode too. */
+.match-card {
+  background-repeat: no-repeat;
 }
 
 /* Match card */
