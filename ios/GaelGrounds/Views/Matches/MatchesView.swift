@@ -8,25 +8,19 @@ struct MatchesView: View {
     @State private var filter: Filter = .all
     @State private var search = ""
     @State private var isLoading = true
+    @State private var isSearching = false
     @State private var realtimeChannel: RealtimeChannelV2?
     @State private var realtimeTask: Task<Void, Never>?
+    @State private var searchTask: Task<Void, Never>?
 
+    /// `matches` is already whatever's relevant to the current search (or
+    /// the recent-first default) -- this just applies the All/Upcoming/
+    /// Results segmented filter on top of that already-loaded set.
     private var filtered: [MatchSummary] {
-        var list = matches
         switch filter {
-        case .all: break
-        case .upcoming: list = list.filter(\.isUpcoming)
-        case .results: list = list.filter(\.hasScore)
-        }
-
-        let q = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !q.isEmpty else { return list }
-        return list.filter { m in
-            m.homeName.lowercased().contains(q)
-                || m.awayName.lowercased().contains(q)
-                || (m.competition ?? "").lowercased().contains(q)
-                || (m.groundName ?? "").lowercased().contains(q)
-                || m.season.map(String.init) == q
+        case .all: return matches
+        case .upcoming: return matches.filter(\.isUpcoming)
+        case .results: return matches.filter(\.hasScore)
         }
     }
 
@@ -39,6 +33,9 @@ struct MatchesView: View {
 
                 TextField("Search by team, competition, ground or year…", text: $search)
                     .textFieldStyle(.roundedBorder)
+                    .onChange(of: search) { newValue in
+                        scheduleSearch(newValue)
+                    }
 
                 Picker("Filter", selection: $filter) {
                     Text("All").tag(Filter.all)
@@ -56,6 +53,9 @@ struct MatchesView: View {
                         ForEach(filtered) { match in
                             MatchCardView(match: match)
                         }
+                        if isSearching {
+                            ProgressView().frame(maxWidth: .infinity)
+                        }
                     }
                 }
             }
@@ -66,20 +66,38 @@ struct MatchesView: View {
             MatchDetailView(matchId: route.id)
         }
         .task {
-            await load()
-            let (channel, task) = RealtimeWatcher.watch(table: "matches") { Task { await load() } }
+            await load(showSpinner: true)
+            let (channel, task) = RealtimeWatcher.watch(table: "matches") { Task { await load(showSpinner: false) } }
             realtimeChannel = channel
             realtimeTask = task
         }
         .onDisappear { RealtimeWatcher.stop(channel: realtimeChannel, task: realtimeTask) }
-        .refreshable { await load() }
+        .refreshable { await load(showSpinner: false) }
     }
 
-    private func load() async {
-        isLoading = true
-        defer { isLoading = false }
+    /// Debounces search-as-you-type so each keystroke doesn't fire its own
+    /// network round trip.
+    private func scheduleSearch(_ query: String) {
+        searchTask?.cancel()
+        searchTask = Task {
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            await load(showSpinner: false)
+        }
+    }
+
+    /// With no search text this loads only the most recent matches (see
+    /// `MatchService.fetchRecent` -- this app's ~8,000-match archive made
+    /// fetching everything on every visit the main reason this screen was
+    /// slow to load). Typing a search runs a dedicated server-side query
+    /// that reaches the full history instead of requiring it all in memory.
+    private func load(showSpinner: Bool) async {
+        if showSpinner { isLoading = true } else { isSearching = true }
+        defer { isLoading = false; isSearching = false }
         do {
-            let rows = try await MatchService.fetchAll()
+            let rows = search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? try await MatchService.fetchRecent()
+                : try await MatchService.search(search)
             matches = try await MatchService.resolveSummaries(rows)
         } catch {
             print("Matches load failed: \(error)")

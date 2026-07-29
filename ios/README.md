@@ -83,6 +83,18 @@ confirmation for this project in the Supabase dashboard under
   side's `CountyColours` alongside the team name it already looked up.
   Club fixtures (no county colours tracked) and any county missing colour
   data just render with no wash.
+- **Bounded, cached match loading** — `MatchesView` used to fetch every row
+  in `matches` (an ~8,000-row archive at this point) on every visit, which
+  was the main reason the Results tab was slow. `MatchService.fetchRecent`
+  now loads only the most recent matches by default; typing a search runs
+  `MatchService.search`, a dedicated server-side query (by competition
+  text, season year, or team/ground name resolved via cached reference
+  data) that still reaches the full history without requiring it all in
+  memory. `counties`/`county_teams`/`grounds` — small, slow-changing
+  tables reused by every `resolveSummaries` call — are now fetched once
+  and cached for the app's lifetime rather than re-fetched on every load;
+  the tradeoff is that a colour/name/ground change made server-side while
+  the app is running won't show up until the app restarts.
 - **Fixture/result model matches how the backend actually structures
   matches**: `Models/Match.swift` carries `competitionId`/`season`/`round`/
   `matchDate`/`throwInTime`/`province`/`status`/`winner` rather than a single
@@ -105,7 +117,9 @@ small fix on first build:
    (`signInWithPassword`, `client.from(_:)`, `client.realtimeV2.channel(_:)`,
    `.postgresChange(AnyAction.self, ...)`, `SupabaseClientOptions(db: .init(decoder:encoder:))`,
    and — new in the ground-photos feature — `client.storage.from(_:).upload(_:data:options:)`
-   and `.getPublicURL(path:)`)
+   and `.getPublicURL(path:)`; and new in `MatchService.search` —
+   `.or(_:)` on the Postgrest filter builder, taking a raw PostgREST
+   filter-syntax string)
    were checked against the current SDK docs/source, but this library has
    renamed things across major versions before. If Xcode flags a signature
    mismatch, check `Sources/Supabase/Types.swift` and `Sources/Auth/AuthClient.swift`

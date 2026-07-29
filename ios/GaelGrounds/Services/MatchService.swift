@@ -5,11 +5,38 @@ import Foundation
 /// plus a live count of check-ins per match. Centralised here since three
 /// different screens (Dashboard, Matches, MatchDetail) all need it.
 enum MatchService {
-    static func fetchAll() async throws -> [Match] {
+    // MARK: - Reference data
+
+    /// counties/county_teams/grounds are small, slow-changing tables (a few
+    /// hundred rows total) reused by every screen's `resolveSummaries` call.
+    /// Cached in-process for the app's lifetime instead of re-fetched on
+    /// every match list load.
+    private static var cachedReferenceData: (counties: [County], teams: [CountyTeam], grounds: [Ground])?
+
+    private static func referenceData() async throws -> (counties: [County], teams: [CountyTeam], grounds: [Ground]) {
+        if let cachedReferenceData { return cachedReferenceData }
+
+        async let countiesTask: [County] = Supa.client.from("counties").select().execute().value
+        async let teamsTask: [CountyTeam] = Supa.client.from("county_teams").select().execute().value
+        async let groundsTask: [Ground] = Supa.client.from("grounds").select().execute().value
+        let data = (counties: try await countiesTask, teams: try await teamsTask, grounds: try await groundsTask)
+        cachedReferenceData = data
+        return data
+    }
+
+    // MARK: - Match queries
+
+    /// Most recent matches first (upcoming fixtures sort ahead of everything
+    /// since their dates are in the future), bounded so this stays fast as
+    /// the historical archive grows -- this app has ~8,000 seeded results,
+    /// and fetching all of them on every tab visit is what made the Matches
+    /// screen slow to load. Use `search(_:)` to reach further back.
+    static func fetchRecent(limit: Int = 150) async throws -> [Match] {
         try await Supa.client
             .from("matches")
             .select()
             .order("match_date", ascending: false, nullsFirst: false)
+            .limit(limit)
             .execute()
             .value
     }
@@ -27,27 +54,60 @@ enum MatchService {
             .value
     }
 
+    /// Server-side search across the *full* historical archive (not just
+    /// the `fetchRecent` window) by competition text, season year, team
+    /// name, or ground name -- team/ground name matching resolves against
+    /// the cached reference data first, since `matches` only stores team
+    /// and ground IDs.
+    static func search(_ query: String, limit: Int = 200) async throws -> [Match] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return try await fetchRecent() }
+
+        // Strip characters that are structurally significant in PostgREST's
+        // `or=(...)` filter syntax so a stray comma/paren can't malform the
+        // query -- ordinary punctuation like hyphens/apostrophes is fine.
+        let term = trimmed.filter { !",()*".contains($0) }
+        guard !term.isEmpty else { return try await fetchRecent() }
+
+        let (counties, teams, grounds) = try await referenceData()
+        let matchingCountyIds = Set(counties.filter { $0.name.localizedCaseInsensitiveContains(term) }.map(\.id))
+        let matchingTeamIds = teams.filter { matchingCountyIds.contains($0.countyId) }.map(\.id)
+        let matchingGroundIds = grounds.filter { $0.name.localizedCaseInsensitiveContains(term) }.map(\.id)
+
+        var orClauses = ["competition.ilike.*\(term)*"]
+        if let year = Int(term) {
+            orClauses.append("season.eq.\(year)")
+        }
+        if !matchingTeamIds.isEmpty {
+            let idList = matchingTeamIds.map(\.uuidString).joined(separator: ",")
+            orClauses.append("home_county_team_id.in.(\(idList))")
+            orClauses.append("away_county_team_id.in.(\(idList))")
+        }
+        if !matchingGroundIds.isEmpty {
+            let idList = matchingGroundIds.map(\.uuidString).joined(separator: ",")
+            orClauses.append("ground_id.in.(\(idList))")
+        }
+
+        return try await Supa.client
+            .from("matches")
+            .select()
+            .or(orClauses.joined(separator: ","))
+            .order("match_date", ascending: false, nullsFirst: false)
+            .limit(limit)
+            .execute()
+            .value
+    }
+
+    // MARK: - Summary resolution
+
     static func resolveSummaries(_ matches: [Match]) async throws -> [MatchSummary] {
         guard !matches.isEmpty else { return [] }
 
-        let teamIds = Array(Set(matches.compactMap { $0.homeCountyTeamId } + matches.compactMap { $0.awayCountyTeamId }))
-        let groundIds = Array(Set(matches.compactMap(\.groundId)))
+        let (counties, teams, grounds) = try await referenceData()
         let matchIds = matches.map(\.id)
 
-        async let teamsTask: [CountyTeam] = teamIds.isEmpty ? [] : Supa.client
-            .from("county_teams").select().in("id", values: teamIds).execute().value
-        async let groundsTask: [Ground] = groundIds.isEmpty ? [] : Supa.client
-            .from("grounds").select().in("id", values: groundIds).execute().value
-        async let attendanceTask: [UserMatchAttendance] = Supa.client
+        let attendance: [UserMatchAttendance] = try await Supa.client
             .from("user_match_attendance").select().in("match_id", values: matchIds).execute().value
-
-        let teams = try await teamsTask
-        let grounds = try await groundsTask
-        let attendance = try await attendanceTask
-
-        let countyIds = Array(Set(teams.map(\.countyId)))
-        let counties: [County] = countyIds.isEmpty ? [] : try await Supa.client
-            .from("counties").select().in("id", values: countyIds).execute().value
 
         let countyById = Dictionary(uniqueKeysWithValues: counties.map { ($0.id, $0) })
         let teamById = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
