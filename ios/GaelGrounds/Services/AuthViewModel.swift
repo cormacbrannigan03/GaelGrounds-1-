@@ -1,48 +1,53 @@
+import Combine
 import Foundation
 import Supabase
 
 @MainActor
 final class AuthViewModel: ObservableObject {
     @Published var session: Session?
-    @Published var isLoading = true
 
     var userId: UUID? { session?.user.id }
     var userEmail: String? { session?.user.email }
     var isSignedIn: Bool { session != nil }
 
-    private var authTask: Task<Void, Never>?
-
     init() {
-        authTask = Task { [weak self] in
-            guard let self else { return }
-            for await (_, newSession) in Supa.client.auth.authStateChanges {
-                self.session = newSession
-                self.isLoading = false
-            }
-        }
+        session = Supa.client.auth.currentSession
     }
 
-    deinit {
-        authTask?.cancel()
+    func startObserving() async {
+        for await (_, newSession) in Supa.client.auth.authStateChanges {
+            session = newSession
+        }
     }
 
     func signIn(email: String, password: String) async -> String? {
         do {
-            _ = try await Supa.client.auth.signInWithPassword(email: email, password: password)
+            _ = try await Supa.client.auth.signIn(email: email, password: password)
             return nil
         } catch {
             return error.localizedDescription
         }
     }
 
-    func signUp(email: String, password: String, displayName: String) async -> String? {
+    func signUp(
+        email: String,
+        password: String,
+        displayName: String,
+        supportedCountyId: UUID
+    ) async -> String? {
         do {
             let response = try await Supa.client.auth.signUp(email: email, password: password)
             let userId = response.user.id
             let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
             try await Supa.client
                 .from("user_profiles")
-                .insert(UserProfileInsert(id: userId, displayName: name.isEmpty ? nil : name))
+                .insert(
+                    UserProfileInsert(
+                        id: userId,
+                        displayName: name.isEmpty ? nil : name,
+                        supportedCountyId: supportedCountyId
+                    )
+                )
                 .execute()
             return nil
         } catch {

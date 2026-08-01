@@ -4,16 +4,22 @@ struct UserProfile: Codable, Identifiable, Hashable {
     let id: UUID
     var displayName: String?
     var avatarUrl: String?
+    var supportedCountyId: UUID?
     let createdAt: Date?
 }
 
 struct UserProfileInsert: Encodable {
     let id: UUID
     let displayName: String?
+    let supportedCountyId: UUID
 }
 
 struct UserProfileUpdate: Encodable {
     let displayName: String
+}
+
+struct SupportedCountyUpdate: Encodable {
+    let supportedCountyId: UUID
 }
 
 struct UserVisit: Codable, Identifiable, Hashable {
@@ -30,11 +36,6 @@ struct UserVisitInsert: Encodable {
     let groundId: UUID
     let userId: UUID
     let notes: String?
-    let photoUrls: [String] = []
-}
-
-struct UserVisitPhotoUpdate: Encodable {
-    let photoUrls: [String]
 }
 
 struct UserMatchAttendance: Codable, Identifiable, Hashable {
@@ -76,4 +77,21 @@ struct UserAchievement: Codable, Identifiable, Hashable {
 struct UserAchievementInsert: Encodable {
     let achievementId: UUID
     let userId: UUID
+}
+
+struct Friendship: Codable, Identifiable {
+    let id: UUID
+    let requesterId: UUID
+    let addresseeId: UUID
+    let status: String
+    let createdAt: Date?
+}
+
+struct FriendshipInsert: Encodable {
+    let requesterId: UUID
+    let addresseeId: UUID
+}
+
+struct FriendshipStatusUpdate: Encodable {
+    let status: String
 }
