@@ -193,6 +193,36 @@ enum MatchService {
             .eq("id", value: id)
             .execute()
     }
+
+    // MARK: - Free-tier limits
+
+    private static let freeMatchLimit = 10
+    static let freeHistoryCutoff = ISO8601DateFormatter().date(from: "2019-01-01T00:00:00Z")!
+
+    /// Combined count of official check-ins + personal matches for one
+    /// user, via the `total_match_count` Postgres function — the same
+    /// count the free-tier RLS policies enforce server-side
+    /// (supabase/migrations/20260801023511_free_tier_match_limits.sql).
+    static func matchCount(userId: UUID) async throws -> Int {
+        struct Params: Encodable { let pUserId: UUID }
+        return try await Supa.client
+            .rpc("total_match_count", params: Params(pUserId: userId))
+            .execute()
+            .value
+    }
+
+    /// Client-side mirror of the RLS free-tier check, so the UI can show a
+    /// paywall proactively instead of only after a failed insert. The RLS
+    /// policies remain the real enforcement regardless of what this returns.
+    static func canLogAnotherMatch(userId: UUID, isPremium: Bool) async -> Bool {
+        guard !isPremium else { return true }
+        let count = (try? await matchCount(userId: userId)) ?? freeMatchLimit
+        return count < freeMatchLimit
+    }
+
+    static func isDateAllowedForFreeTier(_ date: Date) -> Bool {
+        date >= freeHistoryCutoff
+    }
 }
 
 private extension Array {

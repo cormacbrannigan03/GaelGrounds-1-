@@ -24,7 +24,9 @@ private struct AchievementRow: Identifiable {
 
 struct ProfileView: View {
     @EnvironmentObject private var auth: AuthViewModel
+    @EnvironmentObject private var premium: PremiumStore
 
+    @State private var showingPaywall = false
     @State private var displayName = ""
     @State private var savedName = ""
     @State private var grounds: [VisitedGroundRow] = []
@@ -92,6 +94,29 @@ struct ProfileView: View {
                         Label("Friends", systemImage: "person.2.fill")
                             .font(.subheadline.bold())
                         Spacer()
+                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    }
+                    .padding()
+                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
+
+                Button { showingPaywall = true } label: {
+                    HStack {
+                        Label(
+                            premium.isPremium ? "Premium" : "Go Premium",
+                            systemImage: premium.isPremium ? "checkmark.seal.fill" : "star.fill"
+                        )
+                        .font(.subheadline.bold())
+                        .foregroundStyle(premium.isPremium ? .brandGold : .primary)
+                        Spacer()
+                        if premium.isPremium, let expiresAt = premium.premiumExpiresAt {
+                            Text("Renews \(Formatting.shortDate(expiresAt))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else if !premium.isPremium {
+                            Text("€1.99/mo").font(.caption).foregroundStyle(.secondary)
+                        }
                         Image(systemName: "chevron.right").foregroundStyle(.secondary)
                     }
                     .padding()
@@ -171,6 +196,9 @@ struct ProfileView: View {
         .task { await load() }
         .refreshable { await load() }
         .gaelGroundsBackground()
+        .sheet(isPresented: $showingPaywall) {
+            PremiumPaywallView()
+        }
     }
 
     @ViewBuilder

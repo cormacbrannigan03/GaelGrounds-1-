@@ -18,7 +18,7 @@ struct MatchDetailView: View {
                         ProgressView().frame(maxWidth: .infinity)
                     } else if let summary {
                         header(for: summary)
-                        CheckInPanel(matchId: summary.id, isPast: summary.isPast)
+                        CheckInPanel(matchId: summary.id, matchPlayedAt: summary.playedAt, isPast: summary.isPast)
                     } else {
                         Text("Match not found.").foregroundStyle(.secondary)
                     }

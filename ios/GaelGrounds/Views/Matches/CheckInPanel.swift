@@ -9,9 +9,11 @@ private struct Attendee: Identifiable, Hashable {
 
 struct CheckInPanel: View {
     let matchId: UUID
+    let matchPlayedAt: Date?
     let isPast: Bool
 
     @EnvironmentObject private var auth: AuthViewModel
+    @EnvironmentObject private var premium: PremiumStore
 
     @State private var attendees: [Attendee] = []
     @State private var myAttendanceId: UUID?
@@ -20,6 +22,8 @@ struct CheckInPanel: View {
     @State private var unlockedTitles: [String]?
     @State private var realtimeTask: Task<Void, Never>?
     @State private var channel: RealtimeChannelV2?
+    @State private var showingPaywall = false
+    @State private var paywallReason: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -73,6 +77,9 @@ struct CheckInPanel: View {
         .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
         .task { await start() }
         .onDisappear { stop() }
+        .sheet(isPresented: $showingPaywall) {
+            PremiumPaywallView(reason: paywallReason)
+        }
     }
 
     @ViewBuilder
@@ -154,8 +161,22 @@ struct CheckInPanel: View {
 
     private func checkIn() async {
         guard let userId = auth.userId else { return }
+
+        if let matchPlayedAt, !premium.isPremium, !MatchService.isDateAllowedForFreeTier(matchPlayedAt) {
+            paywallReason = "Matches before 2019 require Premium."
+            showingPaywall = true
+            return
+        }
+
         isBusy = true
         defer { isBusy = false }
+
+        guard await MatchService.canLogAnotherMatch(userId: userId, isPremium: premium.isPremium) else {
+            paywallReason = "You've reached the 10-match free limit. Upgrade to log more."
+            showingPaywall = true
+            return
+        }
+
         do {
             try await Supa.client
                 .from("user_match_attendance")

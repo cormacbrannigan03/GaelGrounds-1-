@@ -3,6 +3,7 @@ import SwiftUI
 struct AddMatchView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var auth: AuthViewModel
+    @EnvironmentObject private var premium: PremiumStore
 
     @State private var homeTeam = ""
     @State private var awayTeam = ""
@@ -14,12 +15,18 @@ struct AddMatchView: View {
     @State private var awayScore = ""
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var showingPaywall = false
+    @State private var paywallReason: String?
 
     var onSaved: (() -> Void)?
 
     private var canSave: Bool {
         !homeTeam.trimmingCharacters(in: .whitespaces).isEmpty &&
         !awayTeam.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private var minimumDate: Date {
+        premium.isPremium ? .distantPast : MatchService.freeHistoryCutoff
     }
 
     var body: some View {
@@ -32,12 +39,23 @@ struct AddMatchView: View {
                         .autocorrectionDisabled()
                 }
 
-                Section("Match details") {
+                Section {
                     TextField("Competition (e.g. All-Ireland SFC)", text: $competition)
                     TextField("Round (e.g. Quarter-Final)", text: $round)
                     TextField("Venue", text: $venue)
                         .autocorrectionDisabled()
-                    DatePicker("Date & time", selection: $date, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker(
+                        "Date & time",
+                        selection: $date,
+                        in: minimumDate...,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                } header: {
+                    Text("Match details")
+                } footer: {
+                    if !premium.isPremium {
+                        Text("Free accounts can log matches from 2019 onward. Premium unlocks any year.")
+                    }
                 }
 
                 Section {
@@ -101,6 +119,9 @@ struct AddMatchView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingPaywall) {
+            PremiumPaywallView(reason: paywallReason)
+        }
     }
 
     private func save() async {
@@ -108,8 +129,21 @@ struct AddMatchView: View {
             errorMessage = "You must be signed in to add a match."
             return
         }
+
+        if !premium.isPremium, !MatchService.isDateAllowedForFreeTier(date) {
+            paywallReason = "Matches before 2019 require Premium."
+            showingPaywall = true
+            return
+        }
+
         isSaving = true
         defer { isSaving = false }
+
+        guard await MatchService.canLogAnotherMatch(userId: userId, isPremium: premium.isPremium) else {
+            paywallReason = "You've reached the 10-match free limit. Upgrade to log more."
+            showingPaywall = true
+            return
+        }
 
         let hs = homeScore.trimmingCharacters(in: .whitespaces)
         let as_ = awayScore.trimmingCharacters(in: .whitespaces)

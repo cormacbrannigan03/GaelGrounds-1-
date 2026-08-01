@@ -1,0 +1,42 @@
+{
+  "identifier" : "F8B2EDEB-61AE-4CEF-8499-787C5E6CDCD7",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_locale" : "en_IE"
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "9932A819-D3EB-42FD-80E5-C1E3831A7504",
+      "localizations" : [],
+      "name" : "Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "1.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "DBCB4D95-DBDA-43A5-9803-5259B39AE6B2",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited match logging, friend requests, matches from any year, and leaderboard visibility.",
+              "displayName" : "GaelGrounds Premium",
+              "locale" : "en_IE"
+            }
+          ],
+          "productID" : "com.gaelgrounds.premium.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Premium Monthly",
+          "subscriptionGroupID" : "9932A819-D3EB-42FD-80E5-C1E3831A7504",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

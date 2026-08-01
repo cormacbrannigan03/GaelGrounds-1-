@@ -5,7 +5,14 @@ struct UserProfile: Codable, Identifiable, Hashable {
     var displayName: String?
     var avatarUrl: String?
     var supportedCountyId: UUID?
+    var isPremium: Bool = false
+    var premiumExpiresAt: Date?
     let createdAt: Date?
+}
+
+struct UserProfilePremiumUpdate: Encodable {
+    let isPremium: Bool
+    let premiumExpiresAt: Date?
 }
 
 struct UserProfileInsert: Encodable {

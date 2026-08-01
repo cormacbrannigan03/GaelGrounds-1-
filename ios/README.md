@@ -105,6 +105,40 @@ confirmation for this project in the Supabase dashboard under
 - The Supabase URL and anon key are hardcoded in `Config/SupabaseConfig.swift`
   (same reasoning as the web app: the anon key is safe client-side, every
   table is behind Row Level Security).
+- **Premium subscription (€1.99/mo)** — `Services/PremiumStore.swift` drives
+  a single StoreKit 2 auto-renewable subscription (`com.gaelgrounds.premium.monthly`)
+  and syncs the result onto the signed-in user's `user_profiles.is_premium`/
+  `premium_expires_at`. Verification is **client-side only**: StoreKit 2 does
+  real on-device cryptographic verification of each transaction, but there's
+  no backend receipt check, so a technically sophisticated free user could in
+  principle call the Supabase API directly and set their own `is_premium` to
+  `true` without ever paying. That's a deliberately accepted tradeoff for
+  this pass — everything the flag actually gates is still enforced
+  server-side regardless of how `is_premium` got set:
+  - The combined 10-match free-tier cap (official check-ins +
+    `user_personal_matches`, via `public.total_match_count()`) and the
+    pre-2019 logging cutoff are restrictive Postgres RLS policies
+    (`supabase/migrations/20260801023511_free_tier_match_limits.sql`) —
+    not just a client-side check.
+  - Sending a friend request requires `is_premium = true`, enforced by the
+    `friendships` table's insert policy
+    (`supabase/migrations/20260801023442_create_friendships_table.sql`).
+  - The leaderboard (`Views/Leaderboard/LeaderboardView.swift`) only ranks
+    premium profiles — a client-side filter, since it's a display concern,
+    not a data-access one (the underlying `user_profiles` rows stay
+    publicly readable, same as before, since check-in attendee lists and
+    friend search both still need to read any user's display name).
+
+  Two things need doing manually before this works, same spirit as the
+  Xcode project itself not being checked in:
+  1. Create the `com.gaelgrounds.premium.monthly` auto-renewable
+     subscription product in App Store Connect (Monetization →
+     Subscriptions), priced at €1.99/month.
+  2. In Xcode: **Signing & Capabilities → + Capability → In-App Purchase**
+     on the `GaelGrounds` target. For local testing without a live App
+     Store Connect product, add `ios/GaelGrounds.storekit` (already in this
+     repo, matching the real product ID/price) to the scheme's
+     **Run → Options → StoreKit Configuration**.
 
 ## Honest caveats
 
@@ -117,9 +151,11 @@ small fix on first build:
    (`signInWithPassword`, `client.from(_:)`, `client.realtimeV2.channel(_:)`,
    `.postgresChange(AnyAction.self, ...)`, `SupabaseClientOptions(db: .init(decoder:encoder:))`,
    and — new in the ground-photos feature — `client.storage.from(_:).upload(_:data:options:)`
-   and `.getPublicURL(path:)`; and new in `MatchService.search` —
-   `.or(_:)` on the Postgrest filter builder, taking a raw PostgREST
-   filter-syntax string)
+   and `.getPublicURL(path:)`; and new in the premium/friends work —
+   `client.rpc(_:params:)` (`MatchService.matchCount`, calling the
+   `total_match_count` Postgres function) and `.ilike(_:value:)`/
+   `.neq(_:value:)`/`.or(_:)` on the Postgrest filter builder
+   (`FriendService.searchUsers`))
    were checked against the current SDK docs/source, but this library has
    renamed things across major versions before. If Xcode flags a signature
    mismatch, check `Sources/Supabase/Types.swift` and `Sources/Auth/AuthClient.swift`
@@ -127,6 +163,13 @@ small fix on first build:
 2. **Date decoding.** `Services/SupabaseManager.swift` tries ISO 8601 with
    and without fractional seconds. If a decode ever fails, it's almost
    always this.
+3. **StoreKit 2** (`Services/PremiumStore.swift`) is Apple's own framework,
+   not a third-party dependency, so the risk of an API mismatch is much
+   lower — but it's still unverified against a real compiler. The pattern
+   used (`Product.products(for:)`, `product.purchase()`,
+   `Transaction.currentEntitlements`/`Transaction.updates` as
+   `AsyncSequence`s of `VerificationResult<Transaction>`, `AppStore.sync()`
+   for restore) matches Apple's documented StoreKit 2 API as of iOS 16+.
 
 Everything else — the data model, the RLS-respecting query shapes, the
 achievement/check-in logic — mirrors the web app's already-tested behavior
