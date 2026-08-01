@@ -3,14 +3,24 @@ import SwiftUI
 struct MatchCardView: View {
     let match: MatchSummary
 
+    private var homeColors: (Color, Color) { CountyPalette.colours(for: match.homeName) }
+    private var awayColors: (Color, Color) { CountyPalette.colours(for: match.awayName) }
+
     var body: some View {
-        NavigationLink(value: MatchRoute(id: match.id)) {
+        NavigationLink(value: MatchRoute(id: match.id, isFinal: match.isFinal, winnerName: match.winnerName)) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text(match.competition ?? "Gaelic Games")
-                        .font(.caption.bold())
-                        .foregroundStyle(.brandGold)
-                        .textCase(.uppercase)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(match.competition ?? "Gaelic Games")
+                            .font(.caption.bold())
+                            .foregroundStyle(.brandGold)
+                            .textCase(.uppercase)
+                        if let round = match.round {
+                            Text(round)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     Spacer()
                     if match.isLive {
                         Text("● LIVE")
@@ -40,7 +50,7 @@ struct MatchCardView: View {
                 }
 
                 HStack(spacing: 6) {
-                    Text(Formatting.matchDate(match.playedAt))
+                    Text(match.playedAt.map(Formatting.matchDate) ?? "Date unavailable")
                     if let groundName = match.groundName {
                         Text("· \(groundName)")
                     }
@@ -57,7 +67,32 @@ struct MatchCardView: View {
                 .foregroundStyle(.secondary)
             }
             .padding()
-            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+            .background {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(.secondarySystemBackground))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(
+                                LinearGradient(
+                                    stops: [
+                                        .init(color: homeColors.0.opacity(0.55), location: 0.0),
+                                        .init(color: homeColors.1.opacity(0.30), location: 0.22),
+                                        .init(color: .clear,                     location: 0.45),
+                                        .init(color: .clear,                     location: 0.55),
+                                        .init(color: awayColors.1.opacity(0.30), location: 0.78),
+                                        .init(color: awayColors.0.opacity(0.55), location: 1.0),
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.brandBorder, lineWidth: 1)
+                    }
+                    .shadow(color: Color.brandGreen.opacity(0.07), radius: 7, y: 3)
+            }
         }
         .buttonStyle(.plain)
     }

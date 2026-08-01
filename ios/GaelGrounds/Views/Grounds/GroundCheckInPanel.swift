@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 import Supabase
 
 private struct Visitor: Identifiable, Hashable {
@@ -9,24 +10,12 @@ private struct Visitor: Identifiable, Hashable {
     let notes: String?
 }
 
-private struct VisitUserRef: Decodable {
-    let userId: UUID
-}
-
-private struct LeaderboardEntry: Identifiable {
-    let id: UUID
-    let name: String?
-    let count: Int
-    let isMe: Bool
-}
-
 struct GroundCheckInPanel: View {
     let groundId: UUID
 
     @EnvironmentObject private var auth: AuthViewModel
 
     @State private var visitors: [Visitor] = []
-    @State private var leaderboard: [LeaderboardEntry] = []
     @State private var myVisitId: UUID?
     @State private var notes = ""
     @State private var isLoading = true
@@ -34,6 +23,12 @@ struct GroundCheckInPanel: View {
     @State private var unlockedTitles: [String]?
     @State private var realtimeTask: Task<Void, Never>?
     @State private var channel: RealtimeChannelV2?
+
+    @State private var photoURLs: [String] = []
+    @State private var myPhotoURLs: [String] = []
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var isUploadingPhoto = false
+    @State private var photoError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -64,6 +59,57 @@ struct GroundCheckInPanel: View {
                         .tint(.brandGreen)
                         .controlSize(.large)
                         .disabled(isBusy)
+                    }
+                }
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Photos").font(.headline)
+                        Text("Shared by fans who've been here").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if auth.isSignedIn {
+                        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                            Label("Add photo", systemImage: "camera")
+                                .font(.subheadline)
+                        }
+                        .disabled(isUploadingPhoto)
+                    }
+                }
+
+                if isUploadingPhoto {
+                    ProgressView("Uploading…")
+                }
+
+                if let photoError {
+                    Text(photoError).font(.caption).foregroundStyle(.red)
+                }
+
+                if photoURLs.isEmpty {
+                    Text("No photos yet — be the first to add one!").foregroundStyle(.secondary)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(photoURLs, id: \.self) { urlString in
+                                AsyncImage(url: URL(string: urlString)) { phase in
+                                    switch phase {
+                                    case .success(let image):
+                                        image.resizable().scaledToFill()
+                                    case .failure:
+                                        Color.gray.opacity(0.2)
+                                    default:
+                                        ProgressView()
+                                    }
+                                }
+                                .frame(width: 120, height: 90)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .clipped()
+                            }
+                        }
                     }
                 }
             }
@@ -110,46 +156,26 @@ struct GroundCheckInPanel: View {
                     }
                 }
             }
-
-            if !leaderboard.isEmpty {
-                Divider()
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Leaderboard").font(.headline)
-                    Text("Most check-ins at this ground").font(.caption).foregroundStyle(.secondary)
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(Array(leaderboard.prefix(10).enumerated()), id: \.element.id) { index, entry in
-                        HStack(spacing: 10) {
-                            Text("#\(index + 1)")
-                                .font(.caption.bold())
-                                .foregroundStyle(index == 0 ? Color.brandGold : index == 1 ? Color(red: 0.75, green: 0.75, blue: 0.75) : index == 2 ? Color(red: 0.80, green: 0.50, blue: 0.20) : Color.secondary)
-                                .frame(width: 28, alignment: .leading)
-                            Text(entry.name ?? "A fan")
-                                .font(.subheadline)
-                                .fontWeight(entry.isMe ? .bold : .regular)
-                            if entry.isMe {
-                                Text("YOU").font(.caption2.bold()).foregroundStyle(.brandGold)
-                            }
-                            Spacer()
-                            Text("\(entry.count) visit\(entry.count == 1 ? "" : "s")")
-                                .font(.caption.bold())
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, 4)
-                        if index < leaderboard.prefix(10).count - 1 {
-                            Divider().padding(.leading, 38)
-                        }
-                    }
-                }
-            }
         }
         .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+        .gaelCard(cornerRadius: 14)
         .task { await start() }
         .onDisappear { stop() }
+        .onChange(of: selectedPhotoItem) { newItem in
+            guard let newItem else { return }
+            Task { await addPhoto(from: newItem) }
+        }
     }
 
     private func start() async {
+        guard auth.isSignedIn else {
+            visitors = []
+            myVisitId = nil
+            photoURLs = []
+            myPhotoURLs = []
+            isLoading = false
+            return
+        }
         await loadVisitors()
         isLoading = false
         subscribeToRealtime()
@@ -166,17 +192,12 @@ struct GroundCheckInPanel: View {
             AnyAction.self,
             schema: "public",
             table: "user_visits",
-            filter: .eq("ground_id", value: groundId)
+            filter: "ground_id=eq.\(groundId.uuidString)"
         )
         channel = ch
 
         realtimeTask = Task {
-            do {
-                try await ch.subscribeWithError()
-            } catch {
-                print("realtime subscribe failed: \(error)")
-                return
-            }
+            await ch.subscribe()
             for await _ in changes {
                 await loadVisitors()
             }
@@ -203,27 +224,44 @@ struct GroundCheckInPanel: View {
                 Visitor(id: $0.id, userId: $0.userId, displayName: nameById[$0.userId] ?? nil, visitedAt: $0.visitedAt, notes: $0.notes)
             }
             myVisitId = rows.first { $0.userId == auth.userId }?.id
-
-            let allRefs: [VisitUserRef] = try await Supa.client
-                .from("user_visits")
-                .select("user_id")
-                .eq("ground_id", value: groundId)
-                .execute()
-                .value
-
-            var counts: [UUID: Int] = [:]
-            for ref in allRefs { counts[ref.userId, default: 0] += 1 }
-
-            let leaderboardUserIds = Array(counts.keys)
-            let leaderboardProfiles: [UserProfile] = leaderboardUserIds.isEmpty ? [] : try await Supa.client
-                .from("user_profiles").select().in("id", values: leaderboardUserIds).execute().value
-            let leaderboardNames = Dictionary(uniqueKeysWithValues: leaderboardProfiles.map { ($0.id, $0.displayName) })
-
-            leaderboard = counts
-                .map { LeaderboardEntry(id: $0.key, name: leaderboardNames[$0.key] ?? nil, count: $0.value, isMe: $0.key == auth.userId) }
-                .sorted { $0.count > $1.count }
+            myPhotoURLs = rows.first { $0.userId == auth.userId }?.photoUrls ?? []
+            photoURLs = rows.flatMap(\.photoUrls)
         } catch {
             print("loadVisitors failed: \(error)")
+        }
+    }
+
+    private func addPhoto(from item: PhotosPickerItem) async {
+        guard let userId = auth.userId else { return }
+        isUploadingPhoto = true
+        photoError = nil
+        defer {
+            isUploadingPhoto = false
+            selectedPhotoItem = nil
+        }
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
+                photoError = "Couldn't load that photo — try another."
+                return
+            }
+            let url = try await GroundPhotoService.upload(rawImageData: data, userId: userId, groundId: groundId)
+
+            if let myVisitId {
+                try await Supa.client
+                    .from("user_visits")
+                    .update(UserVisitPhotoUpdate(photoUrls: myPhotoURLs + [url]))
+                    .eq("id", value: myVisitId)
+                    .execute()
+            } else {
+                try await Supa.client
+                    .from("user_visits")
+                    .insert(UserVisitInsert(groundId: groundId, userId: userId, notes: nil, photoUrls: [url]))
+                    .execute()
+            }
+            await loadVisitors()
+        } catch {
+            photoError = "Upload failed — please try again."
+            print("addPhoto failed: \(error)")
         }
     }
 
@@ -238,8 +276,8 @@ struct GroundCheckInPanel: View {
                 .insert(UserVisitInsert(groundId: groundId, userId: userId, notes: trimmed.isEmpty ? nil : trimmed))
                 .execute()
             notes = ""
-            let newTitles = await AchievementsService.evaluate(userId: userId)
-            if !newTitles.isEmpty { unlockedTitles = newTitles }
+            let evaluation = await AchievementsService.evaluate(userId: userId)
+            if !evaluation.unlocks.isEmpty { unlockedTitles = evaluation.unlocks.map(\.title) }
         } catch {
             print("checkIn failed: \(error)")
         }

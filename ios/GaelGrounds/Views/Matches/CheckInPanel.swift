@@ -4,22 +4,32 @@ import Supabase
 private struct Attendee: Identifiable, Hashable {
     let id: UUID
     let userId: UUID
-    var displayName: String?
+    let displayName: String?
+}
+
+private struct AchievementUnlockBatch: Identifiable {
+    let id = UUID()
+    let achievements: [AchievementUnlock]
+    let progress: AchievementProgress?
 }
 
 struct CheckInPanel: View {
     let matchId: UUID
+    let matchPlayedAt: Date?
     let isPast: Bool
 
     @EnvironmentObject private var auth: AuthViewModel
+    @EnvironmentObject private var premium: PremiumStore
 
     @State private var attendees: [Attendee] = []
     @State private var myAttendanceId: UUID?
     @State private var isLoading = true
     @State private var isBusy = false
-    @State private var unlockedTitles: [String]?
+    @State private var achievementPopup: AchievementUnlockBatch?
     @State private var realtimeTask: Task<Void, Never>?
     @State private var channel: RealtimeChannelV2?
+    @State private var showingPaywall = false
+    @State private var paywallReason: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -34,20 +44,6 @@ struct CheckInPanel: View {
                 if auth.isSignedIn {
                     checkInButton
                 }
-            }
-
-            if let unlockedTitles {
-                Button {
-                    self.unlockedTitles = nil
-                } label: {
-                    Text("🏆 Achievement unlocked: \(unlockedTitles.joined(separator: ", "))")
-                        .font(.footnote.bold())
-                        .padding(10)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.brandGold.opacity(0.85), in: RoundedRectangle(cornerRadius: 10))
-                        .foregroundStyle(.black)
-                }
-                .buttonStyle(.plain)
             }
 
             if isLoading {
@@ -70,9 +66,17 @@ struct CheckInPanel: View {
             }
         }
         .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+        .gaelCard(cornerRadius: 14)
         .task { await start() }
         .onDisappear { stop() }
+        .sheet(isPresented: $showingPaywall) {
+            PremiumPaywallView(reason: paywallReason)
+        }
+        .sheet(item: $achievementPopup) { batch in
+            AchievementUnlockedView(achievements: batch.achievements, progress: batch.progress)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     @ViewBuilder
@@ -98,6 +102,12 @@ struct CheckInPanel: View {
     }
 
     private func start() async {
+        guard auth.isSignedIn else {
+            attendees = []
+            myAttendanceId = nil
+            isLoading = false
+            return
+        }
         await loadAttendees()
         isLoading = false
         subscribeToRealtime()
@@ -114,17 +124,12 @@ struct CheckInPanel: View {
             AnyAction.self,
             schema: "public",
             table: "user_match_attendance",
-            filter: .eq("match_id", value: matchId)
+            filter: "match_id=eq.\(matchId.uuidString)"
         )
         channel = ch
 
         realtimeTask = Task {
-            do {
-                try await ch.subscribeWithError()
-            } catch {
-                print("realtime subscribe failed: \(error)")
-                return
-            }
+            await ch.subscribe()
             for await _ in changes {
                 await loadAttendees()
             }
@@ -159,15 +164,37 @@ struct CheckInPanel: View {
 
     private func checkIn() async {
         guard let userId = auth.userId else { return }
+
+        if let matchPlayedAt, !premium.isPremium, !MatchService.isDateAllowedForFreeTier(matchPlayedAt) {
+            paywallReason = "Matches before 2019 require Premium."
+            showingPaywall = true
+            return
+        }
+
         isBusy = true
         defer { isBusy = false }
+
+        guard await MatchService.canLogAnotherMatch(userId: userId, isPremium: premium.isPremium) else {
+            paywallReason = "You've reached the 10-match free limit. Upgrade to log more."
+            showingPaywall = true
+            return
+        }
+
         do {
             try await Supa.client
                 .from("user_match_attendance")
                 .insert(UserMatchAttendanceInsert(matchId: matchId, userId: userId))
                 .execute()
-            let newTitles = await AchievementsService.evaluate(userId: userId)
-            if !newTitles.isEmpty { unlockedTitles = newTitles }
+            let evaluation = await AchievementsService.evaluate(
+                userId: userId,
+                checkedInMatchId: matchId
+            )
+            if !evaluation.unlocks.isEmpty || evaluation.progress != nil {
+                achievementPopup = AchievementUnlockBatch(
+                    achievements: evaluation.unlocks,
+                    progress: evaluation.progress
+                )
+            }
         } catch {
             print("checkIn failed: \(error)")
         }
@@ -180,6 +207,77 @@ struct CheckInPanel: View {
             try await Supa.client.from("user_match_attendance").delete().eq("id", value: attendanceId).execute()
         } catch {
             print("checkOut failed: \(error)")
+        }
+    }
+}
+
+private struct AchievementUnlockedView: View {
+    let achievements: [AchievementUnlock]
+    let progress: AchievementProgress?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Text(achievements.isEmpty ? "Good work!" : "Congratulations!")
+                .font(.largeTitle.bold())
+            if !achievements.isEmpty {
+                Text(achievements.count == 1 ? "You've unlocked an achievement" : "You've unlocked new achievements")
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(spacing: 12) {
+                ForEach(achievements) { achievement in
+                    HStack(spacing: 14) {
+                        Image(systemName: achievement.icon ?? "trophy.fill")
+                            .font(.title2)
+                            .foregroundStyle(tierColour(achievement.tier))
+                            .frame(width: 42, height: 42)
+                            .background(Color.brandGreen, in: Circle())
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(achievement.title).font(.headline)
+                            Text(achievement.description)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                }
+            }
+
+            if let progress {
+                VStack(spacing: 8) {
+                    HStack {
+                        Label(progress.title, systemImage: progress.icon ?? "trophy.fill")
+                            .font(.headline)
+                        Spacer()
+                        Text("\(progress.homeGameCount) home games")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                    }
+                    ProgressView(value: Double(min(progress.homeGameCount, 50)), total: 50)
+                        .tint(tierColour(progress.tier))
+                    Text(progress.message)
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding()
+                .gaelInsetCard(cornerRadius: 14)
+            }
+
+            Button("Done") { dismiss() }
+                .buttonStyle(.borderedProminent)
+                .tint(.brandGreen)
+                .frame(maxWidth: .infinity)
+        }
+        .padding(24)
+    }
+
+    private func tierColour(_ tier: AchievementTier?) -> Color {
+        switch tier {
+        case .bronze: return Color(red: 0.72, green: 0.45, blue: 0.20)
+        case .silver: return Color(red: 0.55, green: 0.60, blue: 0.66)
+        case .gold: return .brandGold
+        case .standard, nil: return .secondary
         }
     }
 }

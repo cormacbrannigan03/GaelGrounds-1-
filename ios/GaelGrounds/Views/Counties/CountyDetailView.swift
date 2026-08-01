@@ -49,7 +49,7 @@ struct CountyDetailView: View {
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding()
-                                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+                                    .gaelCard(cornerRadius: 14)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -70,7 +70,7 @@ struct CountyDetailView: View {
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding()
-                                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+                                    .gaelCard(cornerRadius: 14)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -105,7 +105,7 @@ struct CountyDetailView: View {
             }
         }
         .task { await load() }
-        .gaelGroundsBackground()
+        .countyBackground(county?.name)
     }
 
     @ViewBuilder
@@ -155,8 +155,25 @@ private struct HonoursGroup: View {
         for h in honours where h.honourType == type {
             grouped[h.competitionName, default: []].append(h.year)
         }
-        return grouped.map { (competition: $0.key, years: $0.value.sorted(by: >)) }
-            .sorted { $0.years.count > $1.years.count }
+        let entries = grouped.map { (competition: $0.key, years: $0.value.sorted(by: >)) }
+        if type == .league {
+            return entries.sorted {
+                let lhsDivision = leagueDivision(in: $0.competition)
+                let rhsDivision = leagueDivision(in: $1.competition)
+                return lhsDivision == rhsDivision
+                    ? $0.competition < $1.competition
+                    : lhsDivision < rhsDivision
+            }
+        }
+        return entries.sorted { $0.years.count > $1.years.count }
+    }
+
+    private func leagueDivision(in competition: String) -> Int {
+        for division in 1...4
+        where competition.localizedCaseInsensitiveContains("Division \(division)") {
+            return division
+        }
+        return .max
     }
 
     private func sectionTitle(for type: HonourType) -> String {
@@ -188,7 +205,7 @@ private struct HonoursGroup: View {
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding()
-                                .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
+                                .gaelCard(cornerRadius: 10)
                             }
                         }
                     }
