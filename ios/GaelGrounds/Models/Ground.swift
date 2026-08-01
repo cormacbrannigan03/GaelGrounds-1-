@@ -8,6 +8,6 @@ struct Ground: Codable, Identifiable, Hashable {
     let longitude: Double
     let capacity: Int?
     let photoUrl: String?
-    let isPrimary: Bool
     let createdAt: Date?
+    let isPrimary: Bool
 }

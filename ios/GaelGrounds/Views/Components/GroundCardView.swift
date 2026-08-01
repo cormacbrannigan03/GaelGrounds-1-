@@ -14,13 +14,10 @@ struct GroundCardView: View {
                             .font(.caption2.bold())
                             .padding(.horizontal, 8).padding(.vertical, 3)
                             .background(Color.brandGreenLight.opacity(0.15), in: Capsule())
-                            .foregroundStyle(Color.brandGreenLight)
+                            .foregroundStyle(.brandGreenLight)
                     }
                 }
-                HStack(spacing: 6) {
-                    CountyBanner(countyName: ground.countyName)
-                    Text(ground.countyName).font(.subheadline).foregroundStyle(.secondary)
-                }
+                Text(ground.countyName).font(.subheadline).foregroundStyle(.secondary)
                 if let capacity = ground.capacity {
                     Text("Capacity: \(capacity.formatted())")
                         .font(.caption)
@@ -28,7 +25,7 @@ struct GroundCardView: View {
                 }
             }
             .padding()
-            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+            .gaelCard(cornerRadius: 14)
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(ground.visited ? Color.brandGreenLight : .clear, lineWidth: 1.5)

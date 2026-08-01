@@ -23,15 +23,16 @@ enum Supa {
             supabaseURL: SupabaseConfig.url,
             supabaseKey: SupabaseConfig.anonKey,
             options: SupabaseClientOptions(
-                db: .init(encoder: encoder, decoder: decoder),
-                auth: .init(emitLocalSessionAsInitialSession: true)
+                db: .init(encoder: encoder, decoder: decoder)
             )
         )
     }()
 }
 
 /// Postgres/PostgREST timestamps come back as ISO 8601, sometimes with
-/// fractional seconds and sometimes without — try both before giving up.
+/// fractional seconds and sometimes without. Plain `date` columns (e.g.
+/// matches.match_date) come back as bare 'YYYY-MM-DD' with no time
+/// component at all — try all three before giving up.
 private func decodePostgresDate(_ decoder: Decoder) throws -> Date {
     let container = try decoder.singleValueContainer()
     let raw = try container.decode(String.self)
@@ -45,6 +46,14 @@ private func decodePostgresDate(_ decoder: Decoder) throws -> Date {
     let plain = ISO8601DateFormatter()
     plain.formatOptions = [.withInternetDateTime]
     if let date = plain.date(from: raw) {
+        return date
+    }
+
+    let dateOnly = DateFormatter()
+    dateOnly.calendar = Calendar(identifier: .iso8601)
+    dateOnly.timeZone = TimeZone(identifier: "UTC")
+    dateOnly.dateFormat = "yyyy-MM-dd"
+    if let date = dateOnly.date(from: raw) {
         return date
     }
 

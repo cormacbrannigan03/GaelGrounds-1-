@@ -9,20 +9,17 @@ struct County: Codable, Identifiable, Hashable {
     let secondaryColour: String?
     let createdAt: Date?
 
-    private enum CodingKeys: CodingKey {
-        case id, name, province, crestUrl, primaryColour, secondaryColour, createdAt
+    var colours: CountyColours? {
+        guard let primaryColour, let secondaryColour else { return nil }
+        return CountyColours(primary: primaryColour, secondary: secondaryColour)
     }
+}
 
-    nonisolated init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(UUID.self, forKey: .id)
-        name = try c.decode(String.self, forKey: .name)
-        province = try c.decode(Province.self, forKey: .province)
-        crestUrl = try c.decodeIfPresent(String.self, forKey: .crestUrl)
-        primaryColour = try c.decodeIfPresent(String.self, forKey: .primaryColour)
-        secondaryColour = try c.decodeIfPresent(String.self, forKey: .secondaryColour)
-        createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
-    }
+/// A county's two jersey colours, hex strings straight from the database
+/// (e.g. "#00703C"). Used to wash match banners with each side's colours.
+struct CountyColours: Hashable {
+    let primary: String
+    let secondary: String
 }
 
 struct CountyTeam: Codable, Identifiable, Hashable {
@@ -33,19 +30,4 @@ struct CountyTeam: Codable, Identifiable, Hashable {
     let history: String?
     let currentManager: String?
     let createdAt: Date?
-
-    private enum CodingKeys: CodingKey {
-        case id, countyId, sportCode, foundedYear, history, currentManager, createdAt
-    }
-
-    nonisolated init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(UUID.self, forKey: .id)
-        countyId = try c.decode(UUID.self, forKey: .countyId)
-        sportCode = try c.decode(SportCode.self, forKey: .sportCode)
-        foundedYear = try c.decodeIfPresent(Int.self, forKey: .foundedYear)
-        history = try c.decodeIfPresent(String.self, forKey: .history)
-        currentManager = try c.decodeIfPresent(String.self, forKey: .currentManager)
-        createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
-    }
 }

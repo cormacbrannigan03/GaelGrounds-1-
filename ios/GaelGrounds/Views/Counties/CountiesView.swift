@@ -6,6 +6,9 @@ struct CountiesView: View {
     @State private var isLoading = true
 
     private static let provinceOrder: [Province] = [.leinster, .munster, .connacht, .ulster]
+    private static let otherCountyNames: Set<String> = [
+        "Fingal", "Warwickshire", "Lancashire", "South Down"
+    ]
 
     var body: some View {
         ScrollView {
@@ -18,12 +21,25 @@ struct CountiesView: View {
                     ProgressView().frame(maxWidth: .infinity)
                 } else {
                     ForEach(Self.provinceOrder, id: \.self) { province in
-                        let inProvince = counties.filter { $0.province == province }
+                        let inProvince = counties.filter {
+                            $0.province == province &&
+                            !Self.otherCountyNames.contains($0.name)
+                        }
                         if !inProvince.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(province.rawValue).font(.headline)
                                 FlowChips(counties: inProvince)
                             }
+                        }
+                    }
+
+                    let otherCounties = counties.filter {
+                        Self.otherCountyNames.contains($0.name)
+                    }
+                    if !otherCounties.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Others").font(.headline)
+                            FlowChips(counties: otherCounties)
                         }
                     }
                 }

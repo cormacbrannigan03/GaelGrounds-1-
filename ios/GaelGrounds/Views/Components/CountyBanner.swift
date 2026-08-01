@@ -9,7 +9,7 @@ struct CountyBanner: View {
     private var width: CGFloat { height * 0.67 }
 
     var body: some View {
-        let (primary, secondary) = CountyColours.colours(for: countyName)
+        let (primary, secondary) = CountyPalette.colours(for: countyName)
         HStack(spacing: 0) {
             Rectangle().fill(primary)
             Rectangle().fill(secondary)
@@ -20,9 +20,17 @@ struct CountyBanner: View {
     }
 }
 
-enum CountyColours {
+enum CountyPalette {
     static func colours(for name: String) -> (Color, Color) {
         lookup[name] ?? (Color.gray.opacity(0.4), Color.gray.opacity(0.2))
+    }
+
+    static func backgroundColour(for name: String?) -> Color {
+        guard let name else { return .brandGreen }
+        if let override = backgroundOverrides[name] {
+            return override
+        }
+        return lookup[name]?.0 ?? .brandGreen
     }
 
     private static func rgb(_ r: Double, _ g: Double, _ b: Double) -> Color {
@@ -42,6 +50,12 @@ enum CountyColours {
     private static let saffron = rgb(255, 178,   0)
     private static let purple  = rgb( 90,  30, 137)
     private static let primrose = rgb(255, 240,   0)
+
+    // Counties whose first jersey stripe is white use their contrasting
+    // colour for the page background so the fade remains visible.
+    private static let backgroundOverrides: [String: Color] = [
+        "Kildare": red, "Waterford": blue
+    ]
 
     // Traditional GAA county colours — primary stripe | secondary stripe
     private static let lookup: [String: (Color, Color)] = [
@@ -85,5 +99,13 @@ enum CountyColours {
         "Mayo":         (green,    red),
         "Roscommon":    (primrose, blue),
         "Sligo":        (black,    .white),
+
+        // Overseas and regional teams
+        "Fingal":       (purple,   .white),
+        "Lancashire":   (red,      .white),
+        "London":       (green,    .white),
+        "New York":     (blue,     .white),
+        "South Down":   (red,      black),
+        "Warwickshire": (green,    .white),
     ]
 }

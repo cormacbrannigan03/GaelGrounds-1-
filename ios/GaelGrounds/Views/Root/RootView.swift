@@ -4,9 +4,13 @@ struct RootView: View {
     @EnvironmentObject private var auth: AuthViewModel
 
     var body: some View {
-        MainTabView()
-            .task {
-                await auth.startObserving()
+        Group {
+            if auth.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                MainTabView()
             }
+        }
     }
 }

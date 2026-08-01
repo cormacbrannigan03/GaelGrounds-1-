@@ -1,13 +1,12 @@
-import SwiftUI
-internal import PostgREST
+import PostgREST
 import Supabase
+import SwiftUI
 
 struct GroundDetailView: View {
     let groundId: UUID
 
     @State private var ground: Ground?
     @State private var countyName: String?
-    @State private var countyGrounds: [Ground] = []
     @State private var isLoading = true
 
     var body: some View {
@@ -19,10 +18,7 @@ struct GroundDetailView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(ground.name).font(.title2.bold())
                         if let countyName {
-                            HStack(spacing: 6) {
-                                CountyBanner(countyName: countyName)
-                                Text(countyName).foregroundStyle(.secondary)
-                            }
+                            Text(countyName).foregroundStyle(.secondary)
                         }
                         if let capacity = ground.capacity {
                             Text("Capacity: \(capacity.formatted())")
@@ -37,36 +33,6 @@ struct GroundDetailView: View {
                     }
 
                     GroundCheckInPanel(groundId: ground.id)
-
-                    if !countyGrounds.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Alternate Grounds")
-                                .font(.title3.bold())
-                            ForEach(countyGrounds) { other in
-                                NavigationLink(value: GroundRoute(id: other.id)) {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "mappin.circle.fill")
-                                            .font(.title3)
-                                            .foregroundStyle(.brandGold)
-                                        Text(other.name)
-                                            .font(.body)
-                                        Spacer()
-                                        if let cap = other.capacity {
-                                            Text(cap.formatted())
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .padding()
-                                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
                 } else {
                     Text("Ground not found.").foregroundStyle(.secondary)
                 }
@@ -76,7 +42,7 @@ struct GroundDetailView: View {
         .navigationTitle("Ground")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
-        .gaelGroundsBackground()
+        .countyBackground(countyName)
     }
 
     private func mapURL(for ground: Ground) -> URL {
@@ -90,15 +56,8 @@ struct GroundDetailView: View {
         do {
             let g: Ground = try await Supa.client.from("grounds").select().eq("id", value: groundId).single().execute().value
             ground = g
-            async let countyTask: County = Supa.client.from("counties").select().eq("id", value: g.countyId).single().execute().value
-            async let othersTask: [Ground] = g.isPrimary ? Supa.client.from("grounds").select()
-                .eq("county_id", value: g.countyId)
-                .eq("is_primary", value: false)
-                .order("name")
-                .execute().value : []
-            let county = try await countyTask
+            let county: County = try await Supa.client.from("counties").select().eq("id", value: g.countyId).single().execute().value
             countyName = county.name
-            countyGrounds = try await othersTask
         } catch {
             print("GroundDetail load failed: \(error)")
         }

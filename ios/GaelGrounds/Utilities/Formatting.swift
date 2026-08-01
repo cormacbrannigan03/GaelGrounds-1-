@@ -3,7 +3,7 @@ import Foundation
 enum Formatting {
     static let matchDateFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "EEE d MMM, HH:mm"
+        f.dateFormat = "EEE d MMM yyyy, HH:mm"
         f.locale = Locale(identifier: "en_IE")
         return f
     }()

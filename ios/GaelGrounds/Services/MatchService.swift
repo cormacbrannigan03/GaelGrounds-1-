@@ -6,13 +6,29 @@ import Supabase
 /// plus a live count of check-ins per match. Centralised here since three
 /// different screens (Dashboard, Matches, MatchDetail) all need it.
 enum MatchService {
+    private static let pageSize = 500
+    private static let lookupBatchSize = 100
+
     static func fetchAll() async throws -> [Match] {
-        try await Supa.client
-            .from("matches")
-            .select()
-            .order("played_at", ascending: false)
-            .execute()
-            .value
+        var allMatches: [Match] = []
+        var from = 0
+
+        while true {
+            let page: [Match] = try await Supa.client
+                .from("matches")
+                .select()
+                .order("played_at", ascending: false)
+                .range(from: from, to: from + pageSize - 1)
+                .execute()
+                .value
+
+            allMatches.append(contentsOf: page)
+
+            guard page.count == pageSize else { break }
+            from += pageSize
+        }
+
+        return allMatches
     }
 
     static func fetchUpcomingAndLive(sinceHoursAgo: Double = 2.5) async throws -> [Match] {
@@ -39,7 +55,7 @@ enum MatchService {
             .eq("away_county_team_id", value: teamId)
             .order("played_at", ascending: false).limit(limit).execute().value
         let all = try await homeGames + awayGames
-        return all.sorted { $0.playedAt > $1.playedAt }
+        return all.sorted { ($0.playedAt ?? .distantPast) > ($1.playedAt ?? .distantPast) }
     }
 
     static func resolveSummaries(_ matches: [Match]) async throws -> [MatchSummary] {
@@ -49,21 +65,17 @@ enum MatchService {
         let groundIds = Array(Set(matches.compactMap(\.groundId)))
         let matchIds = matches.map(\.id)
 
-        async let teamsTask: [CountyTeam] = teamIds.isEmpty ? [] : Supa.client
-            .from("county_teams").select().in("id", values: teamIds)
-            .in("sport_code", values: ["gaelic_football", "hurling"]).execute().value
-        async let groundsTask: [Ground] = groundIds.isEmpty ? [] : Supa.client
-            .from("grounds").select().in("id", values: groundIds).execute().value
-        async let attendanceTask: [UserMatchAttendance] = Supa.client
-            .from("user_match_attendance").select().in("match_id", values: matchIds).execute().value
+        // Fire all four lookups concurrently — counties no longer wait behind teamsTask.
+        async let teamsTask: [CountyTeam] = fetchCountyTeams(ids: teamIds)
+        async let groundsTask: [Ground] = fetchGrounds(ids: groundIds)
+        async let attendanceTask: [UserMatchAttendance] = fetchAttendance(matchIds: matchIds)
+        async let countiesTask: [County] = Supa.client.from("counties").select().execute().value
 
-        let teams = try await teamsTask
-        let grounds = try await groundsTask
-        let attendance = try await attendanceTask
-
-        let countyIds = Array(Set(teams.map(\.countyId)))
-        let counties: [County] = countyIds.isEmpty ? [] : try await Supa.client
-            .from("counties").select().in("id", values: countyIds).execute().value
+        // Attendance is supplementary social data. A signed-out user is not
+        // permitted to read it, but that must never prevent public fixtures
+        // and results from rendering.
+        let (teams, grounds, counties) = try await (teamsTask, groundsTask, countiesTask)
+        let attendance = (try? await attendanceTask) ?? []
 
         let countyNameById = Dictionary(uniqueKeysWithValues: counties.map { ($0.id, $0.name) })
         let teamById = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
@@ -72,17 +84,18 @@ enum MatchService {
         var attendanceCountByMatch: [UUID: Int] = [:]
         for a in attendance { attendanceCountByMatch[a.matchId, default: 0] += 1 }
 
-        func teamName(_ teamId: UUID?) -> String {
-            guard let teamId, let team = teamById[teamId], let name = countyNameById[team.countyId] else {
-                return "TBC"
+        return matches.compactMap { match -> MatchSummary? in
+            guard
+                let homeTeamId = match.homeCountyTeamId,
+                let awayTeamId = match.awayCountyTeamId,
+                let homeTeam = teamById[homeTeamId],
+                let awayTeam = teamById[awayTeamId],
+                homeTeam.sportCode == awayTeam.sportCode,
+                let home = countyNameById[homeTeam.countyId],
+                let away = countyNameById[awayTeam.countyId]
+            else {
+                return nil
             }
-            return name
-        }
-
-        return matches.compactMap { match in
-            let home = teamName(match.homeCountyTeamId)
-            let away = teamName(match.awayCountyTeamId)
-            guard home != "TBC", away != "TBC" else { return nil }
             return MatchSummary(
                 id: match.id,
                 competition: match.competition,
@@ -91,10 +104,146 @@ enum MatchService {
                 awayScore: match.awayScore,
                 homeName: home,
                 awayName: away,
+                sportCode: homeTeam.sportCode,
                 groundId: match.groundId,
                 groundName: match.groundId.flatMap { groundNameById[$0] },
+                round: match.round,
                 attendeeCount: attendanceCountByMatch[match.id] ?? 0
             )
+        }
+    }
+
+    private static func fetchCountyTeams(ids: [UUID]) async throws -> [CountyTeam] {
+        guard !ids.isEmpty else { return [] }
+        return try await withThrowingTaskGroup(of: [CountyTeam].self) { group in
+            for batch in ids.chunked(into: lookupBatchSize) {
+                group.addTask {
+                    try await Supa.client
+                        .from("county_teams")
+                        .select()
+                        .in("id", values: batch)
+                        .in("sport_code", values: ["gaelic_football", "hurling"])
+                        .execute()
+                        .value
+                }
+            }
+            var all: [CountyTeam] = []
+            for try await page in group { all.append(contentsOf: page) }
+            return all
+        }
+    }
+
+    private static func fetchGrounds(ids: [UUID]) async throws -> [Ground] {
+        guard !ids.isEmpty else { return [] }
+        return try await withThrowingTaskGroup(of: [Ground].self) { group in
+            for batch in ids.chunked(into: lookupBatchSize) {
+                group.addTask {
+                    try await Supa.client
+                        .from("grounds")
+                        .select()
+                        .in("id", values: batch)
+                        .execute()
+                        .value
+                }
+            }
+            var all: [Ground] = []
+            for try await page in group { all.append(contentsOf: page) }
+            return all
+        }
+    }
+
+    private static func fetchAttendance(matchIds: [UUID]) async throws -> [UserMatchAttendance] {
+        guard !matchIds.isEmpty else { return [] }
+        guard Supa.client.auth.currentSession != nil else { return [] }
+        return try await withThrowingTaskGroup(of: [UserMatchAttendance].self) { group in
+            for batch in matchIds.chunked(into: lookupBatchSize) {
+                group.addTask {
+                    try await Supa.client
+                        .from("user_match_attendance")
+                        .select()
+                        .in("match_id", values: batch)
+                        .execute()
+                        .value
+                }
+            }
+            var all: [UserMatchAttendance] = []
+            for try await page in group { all.append(contentsOf: page) }
+            return all
+        }
+    }
+
+    // MARK: - Personal matches
+
+    static func fetchPersonalMatches(userId: UUID) async throws -> [UserPersonalMatch] {
+        try await Supa.client
+            .from("user_personal_matches")
+            .select()
+            .eq("user_id", value: userId)
+            .order("played_at", ascending: false)
+            .execute()
+            .value
+    }
+
+    static func insertPersonalMatch(_ match: UserPersonalMatchInsert) async throws {
+        try await Supa.client
+            .from("user_personal_matches")
+            .insert(match)
+            .execute()
+    }
+
+    static func deletePersonalMatch(_ id: UUID) async throws {
+        try await Supa.client
+            .from("user_personal_matches")
+            .delete()
+            .eq("id", value: id)
+            .execute()
+    }
+
+    // MARK: - Free-tier limits
+
+    private static let freeMatchLimit = 10
+    static let freeHistoryCutoff = ISO8601DateFormatter().date(from: "2019-01-01T00:00:00Z")!
+
+    /// Combined count of official check-ins + personal matches for one
+    /// user, via the `total_match_count` Postgres function — the same
+    /// count the free-tier RLS policies enforce server-side
+    /// (supabase/migrations/20260801023511_free_tier_match_limits.sql).
+    static func matchCount(userId: UUID) async throws -> Int {
+        struct Params: Encodable { let pUserId: UUID }
+        return try await Supa.client
+            .rpc("total_match_count", params: Params(pUserId: userId))
+            .execute()
+            .value
+    }
+
+    /// Client-side mirror of the RLS free-tier check, so the UI can show a
+    /// paywall proactively instead of only after a failed insert. The RLS
+    /// policies remain the real enforcement regardless of what this returns.
+    static func canLogAnotherMatch(userId: UUID, isPremium: Bool) async -> Bool {
+        guard !isPremium else { return true }
+        let count = (try? await matchCount(userId: userId)) ?? freeMatchLimit
+        return count < freeMatchLimit
+    }
+
+    static func isDateAllowedForFreeTier(_ date: Date) -> Bool {
+        date >= freeHistoryCutoff
+    }
+
+    // MARK: - Match reports
+
+    static func submitReport(_ report: MatchReportInsert) async throws {
+        try await Supa.client
+            .from("match_reports")
+            .insert(report)
+            .execute()
+    }
+}
+
+private extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        guard size > 0 else { return [self] }
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0..<Swift.min($0 + size, count)])
         }
     }
 }

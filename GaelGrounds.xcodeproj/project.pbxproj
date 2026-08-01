@@ -7,11 +7,24 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FF0000013025000000000001 /* Competition.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001013025000000000001 /* Competition.swift */; };
+		FF0000023025000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001023025000000000002 /* AppDelegate.swift */; };
+		FF0000033025000000000003 /* FriendService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001033025000000000003 /* FriendService.swift */; };
+		FF0000043025000000000004 /* GroundPhotoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001043025000000000004 /* GroundPhotoService.swift */; };
+		FF0000053025000000000005 /* PremiumStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001053025000000000005 /* PremiumStore.swift */; };
+		FF0000063025000000000006 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001063025000000000006 /* PushNotificationService.swift */; };
+		FF0000073025000000000007 /* RealtimeWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001073025000000000007 /* RealtimeWatcher.swift */; };
+		FF0000083025000000000008 /* ReportMatchIssueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001083025000000000008 /* ReportMatchIssueView.swift */; };
+		FF0000093025000000000009 /* PremiumPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001093025000000000009 /* PremiumPaywallView.swift */; };
+		FF21C6CF301C14140037E4D5 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF21C6CE301C14140037E4D5 /* LeaderboardView.swift */; };
+		FF3CA037301A47A300DE33C0 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF3CA036301A47A300DE33C0 /* ConfettiView.swift */; };
 		FF89D95630121F9E0006EFFF /* GroundsMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF89D95530121F9E0006EFFF /* GroundsMapView.swift */; };
 		FF9438103012B85F00BCE40E /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF94380F3012B85F00BCE40E /* FriendsView.swift */; };
 		FF9438123012B86C00BCE40E /* FriendProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9438113012B86C00BCE40E /* FriendProfileView.swift */; };
 		FF9438143012BB2300BCE40E /* CountyBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9438133012BB2300BCE40E /* CountyBanner.swift */; };
 		FF9438163012BC4700BCE40E /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9438153012BC4700BCE40E /* TeamDetailView.swift */; };
+		FF9DAA2B3015AF48006EC3F7 /* UserPersonalMatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9DAA2A3015AF48006EC3F7 /* UserPersonalMatch.swift */; };
+		FF9DAA2F3015B047006EC3F7 /* AddMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9DAA2E3015B047006EC3F7 /* AddMatchView.swift */; };
 		FFDAAC3630118DF200456573 /* MatchCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1D30118DF200456573 /* MatchCardView.swift */; };
 		FFDAAC3730118DF200456573 /* Routes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1730118DF200456573 /* Routes.swift */; };
 		FFDAAC3830118DF200456573 /* CheckInPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2830118DF200456573 /* CheckInPanel.swift */; };
@@ -48,6 +61,20 @@
 		FFDAAC5930118F0400456573 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = FFDAAC5830118F0400456573 /* Supabase */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXBuildRule section */
+		FFA4D72A3024216B00DC9B38 /* PBXBuildRule */ = {
+			isa = PBXBuildRule;
+			compilerSpec = com.apple.compilers.proxy.script;
+			fileType = pattern.proxy;
+			inputFiles = (
+			);
+			isEditable = 1;
+			outputFiles = (
+			);
+			script = "# Type a script or drag a script file from your workspace to insert its path.\n";
+		};
+/* End PBXBuildRule section */
+
 /* Begin PBXContainerItemProxy section */
 		FFDAABD430118A1A00456573 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -66,11 +93,24 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FF0001013025000000000001 /* Competition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Competition.swift; sourceTree = "<group>"; };
+		FF0001023025000000000002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		FF0001033025000000000003 /* FriendService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendService.swift; sourceTree = "<group>"; };
+		FF0001043025000000000004 /* GroundPhotoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroundPhotoService.swift; sourceTree = "<group>"; };
+		FF0001053025000000000005 /* PremiumStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumStore.swift; sourceTree = "<group>"; };
+		FF0001063025000000000006 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
+		FF0001073025000000000007 /* RealtimeWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeWatcher.swift; sourceTree = "<group>"; };
+		FF0001083025000000000008 /* ReportMatchIssueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportMatchIssueView.swift; sourceTree = "<group>"; };
+		FF0001093025000000000009 /* PremiumPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumPaywallView.swift; sourceTree = "<group>"; };
+		FF21C6CE301C14140037E4D5 /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
+		FF3CA036301A47A300DE33C0 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		FF89D95530121F9E0006EFFF /* GroundsMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroundsMapView.swift; sourceTree = "<group>"; };
 		FF94380F3012B85F00BCE40E /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
 		FF9438113012B86C00BCE40E /* FriendProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendProfileView.swift; sourceTree = "<group>"; };
 		FF9438133012BB2300BCE40E /* CountyBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountyBanner.swift; sourceTree = "<group>"; };
 		FF9438153012BC4700BCE40E /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
+		FF9DAA2A3015AF48006EC3F7 /* UserPersonalMatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPersonalMatch.swift; sourceTree = "<group>"; };
+		FF9DAA2E3015B047006EC3F7 /* AddMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMatchView.swift; sourceTree = "<group>"; };
 		FFDAABBF30118A1800456573 /* GaelGrounds.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GaelGrounds.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FFDAABD330118A1A00456573 /* GaelGroundsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GaelGroundsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FFDAABDD30118A1A00456573 /* GaelGroundsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GaelGroundsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -166,6 +206,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		FF21C6CD301C14130037E4D5 /* Leaderboard */ = {
+			isa = PBXGroup;
+			children = (
+				FF21C6CE301C14140037E4D5 /* LeaderboardView.swift */,
+			);
+			path = Leaderboard;
+			sourceTree = "<group>";
+		};
 		FFDAABB630118A1800456573 = {
 			isa = PBXGroup;
 			children = (
@@ -174,6 +222,7 @@
 				FFDAABD630118A1A00456573 /* GaelGroundsTests */,
 				FFDAABE030118A1A00456573 /* GaelGroundsUITests */,
 				FFDAABC030118A1800456573 /* Products */,
+				FF9DAA2E3015B047006EC3F7 /* AddMatchView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -206,6 +255,7 @@
 		FFDAAC1030118DF200456573 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				FF0001013025000000000001 /* Competition.swift */,
 				FFDAAC0930118DF200456573 /* County.swift */,
 				FFDAAC0A30118DF200456573 /* Enums.swift */,
 				FFDAAC0B30118DF200456573 /* Ground.swift */,
@@ -213,6 +263,7 @@
 				FFDAAC0D30118DF200456573 /* Match.swift */,
 				FFDAAC0E30118DF200456573 /* MatchSummary.swift */,
 				FFDAAC0F30118DF200456573 /* UserData.swift */,
+				FF9DAA2A3015AF48006EC3F7 /* UserPersonalMatch.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -220,6 +271,12 @@
 		FFDAAC1530118DF200456573 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				FF0001023025000000000002 /* AppDelegate.swift */,
+				FF0001033025000000000003 /* FriendService.swift */,
+				FF0001043025000000000004 /* GroundPhotoService.swift */,
+				FF0001053025000000000005 /* PremiumStore.swift */,
+				FF0001063025000000000006 /* PushNotificationService.swift */,
+				FF0001073025000000000007 /* RealtimeWatcher.swift */,
 				FFDAAC1130118DF200456573 /* AchievementsService.swift */,
 				FFDAAC1230118DF200456573 /* AuthViewModel.swift */,
 				FFDAAC1330118DF200456573 /* MatchService.swift */,
@@ -252,6 +309,7 @@
 				FFDAAC1C30118DF200456573 /* GroundCardView.swift */,
 				FFDAAC1D30118DF200456573 /* MatchCardView.swift */,
 				FF9438133012BB2300BCE40E /* CountyBanner.swift */,
+				FF3CA036301A47A300DE33C0 /* ConfettiView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -288,6 +346,7 @@
 		FFDAAC2B30118DF200456573 /* Matches */ = {
 			isa = PBXGroup;
 			children = (
+				FF0001083025000000000008 /* ReportMatchIssueView.swift */,
 				FFDAAC2830118DF200456573 /* CheckInPanel.swift */,
 				FFDAAC2930118DF200456573 /* MatchDetailView.swift */,
 				FFDAAC2A30118DF200456573 /* MatchesView.swift */,
@@ -317,6 +376,7 @@
 		FFDAAC3130118DF200456573 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				FF0001093025000000000009 /* PremiumPaywallView.swift */,
 				FFDAAC1B30118DF200456573 /* Auth */,
 				FFDAAC1E30118DF200456573 /* Components */,
 				FFDAAC2130118DF200456573 /* Counties */,
@@ -325,6 +385,7 @@
 				FFDAAC2B30118DF200456573 /* Matches */,
 				FFDAAC2D30118DF200456573 /* Profile */,
 				FFDAAC3030118DF200456573 /* Root */,
+				FF21C6CD301C14130037E4D5 /* Leaderboard */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -364,6 +425,7 @@
 				FFDAABBD30118A1800456573 /* Resources */,
 			);
 			buildRules = (
+				FFA4D72A3024216B00DC9B38 /* PBXBuildRule */,
 			);
 			dependencies = (
 			);
@@ -502,6 +564,16 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FF0000013025000000000001 /* Competition.swift in Sources */,
+				FF0000023025000000000002 /* AppDelegate.swift in Sources */,
+				FF0000033025000000000003 /* FriendService.swift in Sources */,
+				FF0000043025000000000004 /* GroundPhotoService.swift in Sources */,
+				FF0000053025000000000005 /* PremiumStore.swift in Sources */,
+				FF0000063025000000000006 /* PushNotificationService.swift in Sources */,
+				FF0000073025000000000007 /* RealtimeWatcher.swift in Sources */,
+				FF0000083025000000000008 /* ReportMatchIssueView.swift in Sources */,
+				FF0000093025000000000009 /* PremiumPaywallView.swift in Sources */,
+				FF3CA037301A47A300DE33C0 /* ConfettiView.swift in Sources */,
 				FF9438103012B85F00BCE40E /* FriendsView.swift in Sources */,
 				FFDAAC3630118DF200456573 /* MatchCardView.swift in Sources */,
 				FF9438123012B86C00BCE40E /* FriendProfileView.swift in Sources */,
@@ -510,11 +582,14 @@
 				FFDAAC3930118DF200456573 /* AuthView.swift in Sources */,
 				FFDAAC3A30118DF200456573 /* Theme.swift in Sources */,
 				FFDAAC3B30118DF200456573 /* GroundsView.swift in Sources */,
+				FF9DAA2B3015AF48006EC3F7 /* UserPersonalMatch.swift in Sources */,
+				FF21C6CF301C14140037E4D5 /* LeaderboardView.swift in Sources */,
 				FFDAAC3C30118DF200456573 /* Enums.swift in Sources */,
 				FFDAAC3D30118DF200456573 /* AuthViewModel.swift in Sources */,
 				FFDAAC3E30118DF200456573 /* GroundDetailView.swift in Sources */,
 				FFDAAC3F30118DF200456573 /* MatchesView.swift in Sources */,
 				FFDAAC4030118DF200456573 /* GroundCheckInPanel.swift in Sources */,
+				FF9DAA2F3015B047006EC3F7 /* AddMatchView.swift in Sources */,
 				FFDAAC4130118DF200456573 /* MatchDetailView.swift in Sources */,
 				FF9438143012BB2300BCE40E /* CountyBanner.swift in Sources */,
 				FFDAAC4230118DF200456573 /* MatchService.swift in Sources */,
@@ -587,6 +662,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GaelGrounds/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GaelGrounds;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -631,6 +708,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GaelGrounds/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GaelGrounds;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -715,6 +794,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
+				NEW_SETTING = "";
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
@@ -774,6 +854,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				NEW_SETTING = "";
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;

@@ -1,14 +1,16 @@
-import Supabase
 import SwiftUI
+import Supabase
 
 struct DashboardView: View {
     @EnvironmentObject private var auth: AuthViewModel
 
-    @State private var liveAndUpcoming: [MatchSummary] = []
+    @State private var upcoming: [MatchSummary] = []
     @State private var groundsVisited = 0
     @State private var matchesAttended = 0
     @State private var achievementsUnlocked = 0
     @State private var isLoading = true
+    @State private var realtimeChannel: RealtimeChannelV2?
+    @State private var realtimeTask: Task<Void, Never>?
 
     var body: some View {
         ScrollView {
@@ -25,27 +27,27 @@ struct DashboardView: View {
 
                 if auth.isSignedIn {
                     HStack(spacing: 12) {
-                        StatTile(value: groundsVisited, label: "Grounds visited")
-                        StatTile(value: matchesAttended, label: "Matches attended")
-                        StatTile(value: achievementsUnlocked, label: "Achievements")
+                        DashboardStatTile(value: groundsVisited, label: "Grounds visited")
+                        DashboardStatTile(value: matchesAttended, label: "Matches attended")
+                        DashboardStatTile(value: achievementsUnlocked, label: "Achievements")
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Live & upcoming").font(.title3.bold())
+                        Text("Upcoming fixtures").font(.title3.bold())
                         Spacer()
                         NavigationLink("See all fixtures →", value: MatchesRouteTag())
                     }
 
                     if isLoading {
                         ProgressView()
-                    } else if liveAndUpcoming.isEmpty {
-                        Text("No live or upcoming matches right now — check back soon.")
+                    } else if upcoming.isEmpty {
+                        Text("No upcoming fixtures right now — check back soon.")
                             .foregroundStyle(.secondary)
                     } else {
                         VStack(spacing: 10) {
-                            ForEach(liveAndUpcoming) { match in
+                            ForEach(upcoming) { match in
                                 MatchCardView(match: match)
                             }
                         }
@@ -61,18 +63,23 @@ struct DashboardView: View {
         .navigationDestination(for: MatchesRouteTag.self) { _ in
             MatchesView()
         }
-        .task { await load() }
-        .refreshable { await load() }
-        .gaelGroundsBackground()
+        .task {
+            await load(showSpinner: true)
+            let (channel, task) = RealtimeWatcher.watch(table: "matches") { Task { await load(showSpinner: false) } }
+            realtimeChannel = channel
+            realtimeTask = task
+        }
+        .onDisappear { RealtimeWatcher.stop(channel: realtimeChannel, task: realtimeTask) }
+        .refreshable { await load(showSpinner: false) }
     }
 
-    private func load() async {
-        isLoading = true
-        defer { isLoading = false }
+    private func load(showSpinner: Bool) async {
+        if showSpinner { isLoading = true }
+        defer { if showSpinner { isLoading = false } }
 
         do {
             let matches = try await MatchService.fetchUpcomingAndLive()
-            liveAndUpcoming = try await MatchService.resolveSummaries(matches)
+            upcoming = try await MatchService.resolveSummaries(matches)
         } catch {
             print("Dashboard load failed: \(error)")
         }
@@ -96,4 +103,17 @@ struct DashboardView: View {
 /// for detail routes.
 private struct MatchesRouteTag: Hashable {}
 
+private struct DashboardStatTile: View {
+    let value: Int
+    let label: String
 
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("\(value)").font(.title.bold()).foregroundStyle(.brandGreenLight)
+            Text(label).font(.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .gaelCard(cornerRadius: 14)
+    }
+}

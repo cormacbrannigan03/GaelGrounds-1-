@@ -6,6 +6,7 @@ struct GroundsView: View {
     @EnvironmentObject private var auth: AuthViewModel
 
     @State private var grounds: [GroundSummary] = []
+    @State private var mapGrounds: [GroundSummary] = []
     @State private var search = ""
     @State private var isLoading = true
     @State private var showMap = false
@@ -52,7 +53,7 @@ struct GroundsView: View {
             }
         }
         .sheet(isPresented: $showMap) {
-            GroundsMapView(grounds: grounds)
+            GroundsMapView(grounds: mapGrounds)
         }
         .navigationDestination(for: GroundRoute.self) { route in
             GroundDetailView(groundId: route.id)
@@ -66,7 +67,7 @@ struct GroundsView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            let groundRows: [Ground] = try await Supa.client.from("grounds").select().eq("is_primary", value: true).order("name").execute().value
+            let groundRows: [Ground] = try await Supa.client.from("grounds").select().order("name").execute().value
             let counties: [County] = try await Supa.client.from("counties").select().execute().value
             let countyNameById = Dictionary(uniqueKeysWithValues: counties.map { ($0.id, $0.name) })
 
@@ -77,7 +78,7 @@ struct GroundsView: View {
                 visitedIds = Set(visits.map(\.groundId))
             }
 
-            grounds = groundRows.map { g in
+            mapGrounds = groundRows.map { g in
                 GroundSummary(
                     id: g.id,
                     name: g.name,
@@ -85,9 +86,11 @@ struct GroundsView: View {
                     capacity: g.capacity,
                     visited: visitedIds.contains(g.id),
                     latitude: g.latitude,
-                    longitude: g.longitude
+                    longitude: g.longitude,
+                    isPrimary: g.isPrimary
                 )
             }
+            grounds = mapGrounds.filter(\.isPrimary)
         } catch {
             print("Grounds load failed: \(error)")
         }

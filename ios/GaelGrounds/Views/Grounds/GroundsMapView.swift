@@ -25,7 +25,11 @@ struct GroundsMapView: View {
                             longitude: ground.longitude
                         )
                     ) {
-                        GroundMapPin(name: ground.name, visited: ground.visited)
+                        GroundMapPin(
+                            name: ground.name,
+                            visited: ground.visited,
+                            isPrimary: ground.isPrimary
+                        )
                     }
                 }
             }
@@ -51,24 +55,23 @@ struct GroundsMapView: View {
 private struct GroundMapPin: View {
     let name: String
     let visited: Bool
+    let isPrimary: Bool
 
     var body: some View {
-        if visited {
-            ZStack {
-                Circle()
-                    .fill(.green)
-                    .frame(width: 18, height: 18)
-                    .shadow(color: .green.opacity(0.6), radius: 6)
-                Circle()
-                    .stroke(.white, lineWidth: 2)
-                    .frame(width: 18, height: 18)
+        let diameter: CGFloat = isPrimary ? 16 : 6
+
+        Circle()
+            .fill(visited ? Color.green : Color(.systemGray3))
+            .frame(width: diameter, height: diameter)
+            .overlay {
+                if isPrimary {
+                    Circle().stroke(.black, lineWidth: 2)
+                }
             }
-        } else {
-            Circle()
-                .fill(Color(.systemGray4))
-                .frame(width: 10, height: 10)
-                .overlay(Circle().stroke(.white.opacity(0.7), lineWidth: 1))
-        }
+            .shadow(
+                color: visited ? .green.opacity(0.55) : .clear,
+                radius: isPrimary ? 5 : 2
+            )
     }
 }
 
