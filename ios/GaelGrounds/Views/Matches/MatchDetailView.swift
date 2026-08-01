@@ -3,60 +3,59 @@ import Supabase
 
 struct MatchDetailView: View {
     let matchId: UUID
+    var isFinalOnLoad: Bool = false
+    var winnerNameOnLoad: String? = nil
 
     @State private var summary: MatchSummary?
     @State private var isLoading = true
-    @State private var realtimeChannel: RealtimeChannelV2?
-    @State private var realtimeTask: Task<Void, Never>?
+    @State private var confettiWinner: String?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                if isLoading {
-                    ProgressView().frame(maxWidth: .infinity)
-                } else if let summary {
-                    header(for: summary)
-                    CheckInPanel(matchId: summary.id, isPast: summary.isPast)
-                } else {
-                    Text("Match not found.").foregroundStyle(.secondary)
+        ZStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if isLoading {
+                        ProgressView().frame(maxWidth: .infinity)
+                    } else if let summary {
+                        header(for: summary)
+                        CheckInPanel(matchId: summary.id, isPast: summary.isPast)
+                    } else {
+                        Text("Match not found.").foregroundStyle(.secondary)
+                    }
                 }
+                .padding()
             }
-            .padding()
+            .countyBackground(winnerNameOnLoad ?? summary?.winnerName)
+
+            if let winner = confettiWinner {
+                let (primary, secondary) = CountyColours.colours(for: winner)
+                ConfettiOverlayView(colors: [primary, secondary])
+            }
         }
         .navigationTitle("Match")
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            await load(showSpinner: true)
-            let (channel, task) = RealtimeWatcher.watch(table: "matches", filter: "id=eq.\(matchId.uuidString)") {
-                Task { await load(showSpinner: false) }
+        .onAppear {
+            if isFinalOnLoad, let winner = winnerNameOnLoad {
+                confettiWinner = winner
             }
-            realtimeChannel = channel
-            realtimeTask = task
         }
-        .onDisappear { RealtimeWatcher.stop(channel: realtimeChannel, task: realtimeTask) }
+        .task { await load() }
     }
 
     @ViewBuilder
     private func header(for summary: MatchSummary) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text([summary.competition, summary.round].compactMap { $0 }.joined(separator: " · "))
+                Text(summary.competition ?? "Gaelic Games")
                     .font(.caption.bold())
                     .foregroundStyle(.brandGold)
                     .textCase(.uppercase)
-                if let season = summary.season {
-                    Text(String(season))
+                if summary.isLive {
+                    Text("● LIVE")
                         .font(.caption2.bold())
                         .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(.background.secondary, in: Capsule())
-                        .foregroundStyle(.secondary)
-                }
-                if summary.status == .postponed || summary.status == .cancelled {
-                    Text(summary.status == .postponed ? "Postponed" : "Cancelled")
-                        .font(.caption2.bold())
-                        .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(Color.orange.opacity(0.18), in: Capsule())
-                        .foregroundStyle(.orange)
+                        .background(Color.brandLive, in: Capsule())
+                        .foregroundStyle(.white)
                 }
             }
 
@@ -69,13 +68,11 @@ struct MatchDetailView: View {
                     .foregroundStyle(.brandGreenLight)
             }
 
-            Text(Formatting.fixtureDateTime(date: summary.matchDate, throwInTime: summary.throwInTime))
+            Text(summary.playedAt.map(Formatting.matchDate) ?? "Date unavailable")
                 .foregroundStyle(.secondary)
 
             if let groundName = summary.groundName {
                 Text("📍 \(groundName)").foregroundStyle(.secondary)
-            } else {
-                Text("📍 Venue to be confirmed").foregroundStyle(.secondary)
             }
         }
         .padding(.leading, 12)
@@ -84,9 +81,9 @@ struct MatchDetailView: View {
         }
     }
 
-    private func load(showSpinner: Bool) async {
-        if showSpinner { isLoading = true }
-        defer { if showSpinner { isLoading = false } }
+    private func load() async {
+        isLoading = true
+        defer { isLoading = false }
         do {
             let match: Match = try await Supa.client
                 .from("matches")
@@ -96,6 +93,9 @@ struct MatchDetailView: View {
                 .execute()
                 .value
             summary = try await MatchService.resolveSummaries([match]).first
+            if confettiWinner == nil, let s = summary, s.isFinal, let winner = s.winnerName {
+                confettiWinner = winner
+            }
         } catch {
             print("MatchDetail load failed: \(error)")
         }

@@ -1,11 +1,15 @@
+import MapKit
 import SwiftUI
+import Supabase
 
 struct GroundsView: View {
     @EnvironmentObject private var auth: AuthViewModel
 
     @State private var grounds: [GroundSummary] = []
+    @State private var mapGrounds: [GroundSummary] = []
     @State private var search = ""
     @State private var isLoading = true
+    @State private var showMap = false
 
     private var filtered: [GroundSummary] {
         let q = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -41,11 +45,22 @@ struct GroundsView: View {
             .padding()
         }
         .navigationTitle("Grounds")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showMap = true } label: {
+                    IrelandMapIcon()
+                }
+            }
+        }
+        .sheet(isPresented: $showMap) {
+            GroundsMapView(grounds: mapGrounds)
+        }
         .navigationDestination(for: GroundRoute.self) { route in
             GroundDetailView(groundId: route.id)
         }
         .task { await load() }
         .refreshable { await load() }
+        .gaelGroundsBackground()
     }
 
     private func load() async {
@@ -63,15 +78,19 @@ struct GroundsView: View {
                 visitedIds = Set(visits.map(\.groundId))
             }
 
-            grounds = groundRows.map { g in
+            mapGrounds = groundRows.map { g in
                 GroundSummary(
                     id: g.id,
                     name: g.name,
                     countyName: countyNameById[g.countyId] ?? "",
                     capacity: g.capacity,
-                    visited: visitedIds.contains(g.id)
+                    visited: visitedIds.contains(g.id),
+                    latitude: g.latitude,
+                    longitude: g.longitude,
+                    isPrimary: g.isPrimary
                 )
             }
+            grounds = mapGrounds.filter(\.isPrimary)
         } catch {
             print("Grounds load failed: \(error)")
         }

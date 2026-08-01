@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 private struct VisitedGroundRow: Identifiable {
     let id: UUID
@@ -9,8 +10,7 @@ private struct VisitedGroundRow: Identifiable {
 private struct AttendedMatchRow: Identifiable {
     let id: UUID
     let competition: String?
-    let matchDate: Date?
-    let throwInTime: String?
+    let playedAt: Date
     let homeName: String
     let awayName: String
 }
@@ -30,8 +30,12 @@ struct ProfileView: View {
     @State private var grounds: [VisitedGroundRow] = []
     @State private var matches: [AttendedMatchRow] = []
     @State private var achievements: [AchievementRow] = []
+    @State private var counties: [County] = []
+    @State private var supportedCountyId: UUID?
+    @State private var savedSupportedCountyId: UUID?
     @State private var isLoading = true
     @State private var isSaving = false
+    @State private var isSavingCounty = false
 
     var body: some View {
         ScrollView {
@@ -53,11 +57,47 @@ struct ProfileView: View {
                     .disabled(isSaving || displayName.trimmingCharacters(in: .whitespaces) == savedName)
                 }
 
+                HStack(spacing: 8) {
+                    Picker("Supported county", selection: $supportedCountyId) {
+                        Text("Select your county").tag(nil as UUID?)
+                        ForEach(counties) { county in
+                            Text(county.name).tag(county.id as UUID?)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    Spacer()
+
+                    Button(isSavingCounty ? "Saving…" : "Save county") {
+                        Task { await saveSupportedCounty() }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(
+                        isSavingCounty ||
+                        supportedCountyId == nil ||
+                        supportedCountyId == savedSupportedCountyId
+                    )
+                }
+
                 HStack(spacing: 12) {
                     StatTile(value: grounds.count, label: "Grounds visited")
                     StatTile(value: matches.count, label: "Matches attended")
                     StatTile(value: achievements.count, label: "Achievements")
                 }
+
+                NavigationLink {
+                    FriendsView()
+                } label: {
+                    HStack {
+                        Label("Friends", systemImage: "person.2.fill")
+                            .font(.subheadline.bold())
+                        Spacer()
+                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    }
+                    .padding()
+                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
 
                 if isLoading {
                     ProgressView().frame(maxWidth: .infinity)
@@ -89,7 +129,7 @@ struct ProfileView: View {
                                 ForEach(matches) { m in
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("\(m.homeName) v \(m.awayName)").font(.subheadline.bold())
-                                        Text("\(m.competition ?? "Gaelic Games") · \(Formatting.fixtureDateTime(date: m.matchDate, throwInTime: m.throwInTime))")
+                                        Text("\(m.competition ?? "Gaelic Games") · \(Formatting.matchDate(m.playedAt))")
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                     }
@@ -130,6 +170,7 @@ struct ProfileView: View {
         .navigationTitle("Profile")
         .task { await load() }
         .refreshable { await load() }
+        .gaelGroundsBackground()
     }
 
     @ViewBuilder
@@ -157,14 +198,36 @@ struct ProfileView: View {
         }
     }
 
+    private func saveSupportedCounty() async {
+        guard let userId = auth.userId, let supportedCountyId else { return }
+        isSavingCounty = true
+        defer { isSavingCounty = false }
+        do {
+            try await Supa.client
+                .from("user_profiles")
+                .update(SupportedCountyUpdate(supportedCountyId: supportedCountyId))
+                .eq("id", value: userId)
+                .execute()
+            savedSupportedCountyId = supportedCountyId
+        } catch {
+            print("saveSupportedCounty failed: \(error)")
+        }
+    }
+
     private func load() async {
         guard let userId = auth.userId else { return }
         isLoading = true
         defer { isLoading = false }
 
         do {
-            let profile: UserProfile = try await Supa.client
+            async let profileTask: UserProfile = Supa.client
                 .from("user_profiles").select().eq("id", value: userId).single().execute().value
+            async let countiesTask: [County] = Supa.client
+                .from("counties").select().order("name").execute().value
+            let (profile, loadedCounties) = try await (profileTask, countiesTask)
+            counties = loadedCounties
+            supportedCountyId = profile.supportedCountyId
+            savedSupportedCountyId = profile.supportedCountyId
             if let name = profile.displayName {
                 displayName = name
                 savedName = name
@@ -188,8 +251,8 @@ struct ProfileView: View {
                 let summaries = try await MatchService.resolveSummaries(matchRows)
                 let summaryById = Dictionary(uniqueKeysWithValues: summaries.map { ($0.id, $0) })
                 matches = attendance.compactMap { a in
-                    guard let s = summaryById[a.matchId] else { return nil }
-                    return AttendedMatchRow(id: a.id, competition: s.competition, matchDate: s.matchDate, throwInTime: s.throwInTime, homeName: s.homeName, awayName: s.awayName)
+                    guard let s = summaryById[a.matchId], let playedAt = s.playedAt else { return nil }
+                    return AttendedMatchRow(id: a.id, competition: s.competition, playedAt: playedAt, homeName: s.homeName, awayName: s.awayName)
                 }
             } else {
                 matches = []
@@ -215,7 +278,7 @@ struct ProfileView: View {
     }
 }
 
-private struct StatTile: View {
+struct StatTile: View {
     let value: Int
     let label: String
 
