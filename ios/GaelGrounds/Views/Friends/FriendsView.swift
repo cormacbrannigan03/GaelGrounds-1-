@@ -235,6 +235,14 @@ struct FriendsView: View {
 
 /// Minimal read-only view of a friend's stats, pushed via the
 /// `FriendProfileRoute` navigation value (previously unused/dead code).
+private struct FriendAchievementRow: Identifiable {
+    let id: UUID
+    let title: String
+    let description: String
+    let icon: String?
+    let unlockedAt: Date
+}
+
 struct FriendProfileView: View {
     let userId: UUID
 
@@ -242,6 +250,7 @@ struct FriendProfileView: View {
     @State private var groundsCount = 0
     @State private var matchesCount = 0
     @State private var achievementsCount = 0
+    @State private var achievements: [FriendAchievementRow] = []
     @State private var isLoading = true
 
     var body: some View {
@@ -256,6 +265,30 @@ struct FriendProfileView: View {
                         StatTile(value: groundsCount, label: "Grounds visited")
                         StatTile(value: matchesCount, label: "Matches attended")
                         StatTile(value: achievementsCount, label: "Achievements")
+                    }
+
+                    if !achievements.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Achievements").font(.title3.bold())
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
+                                ForEach(achievements) { achievement in
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Label(achievement.title, systemImage: achievement.icon ?? "trophy.fill")
+                                            .font(.headline)
+                                            .foregroundStyle(.brandGold)
+                                        Text(achievement.description)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                        Text("Unlocked \(Formatting.shortDate(achievement.unlockedAt))")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding()
+                                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -274,8 +307,43 @@ struct FriendProfileView: View {
                 .from("user_profiles").select().eq("id", value: userId).single().execute().value
             async let grounds = countRows("user_visits", userId: userId)
             async let matches = countRows("user_match_attendance", userId: userId)
-            async let achievements = countRows("user_achievements", userId: userId)
-            (profile, groundsCount, matchesCount, achievementsCount) = try await (profileTask, grounds, matches, achievements)
+            async let achievementRowsTask: [UserAchievement] = Supa.client
+                .from("user_achievements")
+                .select()
+                .eq("user_id", value: userId)
+                .order("unlocked_at", ascending: false)
+                .execute()
+                .value
+            let (loadedProfile, loadedGrounds, loadedMatches, userAchievements) = try await (
+                profileTask, grounds, matches, achievementRowsTask
+            )
+            profile = loadedProfile
+            groundsCount = loadedGrounds
+            matchesCount = loadedMatches
+            achievementsCount = userAchievements.count
+
+            let achievementIds = userAchievements.map(\.achievementId)
+            if !achievementIds.isEmpty {
+                let definitions: [AchievementDefinition] = try await Supa.client
+                    .from("achievement_definitions")
+                    .select()
+                    .in("id", values: achievementIds)
+                    .execute()
+                    .value
+                let definitionById = Dictionary(uniqueKeysWithValues: definitions.map { ($0.id, $0) })
+                achievements = userAchievements.compactMap { userAchievement in
+                    guard let definition = definitionById[userAchievement.achievementId] else { return nil }
+                    return FriendAchievementRow(
+                        id: userAchievement.id,
+                        title: definition.title,
+                        description: definition.description,
+                        icon: definition.icon,
+                        unlockedAt: userAchievement.unlockedAt
+                    )
+                }
+            } else {
+                achievements = []
+            }
         } catch {
             print("FriendProfileView load failed: \(error)")
         }

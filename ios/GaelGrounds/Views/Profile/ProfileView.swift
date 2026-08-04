@@ -19,6 +19,7 @@ private struct AchievementRow: Identifiable {
     let id: UUID
     let title: String
     let description: String
+    let icon: String?
     let unlockedAt: Date
 }
 
@@ -132,7 +133,9 @@ struct ProfileView: View {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                                 ForEach(achievements) { a in
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text("🏆 \(a.title)").font(.headline)
+                                        Label(a.title, systemImage: a.icon ?? "trophy.fill")
+                                            .font(.headline)
+                                            .foregroundStyle(.brandGold)
                                         Text(a.description).font(.caption).foregroundStyle(.secondary)
                                         Text("Unlocked \(Formatting.shortDate(a.unlockedAt))")
                                             .font(.caption)
@@ -295,7 +298,13 @@ struct ProfileView: View {
                 let defById = Dictionary(uniqueKeysWithValues: defs.map { ($0.id, $0) })
                 achievements = userAchievements.compactMap { ua in
                     guard let d = defById[ua.achievementId] else { return nil }
-                    return AchievementRow(id: ua.id, title: d.title, description: d.description, unlockedAt: ua.unlockedAt)
+                    return AchievementRow(
+                        id: ua.id,
+                        title: d.title,
+                        description: d.description,
+                        icon: d.icon,
+                        unlockedAt: ua.unlockedAt
+                    )
                 }
             } else {
                 achievements = []

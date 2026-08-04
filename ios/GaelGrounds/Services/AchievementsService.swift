@@ -5,7 +5,7 @@ import Foundation
 /// Safe to call after every check-in — RLS still enforces user_id = auth.uid()
 /// on the insert, and we only ever add achievements the user doesn't have yet.
 enum AchievementsService {
-    static func evaluate(userId: UUID) async -> [String] {
+    static func evaluate(userId: UUID, checkedInMatchId: UUID? = nil) async -> [AchievementUnlock] {
         do {
             async let definitions: [AchievementDefinition] = Supa.client
                 .from("achievement_definitions")
@@ -61,8 +61,44 @@ enum AchievementsService {
             }
             let groundCount = groundIds.count
 
+            // County achievements only count when the county is both the designated
+            // home team and the venue belongs to that county. This excludes neutral
+            // championship venues even if the county happens to be listed first.
+            var eligibleHomeCountyId: UUID?
+            if let checkedInMatchId {
+                let checkedInMatch: Match = try await Supa.client
+                    .from("matches")
+                    .select()
+                    .eq("id", value: checkedInMatchId)
+                    .single()
+                    .execute()
+                    .value
+
+                if let homeTeamId = checkedInMatch.homeCountyTeamId,
+                   let groundId = checkedInMatch.groundId {
+                    async let homeTeamTask: CountyTeam = Supa.client
+                        .from("county_teams")
+                        .select()
+                        .eq("id", value: homeTeamId)
+                        .single()
+                        .execute()
+                        .value
+                    async let groundTask: Ground = Supa.client
+                        .from("grounds")
+                        .select()
+                        .eq("id", value: groundId)
+                        .single()
+                        .execute()
+                        .value
+                    let (homeTeam, ground) = try await (homeTeamTask, groundTask)
+                    if homeTeam.countyId == ground.countyId {
+                        eligibleHomeCountyId = homeTeam.countyId
+                    }
+                }
+            }
+
             var newlyUnlocked: [UserAchievementInsert] = []
-            var newTitles: [String] = []
+            var unlocks: [AchievementUnlock] = []
 
             for def in defs where !unlockedIds.contains(def.id) {
                 let earned: Bool
@@ -73,13 +109,22 @@ enum AchievementsService {
                     earned = matchCount >= (def.ruleParams.count ?? 1)
                 case "all_provinces_visited":
                     earned = provinces.count >= 4
+                case "county_home_match":
+                    earned = def.ruleParams.countyId == eligibleHomeCountyId
                 default:
                     earned = false
                 }
 
                 if earned {
                     newlyUnlocked.append(UserAchievementInsert(achievementId: def.id, userId: userId))
-                    newTitles.append(def.title)
+                    unlocks.append(
+                        AchievementUnlock(
+                            id: def.id,
+                            title: def.title,
+                            description: def.description,
+                            icon: def.icon
+                        )
+                    )
                 }
             }
 
@@ -87,7 +132,7 @@ enum AchievementsService {
                 try await Supa.client.from("user_achievements").insert(newlyUnlocked).execute()
             }
 
-            return newTitles
+            return unlocks
         } catch {
             print("AchievementsService.evaluate failed: \(error)")
             return []

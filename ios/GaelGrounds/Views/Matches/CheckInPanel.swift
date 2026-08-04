@@ -7,6 +7,11 @@ private struct Attendee: Identifiable, Hashable {
     let displayName: String?
 }
 
+private struct AchievementUnlockBatch: Identifiable {
+    let id = UUID()
+    let achievements: [AchievementUnlock]
+}
+
 struct CheckInPanel: View {
     let matchId: UUID
     let matchPlayedAt: Date?
@@ -19,7 +24,7 @@ struct CheckInPanel: View {
     @State private var myAttendanceId: UUID?
     @State private var isLoading = true
     @State private var isBusy = false
-    @State private var unlockedTitles: [String]?
+    @State private var achievementPopup: AchievementUnlockBatch?
     @State private var realtimeTask: Task<Void, Never>?
     @State private var channel: RealtimeChannelV2?
     @State private var showingPaywall = false
@@ -38,20 +43,6 @@ struct CheckInPanel: View {
                 if auth.isSignedIn {
                     checkInButton
                 }
-            }
-
-            if let unlockedTitles {
-                Button {
-                    self.unlockedTitles = nil
-                } label: {
-                    Text("🏆 Achievement unlocked: \(unlockedTitles.joined(separator: ", "))")
-                        .font(.footnote.bold())
-                        .padding(10)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.brandGold.opacity(0.85), in: RoundedRectangle(cornerRadius: 10))
-                        .foregroundStyle(.black)
-                }
-                .buttonStyle(.plain)
             }
 
             if isLoading {
@@ -79,6 +70,11 @@ struct CheckInPanel: View {
         .onDisappear { stop() }
         .sheet(isPresented: $showingPaywall) {
             PremiumPaywallView(reason: paywallReason)
+        }
+        .sheet(item: $achievementPopup) { batch in
+            AchievementUnlockedView(achievements: batch.achievements)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
         }
     }
 
@@ -182,8 +178,13 @@ struct CheckInPanel: View {
                 .from("user_match_attendance")
                 .insert(UserMatchAttendanceInsert(matchId: matchId, userId: userId))
                 .execute()
-            let newTitles = await AchievementsService.evaluate(userId: userId)
-            if !newTitles.isEmpty { unlockedTitles = newTitles }
+            let unlocks = await AchievementsService.evaluate(
+                userId: userId,
+                checkedInMatchId: matchId
+            )
+            if !unlocks.isEmpty {
+                achievementPopup = AchievementUnlockBatch(achievements: unlocks)
+            }
         } catch {
             print("checkIn failed: \(error)")
         }
@@ -197,5 +198,44 @@ struct CheckInPanel: View {
         } catch {
             print("checkOut failed: \(error)")
         }
+    }
+}
+
+private struct AchievementUnlockedView: View {
+    let achievements: [AchievementUnlock]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Text("Congratulations!")
+                .font(.largeTitle.bold())
+            Text(achievements.count == 1 ? "You've unlocked an achievement" : "You've unlocked new achievements")
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 12) {
+                ForEach(achievements) { achievement in
+                    HStack(spacing: 14) {
+                        Image(systemName: achievement.icon ?? "trophy.fill")
+                            .font(.title2)
+                            .foregroundStyle(Color.brandGold)
+                            .frame(width: 42, height: 42)
+                            .background(Color.brandGreen, in: Circle())
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(achievement.title).font(.headline)
+                            Text(achievement.description)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                }
+            }
+
+            Button("Done") { dismiss() }
+                .buttonStyle(.borderedProminent)
+                .tint(.brandGreen)
+                .frame(maxWidth: .infinity)
+        }
+        .padding(24)
     }
 }

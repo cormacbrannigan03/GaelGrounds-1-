@@ -62,6 +62,7 @@ struct UserMatchAttendanceInsert: Encodable {
 struct AchievementDefinition: Codable, Identifiable, Hashable {
     struct RuleParams: Codable, Hashable {
         let count: Int?
+        let countyId: UUID?
     }
 
     let id: UUID
@@ -72,6 +73,13 @@ struct AchievementDefinition: Codable, Identifiable, Hashable {
     let ruleType: String
     let ruleParams: RuleParams
     let createdAt: Date?
+}
+
+struct AchievementUnlock: Identifiable, Hashable {
+    let id: UUID
+    let title: String
+    let description: String
+    let icon: String?
 }
 
 struct UserAchievement: Codable, Identifiable, Hashable {

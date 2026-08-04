@@ -268,8 +268,8 @@ struct GroundCheckInPanel: View {
                 .insert(UserVisitInsert(groundId: groundId, userId: userId, notes: trimmed.isEmpty ? nil : trimmed))
                 .execute()
             notes = ""
-            let newTitles = await AchievementsService.evaluate(userId: userId)
-            if !newTitles.isEmpty { unlockedTitles = newTitles }
+            let unlocks = await AchievementsService.evaluate(userId: userId)
+            if !unlocks.isEmpty { unlockedTitles = unlocks.map(\.title) }
         } catch {
             print("checkIn failed: \(error)")
         }
