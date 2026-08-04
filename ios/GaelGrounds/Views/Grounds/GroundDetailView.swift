@@ -40,6 +40,7 @@ struct GroundDetailView: View {
         .navigationTitle("Ground")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
+        .countyBackground(countyName)
     }
 
     private func mapURL(for ground: Ground) -> URL {

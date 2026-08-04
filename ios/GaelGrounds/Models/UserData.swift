@@ -80,6 +80,43 @@ struct AchievementUnlock: Identifiable, Hashable {
     let title: String
     let description: String
     let icon: String?
+    let tier: AchievementTier?
+}
+
+enum AchievementTier: String, Hashable {
+    case standard
+    case bronze
+    case silver
+    case gold
+
+    static func forHomeMatchCount(_ count: Int) -> AchievementTier {
+        if count >= 50 { return .gold }
+        if count >= 25 { return .silver }
+        if count >= 10 { return .bronze }
+        return .standard
+    }
+
+    var label: String {
+        switch self {
+        case .standard: return ""
+        case .bronze: return "Bronze"
+        case .silver: return "Silver"
+        case .gold: return "Gold"
+        }
+    }
+}
+
+struct AchievementProgress: Hashable {
+    let title: String
+    let message: String
+    let icon: String?
+    let tier: AchievementTier
+    let homeGameCount: Int
+}
+
+struct AchievementEvaluation: Hashable {
+    let unlocks: [AchievementUnlock]
+    let progress: AchievementProgress?
 }
 
 struct UserAchievement: Codable, Identifiable, Hashable {

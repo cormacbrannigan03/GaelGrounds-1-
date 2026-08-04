@@ -5,7 +5,7 @@ import Foundation
 /// Safe to call after every check-in — RLS still enforces user_id = auth.uid()
 /// on the insert, and we only ever add achievements the user doesn't have yet.
 enum AchievementsService {
-    static func evaluate(userId: UUID, checkedInMatchId: UUID? = nil) async -> [AchievementUnlock] {
+    static func evaluate(userId: UUID, checkedInMatchId: UUID? = nil) async -> AchievementEvaluation {
         do {
             async let definitions: [AchievementDefinition] = Supa.client
                 .from("achievement_definitions")
@@ -37,7 +37,8 @@ enum AchievementsService {
             let defs = try await definitions
             let unlockedIds = Set(try await unlocked.map(\.achievementId))
             let visitRows = try await visits
-            let matchCount = try await attendance.count
+            let attendanceRows = try await attendance
+            let matchCount = attendanceRows.count
 
             let groundIds = Array(Set(visitRows.map(\.groundId)))
             var provinces = Set<Province>()
@@ -64,6 +65,7 @@ enum AchievementsService {
             // County achievements only count when the county is both the designated
             // home team and the venue belongs to that county. This excludes neutral
             // championship venues even if the county happens to be listed first.
+            let homeCounts = try await homeMatchCounts(attendance: attendanceRows)
             var eligibleHomeCountyId: UUID?
             if let checkedInMatchId {
                 let checkedInMatch: Match = try await Supa.client
@@ -110,7 +112,7 @@ enum AchievementsService {
                 case "all_provinces_visited":
                     earned = provinces.count >= 4
                 case "county_home_match":
-                    earned = def.ruleParams.countyId == eligibleHomeCountyId
+                    earned = (def.ruleParams.countyId.flatMap { homeCounts[$0] } ?? 0) >= 1
                 default:
                     earned = false
                 }
@@ -122,7 +124,8 @@ enum AchievementsService {
                             id: def.id,
                             title: def.title,
                             description: def.description,
-                            icon: def.icon
+                            icon: def.icon,
+                            tier: def.ruleType == "county_home_match" ? .standard : nil
                         )
                     )
                 }
@@ -132,10 +135,111 @@ enum AchievementsService {
                 try await Supa.client.from("user_achievements").insert(newlyUnlocked).execute()
             }
 
-            return unlocks
+            var progress: AchievementProgress?
+            if let countyId = eligibleHomeCountyId,
+               let definition = defs.first(where: {
+                   $0.ruleType == "county_home_match" && $0.ruleParams.countyId == countyId
+               }) {
+                let count = homeCounts[countyId] ?? 0
+                let tier = AchievementTier.forHomeMatchCount(count)
+
+                if [10, 25, 50].contains(count) {
+                    unlocks.append(
+                        AchievementUnlock(
+                            id: UUID(),
+                            title: "\(definition.title) — \(tier.label)",
+                            description: "Attend \(count) verified home games.",
+                            icon: definition.icon,
+                            tier: tier
+                        )
+                    )
+                }
+
+                progress = AchievementProgress(
+                    title: definition.title,
+                    message: progressMessage(count: count),
+                    icon: definition.icon,
+                    tier: tier,
+                    homeGameCount: count
+                )
+            }
+
+            return AchievementEvaluation(unlocks: unlocks, progress: progress)
         } catch {
             print("AchievementsService.evaluate failed: \(error)")
-            return []
+            return AchievementEvaluation(unlocks: [], progress: nil)
         }
+    }
+
+    static func homeMatchCounts(userId: UUID) async throws -> [UUID: Int] {
+        let attendance: [UserMatchAttendance] = try await Supa.client
+            .from("user_match_attendance")
+            .select()
+            .eq("user_id", value: userId)
+            .execute()
+            .value
+        return try await homeMatchCounts(attendance: attendance)
+    }
+
+    private static func homeMatchCounts(attendance: [UserMatchAttendance]) async throws -> [UUID: Int] {
+        let matchIds = Array(Set(attendance.map(\.matchId)))
+        guard !matchIds.isEmpty else { return [:] }
+
+        let matches: [Match] = try await Supa.client
+            .from("matches")
+            .select()
+            .in("id", values: matchIds)
+            .execute()
+            .value
+        let homeTeamIds = Array(Set(matches.compactMap(\.homeCountyTeamId)))
+        let groundIds = Array(Set(matches.compactMap(\.groundId)))
+        guard !homeTeamIds.isEmpty, !groundIds.isEmpty else { return [:] }
+
+        async let teamsTask: [CountyTeam] = Supa.client
+            .from("county_teams")
+            .select()
+            .in("id", values: homeTeamIds)
+            .execute()
+            .value
+        async let groundsTask: [Ground] = Supa.client
+            .from("grounds")
+            .select()
+            .in("id", values: groundIds)
+            .execute()
+            .value
+        let (teams, grounds) = try await (teamsTask, groundsTask)
+        let teamById = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
+        let groundById = Dictionary(uniqueKeysWithValues: grounds.map { ($0.id, $0) })
+
+        var counts: [UUID: Int] = [:]
+        for match in matches {
+            guard let teamId = match.homeCountyTeamId,
+                  let groundId = match.groundId,
+                  let team = teamById[teamId],
+                  let ground = groundById[groundId],
+                  team.countyId == ground.countyId else { continue }
+            counts[team.countyId, default: 0] += 1
+        }
+        return counts
+    }
+
+    static func progressMessage(count: Int) -> String {
+        let next: (threshold: Int, name: String)?
+        if count < 10 {
+            next = (10, "Bronze")
+        } else if count < 25 {
+            next = (25, "Silver")
+        } else if count < 50 {
+            next = (50, "Gold")
+        } else {
+            next = nil
+        }
+
+        guard let next else {
+            return "Outstanding — you've earned Gold level with \(count) home games."
+        }
+        let remaining = next.threshold - count
+        let noun = remaining == 1 ? "game" : "games"
+        return "Good work — you're only \(remaining) \(noun) away from earning \(next.name) level."
     }
 }

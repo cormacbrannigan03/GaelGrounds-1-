@@ -10,6 +10,7 @@ private struct Attendee: Identifiable, Hashable {
 private struct AchievementUnlockBatch: Identifiable {
     let id = UUID()
     let achievements: [AchievementUnlock]
+    let progress: AchievementProgress?
 }
 
 struct CheckInPanel: View {
@@ -72,7 +73,7 @@ struct CheckInPanel: View {
             PremiumPaywallView(reason: paywallReason)
         }
         .sheet(item: $achievementPopup) { batch in
-            AchievementUnlockedView(achievements: batch.achievements)
+            AchievementUnlockedView(achievements: batch.achievements, progress: batch.progress)
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
@@ -178,12 +179,15 @@ struct CheckInPanel: View {
                 .from("user_match_attendance")
                 .insert(UserMatchAttendanceInsert(matchId: matchId, userId: userId))
                 .execute()
-            let unlocks = await AchievementsService.evaluate(
+            let evaluation = await AchievementsService.evaluate(
                 userId: userId,
                 checkedInMatchId: matchId
             )
-            if !unlocks.isEmpty {
-                achievementPopup = AchievementUnlockBatch(achievements: unlocks)
+            if !evaluation.unlocks.isEmpty || evaluation.progress != nil {
+                achievementPopup = AchievementUnlockBatch(
+                    achievements: evaluation.unlocks,
+                    progress: evaluation.progress
+                )
             }
         } catch {
             print("checkIn failed: \(error)")
@@ -203,21 +207,24 @@ struct CheckInPanel: View {
 
 private struct AchievementUnlockedView: View {
     let achievements: [AchievementUnlock]
+    let progress: AchievementProgress?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 18) {
-            Text("Congratulations!")
+            Text(achievements.isEmpty ? "Good work!" : "Congratulations!")
                 .font(.largeTitle.bold())
-            Text(achievements.count == 1 ? "You've unlocked an achievement" : "You've unlocked new achievements")
-                .foregroundStyle(.secondary)
+            if !achievements.isEmpty {
+                Text(achievements.count == 1 ? "You've unlocked an achievement" : "You've unlocked new achievements")
+                    .foregroundStyle(.secondary)
+            }
 
             VStack(spacing: 12) {
                 ForEach(achievements) { achievement in
                     HStack(spacing: 14) {
                         Image(systemName: achievement.icon ?? "trophy.fill")
                             .font(.title2)
-                            .foregroundStyle(Color.brandGold)
+                            .foregroundStyle(tierColour(achievement.tier))
                             .frame(width: 42, height: 42)
                             .background(Color.brandGreen, in: Circle())
                         VStack(alignment: .leading, spacing: 3) {
@@ -231,11 +238,40 @@ private struct AchievementUnlockedView: View {
                 }
             }
 
+            if let progress {
+                VStack(spacing: 8) {
+                    HStack {
+                        Label(progress.title, systemImage: progress.icon ?? "trophy.fill")
+                            .font(.headline)
+                        Spacer()
+                        Text("\(progress.homeGameCount) home games")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                    }
+                    ProgressView(value: Double(min(progress.homeGameCount, 50)), total: 50)
+                        .tint(tierColour(progress.tier))
+                    Text(progress.message)
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding()
+                .gaelInsetCard(cornerRadius: 14)
+            }
+
             Button("Done") { dismiss() }
                 .buttonStyle(.borderedProminent)
                 .tint(.brandGreen)
                 .frame(maxWidth: .infinity)
         }
         .padding(24)
+    }
+
+    private func tierColour(_ tier: AchievementTier?) -> Color {
+        switch tier {
+        case .bronze: return Color(red: 0.72, green: 0.45, blue: 0.20)
+        case .silver: return Color(red: 0.55, green: 0.60, blue: 0.66)
+        case .gold: return .brandGold
+        case .standard, nil: return .secondary
+        }
     }
 }

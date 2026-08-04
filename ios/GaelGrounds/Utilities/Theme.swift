@@ -32,6 +32,17 @@ extension ShapeStyle where Self == Color {
     static var brandLive: Color { .init(red: 0xD6 / 255, green: 0x45 / 255, blue: 0x45 / 255) }
 }
 
+extension AchievementTier {
+    var tint: Color {
+        switch self {
+        case .standard: return .secondary
+        case .bronze: return Color(red: 0.72, green: 0.45, blue: 0.20)
+        case .silver: return Color(red: 0.55, green: 0.60, blue: 0.66)
+        case .gold: return .brandGold
+        }
+    }
+}
+
 extension View {
     func gaelGroundsBackground() -> some View {
         self.background(
@@ -52,20 +63,28 @@ extension View {
         )
     }
 
+    @MainActor
     func countyBackground(_ countyName: String?) -> some View {
-        let countyColour = CountyColours.backgroundColour(for: countyName)
+        let colours = countyName.map(CountyColours.colours(for:))
+        let primary = colours?.0 ?? Color.brandGreen
+        let secondary = colours?.1 ?? Color.brandGold
         return background(
             ZStack {
                 Color.brandCanvas
                 LinearGradient(
                     stops: [
-                        .init(color: countyColour.opacity(0.88), location: 0),
-                        .init(color: countyColour.opacity(0.10), location: 0.32),
-                        .init(color: .clear, location: 0.68),
-                        .init(color: countyColour.opacity(0.38), location: 1),
+                        .init(color: primary.opacity(0.94), location: 0),
+                        .init(color: primary.opacity(0.78), location: 0.28),
+                        .init(color: secondary.opacity(0.72), location: 0.72),
+                        .init(color: secondary.opacity(0.92), location: 1),
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
+                )
+                LinearGradient(
+                    colors: [Color.white.opacity(0.05), Color.clear, Color.black.opacity(0.04)],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
             }
             .ignoresSafeArea()
