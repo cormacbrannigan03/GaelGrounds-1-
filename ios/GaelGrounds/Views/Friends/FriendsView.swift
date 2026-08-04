@@ -241,6 +241,8 @@ private struct FriendAchievementRow: Identifiable {
     let description: String
     let icon: String?
     let unlockedAt: Date
+    let tier: AchievementTier?
+    let homeGameCount: Int?
 }
 
 struct FriendProfileView: View {
@@ -275,7 +277,12 @@ struct FriendProfileView: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Label(achievement.title, systemImage: achievement.icon ?? "trophy.fill")
                                             .font(.headline)
-                                            .foregroundStyle(.brandGold)
+                                            .foregroundStyle(achievement.tier?.tint ?? Color.brandGold)
+                                        if let tier = achievement.tier, let count = achievement.homeGameCount {
+                                            Text(tier == .standard ? "\(count) home games" : "\(tier.label) · \(count) home games")
+                                                .font(.caption.bold())
+                                                .foregroundStyle(tier.tint)
+                                        }
                                         Text(achievement.description)
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
@@ -323,6 +330,7 @@ struct FriendProfileView: View {
             achievementsCount = userAchievements.count
 
             let achievementIds = userAchievements.map(\.achievementId)
+            let homeCounts = (try? await AchievementsService.homeMatchCounts(userId: userId)) ?? [:]
             if !achievementIds.isEmpty {
                 let definitions: [AchievementDefinition] = try await Supa.client
                     .from("achievement_definitions")
@@ -333,12 +341,17 @@ struct FriendProfileView: View {
                 let definitionById = Dictionary(uniqueKeysWithValues: definitions.map { ($0.id, $0) })
                 achievements = userAchievements.compactMap { userAchievement in
                     guard let definition = definitionById[userAchievement.achievementId] else { return nil }
+                    let homeCount = definition.ruleType == "county_home_match"
+                        ? definition.ruleParams.countyId.flatMap { homeCounts[$0] }
+                        : nil
                     return FriendAchievementRow(
                         id: userAchievement.id,
                         title: definition.title,
                         description: definition.description,
                         icon: definition.icon,
-                        unlockedAt: userAchievement.unlockedAt
+                        unlockedAt: userAchievement.unlockedAt,
+                        tier: homeCount.map(AchievementTier.forHomeMatchCount),
+                        homeGameCount: homeCount
                     )
                 }
             } else {

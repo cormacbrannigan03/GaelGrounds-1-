@@ -21,6 +21,9 @@ private struct AchievementRow: Identifiable {
     let description: String
     let icon: String?
     let unlockedAt: Date
+    let tier: AchievementTier?
+    let homeGameCount: Int?
+    let progressMessage: String?
 }
 
 struct ProfileView: View {
@@ -135,8 +138,18 @@ struct ProfileView: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Label(a.title, systemImage: a.icon ?? "trophy.fill")
                                             .font(.headline)
-                                            .foregroundStyle(.brandGold)
+                                            .foregroundStyle(a.tier?.tint ?? Color.brandGold)
+                                        if let tier = a.tier, let count = a.homeGameCount {
+                                            Text(tier == .standard ? "\(count) home games" : "\(tier.label) · \(count) home games")
+                                                .font(.caption.bold())
+                                                .foregroundStyle(tier.tint)
+                                        }
                                         Text(a.description).font(.caption).foregroundStyle(.secondary)
+                                        if let progressMessage = a.progressMessage {
+                                            Text(progressMessage)
+                                                .font(.caption)
+                                                .foregroundStyle(.primary)
+                                        }
                                         Text("Unlocked \(Formatting.shortDate(a.unlockedAt))")
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
@@ -292,18 +305,26 @@ struct ProfileView: View {
             let userAchievements: [UserAchievement] = try await Supa.client
                 .from("user_achievements").select().eq("user_id", value: userId).order("unlocked_at", ascending: false).execute().value
             let achievementIds = userAchievements.map(\.achievementId)
+            let homeCounts = (try? await AchievementsService.homeMatchCounts(userId: userId)) ?? [:]
             if !achievementIds.isEmpty {
                 let defs: [AchievementDefinition] = try await Supa.client
                     .from("achievement_definitions").select().in("id", values: achievementIds).execute().value
                 let defById = Dictionary(uniqueKeysWithValues: defs.map { ($0.id, $0) })
                 achievements = userAchievements.compactMap { ua in
                     guard let d = defById[ua.achievementId] else { return nil }
+                    let homeCount = d.ruleType == "county_home_match"
+                        ? d.ruleParams.countyId.flatMap { homeCounts[$0] }
+                        : nil
+                    let tier = homeCount.map(AchievementTier.forHomeMatchCount)
                     return AchievementRow(
                         id: ua.id,
                         title: d.title,
                         description: d.description,
                         icon: d.icon,
-                        unlockedAt: ua.unlockedAt
+                        unlockedAt: ua.unlockedAt,
+                        tier: tier,
+                        homeGameCount: homeCount,
+                        progressMessage: homeCount.map(AchievementsService.progressMessage)
                     )
                 }
             } else {
