@@ -59,22 +59,42 @@ struct MainTabView: View {
                     } label: {
                         VStack(spacing: 3) {
                             Image(systemName: tab.icon)
-                                .font(.system(size: 20))
+                                .font(.system(size: 19, weight: selectedTab == tab.tag ? .semibold : .regular))
                             Text(tab.label)
                                 .font(.system(size: 9, weight: .medium))
                         }
-                        .foregroundStyle(selectedTab == tab.tag ? Color.brandGreenLight : Color.secondary)
+                        .foregroundStyle(selectedTab == tab.tag ? Color.brandGreen : Color.secondary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 7)
+                        .background {
+                            if selectedTab == tab.tag {
+                                Capsule()
+                                    .fill(Color.brandGreenLight.opacity(0.12))
+                                    .overlay {
+                                        Capsule().stroke(Color.brandGold.opacity(0.26), lineWidth: 1)
+                                    }
+                                    .padding(.horizontal, 3)
+                            }
+                        }
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .background(.bar)
+            .padding(.horizontal, 5)
+            .padding(.top, 5)
+            .padding(.bottom, 2)
+            .background(Color.brandSurfaceRaised.ignoresSafeArea(edges: .bottom))
             .overlay(alignment: .top) {
-                Divider()
+                LinearGradient(
+                    colors: [.brandGreen.opacity(0.08), .brandGold.opacity(0.48), .brandGreen.opacity(0.08)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(height: 1)
             }
+            .shadow(color: Color.brandGreen.opacity(0.10), radius: 10, y: -3)
         }
         .ignoresSafeArea(.keyboard)
+        .tint(.brandGreenLight)
     }
 }

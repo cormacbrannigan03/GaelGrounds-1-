@@ -49,7 +49,7 @@ struct CountyDetailView: View {
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding()
-                                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+                                    .gaelCard(cornerRadius: 14)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -70,7 +70,7 @@ struct CountyDetailView: View {
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding()
-                                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+                                    .gaelCard(cornerRadius: 14)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -188,7 +188,7 @@ private struct HonoursGroup: View {
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding()
-                                .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
+                                .gaelCard(cornerRadius: 10)
                             }
                         }
                     }

@@ -25,7 +25,7 @@ struct GroundCardView: View {
                 }
             }
             .padding()
-            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+            .gaelCard(cornerRadius: 14)
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(ground.visited ? Color.brandGreenLight : .clear, lineWidth: 1.5)

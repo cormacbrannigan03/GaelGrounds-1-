@@ -89,7 +89,7 @@ struct FriendsView: View {
                                         Text("Requested").font(.caption).foregroundStyle(.secondary)
                                     }
                                     .padding()
-                                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
+                                    .gaelCard(cornerRadius: 10)
                                 }
                             }
                         }
@@ -124,7 +124,7 @@ struct FriendsView: View {
             Image(systemName: "chevron.right").foregroundStyle(.secondary).font(.caption)
         }
         .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
+        .gaelCard(cornerRadius: 10)
     }
 
     private func requestRow(_ request: FriendService.FriendRequest) -> some View {
@@ -139,7 +139,7 @@ struct FriendsView: View {
         }
         .disabled(isBusy)
         .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
+        .gaelCard(cornerRadius: 10)
     }
 
     @ViewBuilder
@@ -163,7 +163,7 @@ struct FriendsView: View {
             }
         }
         .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
+        .gaelCard(cornerRadius: 10)
     }
 
     private func scheduleSearch(_ query: String) {
@@ -285,7 +285,7 @@ struct FriendProfileView: View {
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding()
-                                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+                                    .gaelCard(cornerRadius: 14)
                                 }
                             }
                         }
