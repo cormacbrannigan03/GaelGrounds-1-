@@ -23,7 +23,7 @@ interface WaitlistEvent {
 Deno.serve(async (req) => {
   const expectedSecret = Deno.env.get("WAITLIST_EMAIL_SECRET");
   const providedSecret = req.headers.get("x-waitlist-secret");
-  if (expectedSecret && providedSecret !== expectedSecret) {
+  if (!expectedSecret || providedSecret !== expectedSecret) {
     return json({ error: "unauthorized" }, 401);
   }
 

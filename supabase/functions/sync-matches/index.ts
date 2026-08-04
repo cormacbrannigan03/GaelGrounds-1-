@@ -34,7 +34,7 @@ interface ProviderRow {
 Deno.serve(async (req) => {
   const expectedSecret = Deno.env.get("SYNC_SECRET");
   const providedSecret = req.headers.get("x-sync-secret");
-  if (expectedSecret && providedSecret !== expectedSecret) {
+  if (!expectedSecret || providedSecret !== expectedSecret) {
     return json({ error: "unauthorized" }, 401);
   }
 

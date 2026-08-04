@@ -37,7 +37,7 @@ type PushEvent = FriendRequestEvent | LiveCheckinEvent;
 Deno.serve(async (req) => {
   const expectedSecret = Deno.env.get("PUSH_NOTIFY_SECRET");
   const providedSecret = req.headers.get("x-push-secret");
-  if (expectedSecret && providedSecret !== expectedSecret) {
+  if (!expectedSecret || providedSecret !== expectedSecret) {
     return json({ error: "unauthorized" }, 401);
   }
 
