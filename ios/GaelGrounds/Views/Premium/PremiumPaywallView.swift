@@ -38,7 +38,7 @@ struct PremiumPaywallView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         perk("infinity", "Unlimited match logging", "No cap on check-ins or matches you add yourself.")
                         perk("clock.arrow.circlepath", "Log any year", "Add matches from before 2019, not just recent ones.")
-                        perk("person.2.fill", "Add friends", "Send friend requests and follow their GAA record.")
+                        perk("person.2.fill", "Add friends", "Send friend requests and follow their record.")
                         perk("trophy.fill", "Appear on leaderboards", "Free accounts can browse the leaderboard but aren't ranked on it.")
                     }
 

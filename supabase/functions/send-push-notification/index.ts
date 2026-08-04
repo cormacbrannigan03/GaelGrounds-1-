@@ -68,7 +68,7 @@ async function handleFriendRequest(supabase: SupabaseAdmin, event: FriendRequest
     .eq("id", event.requester_id)
     .single();
 
-  const requesterName = requester?.display_name ?? "A GAA fan";
+  const requesterName = requester?.display_name ?? "A fan";
   return await dispatchToUsers(
     supabase,
     [event.addressee_id],

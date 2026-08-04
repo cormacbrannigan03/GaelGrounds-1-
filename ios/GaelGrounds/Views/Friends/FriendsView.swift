@@ -84,7 +84,7 @@ struct FriendsView: View {
                             VStack(spacing: 8) {
                                 ForEach(sentRequests) { request in
                                     HStack {
-                                        Text(request.profile.displayName ?? "GAA fan")
+                                        Text(request.profile.displayName ?? "A fan")
                                         Spacer()
                                         Text("Requested").font(.caption).foregroundStyle(.secondary)
                                     }
@@ -119,7 +119,7 @@ struct FriendsView: View {
 
     private func friendRow(_ profile: UserProfile) -> some View {
         HStack {
-            Text(profile.displayName ?? "GAA fan").foregroundStyle(.primary)
+            Text(profile.displayName ?? "A fan").foregroundStyle(.primary)
             Spacer()
             Image(systemName: "chevron.right").foregroundStyle(.secondary).font(.caption)
         }
@@ -129,7 +129,7 @@ struct FriendsView: View {
 
     private func requestRow(_ request: FriendService.FriendRequest) -> some View {
         HStack {
-            Text(request.profile.displayName ?? "GAA fan")
+            Text(request.profile.displayName ?? "A fan")
             Spacer()
             Button("Accept") { Task { await respond(to: request, accept: true) } }
                 .buttonStyle(.borderedProminent)
@@ -145,7 +145,7 @@ struct FriendsView: View {
     @ViewBuilder
     private func searchResultRow(_ profile: UserProfile) -> some View {
         HStack {
-            Text(profile.displayName ?? "GAA fan")
+            Text(profile.displayName ?? "A fan")
             Spacer()
             if friendIds.contains(profile.id) {
                 Text("Friends").font(.caption).foregroundStyle(.secondary)
@@ -247,7 +247,7 @@ struct FriendProfileView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text(profile?.displayName ?? "GAA fan").font(.title2.bold())
+                Text(profile?.displayName ?? "A fan").font(.title2.bold())
 
                 if isLoading {
                     ProgressView().frame(maxWidth: .infinity)
