@@ -98,7 +98,7 @@ struct ProfileView: View {
                         Image(systemName: "chevron.right").foregroundStyle(.secondary)
                     }
                     .padding()
-                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+                    .gaelCard(cornerRadius: 14)
                 }
                 .buttonStyle(.plain)
 
@@ -121,7 +121,7 @@ struct ProfileView: View {
                         Image(systemName: "chevron.right").foregroundStyle(.secondary)
                     }
                     .padding()
-                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+                    .gaelCard(cornerRadius: 14)
                 }
                 .buttonStyle(.plain)
 
@@ -143,7 +143,7 @@ struct ProfileView: View {
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding()
-                                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+                                    .gaelCard(cornerRadius: 14)
                                 }
                             }
                         }
@@ -163,7 +163,7 @@ struct ProfileView: View {
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding()
-                                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
+                                    .gaelCard(cornerRadius: 10)
                                 }
                             }
                         }
@@ -181,7 +181,7 @@ struct ProfileView: View {
                                         Text(Formatting.shortDate(g.visitedAt)).font(.caption).foregroundStyle(.secondary)
                                     }
                                     .padding()
-                                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
+                                    .gaelCard(cornerRadius: 10)
                                 }
                             }
                         }
@@ -326,6 +326,6 @@ struct StatTile: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+        .gaelCard(cornerRadius: 14)
     }
 }

@@ -27,7 +27,7 @@ struct PremiumPaywallView: View {
                             .font(.subheadline.bold())
                             .padding(12)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+                            .gaelCard(cornerRadius: 12)
                     }
 
                     VStack(alignment: .leading, spacing: 4) {

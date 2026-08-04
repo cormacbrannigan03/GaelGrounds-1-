@@ -65,7 +65,7 @@ struct CheckInPanel: View {
             }
         }
         .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+        .gaelCard(cornerRadius: 14)
         .task { await start() }
         .onDisappear { stop() }
         .sheet(isPresented: $showingPaywall) {

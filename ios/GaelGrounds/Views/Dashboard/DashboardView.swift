@@ -114,6 +114,6 @@ private struct StatTile: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+        .gaelCard(cornerRadius: 14)
     }
 }

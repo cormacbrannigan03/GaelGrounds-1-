@@ -135,7 +135,8 @@ struct MatchesView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
+                VStack(spacing: 10) {
+                    HStack(spacing: 8) {
                     TextField("Search by team, competition, ground or year…", text: $search)
                         .textFieldStyle(.roundedBorder)
 
@@ -161,20 +162,23 @@ struct MatchesView: View {
                     .foregroundStyle(activeFilterCount > 0 ? .brandGreenLight : .secondary)
                     .accessibilityLabel("Filter matches")
                     .accessibilityValue(activeFilterCount > 0 ? "\(activeFilterCount) active" : "No active filters")
-                }
+                    }
 
-                Picker("Sport", selection: $selectedSport) {
-                    Text("Football").tag(SportCode.gaelicFootball)
-                    Text("Hurling").tag(SportCode.hurling)
-                }
-                .pickerStyle(.segmented)
+                    Picker("Sport", selection: $selectedSport) {
+                        Text("Football").tag(SportCode.gaelicFootball)
+                        Text("Hurling").tag(SportCode.hurling)
+                    }
+                    .pickerStyle(.segmented)
 
-                Picker("Tab", selection: $tab) {
-                    Text("Upcoming").tag(Tab.upcoming)
-                    Text("Fixtures").tag(Tab.fixtures)
-                    Text("Results").tag(Tab.results)
+                    Picker("Tab", selection: $tab) {
+                        Text("Upcoming").tag(Tab.upcoming)
+                        Text("Fixtures").tag(Tab.fixtures)
+                        Text("Results").tag(Tab.results)
+                    }
+                    .pickerStyle(.segmented)
                 }
-                .pickerStyle(.segmented)
+                .padding(12)
+                .gaelCard(cornerRadius: 16)
 
                 if isLoading {
                     ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
@@ -448,7 +452,7 @@ private struct UndatedResultsSection: View {
             .padding(.vertical, 4)
         }
         .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+        .gaelCard(cornerRadius: 14)
     }
 }
 
@@ -483,7 +487,7 @@ private struct MyMatchesSection: View {
             .padding(.vertical, 4)
         }
         .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+        .gaelCard(cornerRadius: 14)
     }
 }
 
@@ -541,7 +545,7 @@ private struct PersonalMatchCard: View {
             .foregroundStyle(.secondary)
         }
         .padding()
-        .background(.background.tertiary, in: RoundedRectangle(cornerRadius: 12))
+        .gaelInsetCard(cornerRadius: 12)
         .contextMenu {
             Button(role: .destructive, action: onDelete) {
                 Label("Delete match", systemImage: "trash")
@@ -586,7 +590,7 @@ private struct YearSection: View {
             .padding(.vertical, 4)
         }
         .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+        .gaelCard(cornerRadius: 14)
     }
 
     private func monthBinding(_ month: Int) -> Binding<Bool> {

@@ -87,6 +87,11 @@ struct MatchCardView: View {
                                 )
                             )
                     }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.brandBorder, lineWidth: 1)
+                    }
+                    .shadow(color: Color.brandGreen.opacity(0.07), radius: 7, y: 3)
             }
         }
         .buttonStyle(.plain)
