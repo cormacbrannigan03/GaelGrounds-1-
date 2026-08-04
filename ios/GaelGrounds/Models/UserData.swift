@@ -102,3 +102,9 @@ struct FriendshipInsert: Encodable {
 struct FriendshipStatusUpdate: Encodable {
     let status: String
 }
+
+struct DevicePushTokenUpsert: Encodable {
+    let userId: UUID
+    let token: String
+    let updatedAt: Date
+}

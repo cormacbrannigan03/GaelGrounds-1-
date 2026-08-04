@@ -2,16 +2,25 @@ import SwiftUI
 
 @main
 struct GaelGroundsApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var auth = AuthViewModel()
     @StateObject private var premium = PremiumStore()
+    @StateObject private var push = PushNotificationService.shared
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(auth)
                 .environmentObject(premium)
+                .environmentObject(push)
                 .task { await premium.start() }
                 .task(id: auth.userId) { premium.userId = auth.userId }
+                .task(id: auth.userId) {
+                    push.userId = auth.userId
+                    if auth.userId != nil {
+                        await push.requestAuthorizationAndRegister()
+                    }
+                }
         }
     }
 }
