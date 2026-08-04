@@ -166,6 +166,14 @@ confirmation for this project in the Supabase dashboard under
   plus an APNs Auth Key generated in the Apple Developer portal. The full
   manual setup (capability, key generation, five Edge Function secrets) is
   in that same Edge Function README rather than duplicated here.
+- **Report a match issue** — a small flag button in `MatchDetailView`'s
+  bottom-left corner opens `Views/Matches/ReportMatchIssueView.swift`, where
+  a signed-in user picks which of venue/date/time/score looks wrong
+  (multi-select — any combination) and adds optional free-text detail.
+  Writes to the new `match_reports` table. There's no admin UI for
+  triaging these, by design — same pattern as `manual_match_submissions`
+  in the sync-matches pipeline: it's meant to be reviewed directly against
+  the table (Studio's Table Editor, or the API with the service_role key).
 
 ## Honest caveats
 

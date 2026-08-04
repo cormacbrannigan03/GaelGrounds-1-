@@ -223,6 +223,15 @@ enum MatchService {
     static func isDateAllowedForFreeTier(_ date: Date) -> Bool {
         date >= freeHistoryCutoff
     }
+
+    // MARK: - Match reports
+
+    static func submitReport(_ report: MatchReportInsert) async throws {
+        try await Supa.client
+            .from("match_reports")
+            .insert(report)
+            .execute()
+    }
 }
 
 private extension Array {

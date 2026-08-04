@@ -108,3 +108,20 @@ struct DevicePushTokenUpsert: Encodable {
     let token: String
     let updatedAt: Date
 }
+
+struct MatchReport: Codable, Identifiable {
+    let id: UUID
+    let matchId: UUID
+    let userId: UUID
+    let issueTypes: [String]
+    let details: String?
+    let status: String
+    let createdAt: Date?
+}
+
+struct MatchReportInsert: Encodable {
+    let matchId: UUID
+    let userId: UUID
+    let issueTypes: [String]
+    let details: String?
+}

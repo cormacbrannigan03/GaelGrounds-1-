@@ -9,6 +9,7 @@ struct MatchDetailView: View {
     @State private var summary: MatchSummary?
     @State private var isLoading = true
     @State private var confettiWinner: String?
+    @State private var showingReport = false
 
     var body: some View {
         ZStack {
@@ -31,6 +32,17 @@ struct MatchDetailView: View {
                 let (primary, secondary) = CountyColours.colours(for: winner)
                 ConfettiOverlayView(colors: [primary, secondary])
             }
+
+            if summary != nil {
+                VStack {
+                    Spacer()
+                    HStack {
+                        reportButton
+                        Spacer()
+                    }
+                }
+                .padding()
+            }
         }
         .navigationTitle("Match")
         .navigationBarTitleDisplayMode(.inline)
@@ -40,6 +52,24 @@ struct MatchDetailView: View {
             }
         }
         .task { await load() }
+        .sheet(isPresented: $showingReport) {
+            if let summary {
+                ReportMatchIssueView(matchId: summary.id)
+            }
+        }
+    }
+
+    private var reportButton: some View {
+        Button {
+            showingReport = true
+        } label: {
+            Image(systemName: "flag.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(.white)
+                .padding(12)
+                .background(Color.black.opacity(0.55), in: Circle())
+        }
+        .accessibilityLabel("Report an issue with this match")
     }
 
     @ViewBuilder
