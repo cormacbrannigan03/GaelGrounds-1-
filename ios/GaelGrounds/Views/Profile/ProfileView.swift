@@ -19,12 +19,15 @@ private struct AchievementRow: Identifiable {
     let id: UUID
     let title: String
     let description: String
+    let icon: String?
     let unlockedAt: Date
 }
 
 struct ProfileView: View {
     @EnvironmentObject private var auth: AuthViewModel
+    @EnvironmentObject private var premium: PremiumStore
 
+    @State private var showingPaywall = false
     @State private var displayName = ""
     @State private var savedName = ""
     @State private var grounds: [VisitedGroundRow] = []
@@ -99,6 +102,29 @@ struct ProfileView: View {
                 }
                 .buttonStyle(.plain)
 
+                Button { showingPaywall = true } label: {
+                    HStack {
+                        Label(
+                            premium.isPremium ? "Premium" : "Go Premium",
+                            systemImage: premium.isPremium ? "checkmark.seal.fill" : "star.fill"
+                        )
+                        .font(.subheadline.bold())
+                        .foregroundStyle(premium.isPremium ? .brandGold : .primary)
+                        Spacer()
+                        if premium.isPremium, let expiresAt = premium.premiumExpiresAt {
+                            Text("Renews \(Formatting.shortDate(expiresAt))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else if !premium.isPremium {
+                            Text("€1.99/mo").font(.caption).foregroundStyle(.secondary)
+                        }
+                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    }
+                    .padding()
+                    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
+
                 if isLoading {
                     ProgressView().frame(maxWidth: .infinity)
                 } else {
@@ -107,7 +133,9 @@ struct ProfileView: View {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                                 ForEach(achievements) { a in
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text("🏆 \(a.title)").font(.headline)
+                                        Label(a.title, systemImage: a.icon ?? "trophy.fill")
+                                            .font(.headline)
+                                            .foregroundStyle(.brandGold)
                                         Text(a.description).font(.caption).foregroundStyle(.secondary)
                                         Text("Unlocked \(Formatting.shortDate(a.unlockedAt))")
                                             .font(.caption)
@@ -171,6 +199,9 @@ struct ProfileView: View {
         .task { await load() }
         .refreshable { await load() }
         .gaelGroundsBackground()
+        .sheet(isPresented: $showingPaywall) {
+            PremiumPaywallView()
+        }
     }
 
     @ViewBuilder
@@ -267,7 +298,13 @@ struct ProfileView: View {
                 let defById = Dictionary(uniqueKeysWithValues: defs.map { ($0.id, $0) })
                 achievements = userAchievements.compactMap { ua in
                     guard let d = defById[ua.achievementId] else { return nil }
-                    return AchievementRow(id: ua.id, title: d.title, description: d.description, unlockedAt: ua.unlockedAt)
+                    return AchievementRow(
+                        id: ua.id,
+                        title: d.title,
+                        description: d.description,
+                        icon: d.icon,
+                        unlockedAt: ua.unlockedAt
+                    )
                 }
             } else {
                 achievements = []

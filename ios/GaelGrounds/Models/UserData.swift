@@ -5,7 +5,14 @@ struct UserProfile: Codable, Identifiable, Hashable {
     var displayName: String?
     var avatarUrl: String?
     var supportedCountyId: UUID?
+    var isPremium: Bool = false
+    var premiumExpiresAt: Date?
     let createdAt: Date?
+}
+
+struct UserProfilePremiumUpdate: Encodable {
+    let isPremium: Bool
+    let premiumExpiresAt: Date?
 }
 
 struct UserProfileInsert: Encodable {
@@ -55,6 +62,7 @@ struct UserMatchAttendanceInsert: Encodable {
 struct AchievementDefinition: Codable, Identifiable, Hashable {
     struct RuleParams: Codable, Hashable {
         let count: Int?
+        let countyId: UUID?
     }
 
     let id: UUID
@@ -65,6 +73,13 @@ struct AchievementDefinition: Codable, Identifiable, Hashable {
     let ruleType: String
     let ruleParams: RuleParams
     let createdAt: Date?
+}
+
+struct AchievementUnlock: Identifiable, Hashable {
+    let id: UUID
+    let title: String
+    let description: String
+    let icon: String?
 }
 
 struct UserAchievement: Codable, Identifiable, Hashable {
@@ -94,4 +109,27 @@ struct FriendshipInsert: Encodable {
 
 struct FriendshipStatusUpdate: Encodable {
     let status: String
+}
+
+struct DevicePushTokenUpsert: Encodable {
+    let userId: UUID
+    let token: String
+    let updatedAt: Date
+}
+
+struct MatchReport: Codable, Identifiable {
+    let id: UUID
+    let matchId: UUID
+    let userId: UUID
+    let issueTypes: [String]
+    let details: String?
+    let status: String
+    let createdAt: Date?
+}
+
+struct MatchReportInsert: Encodable {
+    let matchId: UUID
+    let userId: UUID
+    let issueTypes: [String]
+    let details: String?
 }

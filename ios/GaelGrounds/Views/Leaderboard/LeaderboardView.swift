@@ -3,6 +3,8 @@ import Supabase
 
 struct LeaderboardView: View {
     @EnvironmentObject private var auth: AuthViewModel
+    @EnvironmentObject private var premium: PremiumStore
+    @State private var showingPaywall = false
 
     enum Tab: String, CaseIterable {
         case overall  = "Overall"
@@ -90,6 +92,20 @@ struct LeaderboardView: View {
             // MARK: Content
             ScrollView {
                 VStack(spacing: 14) {
+                    if !premium.isPremium {
+                        Button { showingPaywall = true } label: {
+                            HStack {
+                                Text("Go Premium to appear on the leaderboard")
+                                    .font(.footnote.bold())
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                            }
+                            .padding(10)
+                            .background(Color.brandGold.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     if activeTab == .overall || activeTab == .myCounty {
                         Picker("Sort by", selection: $sortBy) {
                             ForEach(SortKey.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -125,6 +141,9 @@ struct LeaderboardView: View {
         .task { await load() }
         .refreshable { await load() }
         .gaelGroundsBackground()
+        .sheet(isPresented: $showingPaywall) {
+            PremiumPaywallView(reason: "Only Premium members appear on the leaderboard.")
+        }
     }
 
     private var emptyMessage: String {
@@ -191,8 +210,10 @@ struct LeaderboardView: View {
             let profileById = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
             let allIds = Set(overallMatchCounts.keys).union(groundCounts.keys)
 
+            // Free accounts can browse the leaderboard but never appear on
+            // it — only premium profiles are ranked.
             entries = allIds.compactMap { uid in
-                guard let profile = profileById[uid] else { return nil }
+                guard let profile = profileById[uid], profile.isPremium else { return nil }
                 let provMap = Dictionary(uniqueKeysWithValues: Province.allCases.map { ($0, provinceCounts[$0]?[uid] ?? 0) })
                 return LeaderboardEntry(
                     id: uid,

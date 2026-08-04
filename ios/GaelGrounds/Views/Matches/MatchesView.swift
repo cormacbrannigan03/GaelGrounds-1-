@@ -4,6 +4,7 @@ struct MatchesView: View {
     private enum Tab { case upcoming, fixtures, results }
 
     @EnvironmentObject private var auth: AuthViewModel
+    @EnvironmentObject private var premium: PremiumStore
 
     @State private var matches: [MatchSummary] = []
     @State private var personalMatches: [UserPersonalMatch] = []
@@ -14,6 +15,7 @@ struct MatchesView: View {
     @State private var expandedYears: Set<Int> = []
     @State private var expandedMonths: Set<String> = []
     @State private var showingAddMatch = false
+    @State private var showingPaywall = false
     @State private var showingFilters = false
     @State private var selectedCounty = ""
     @State private var selectedCompetition = ""
@@ -196,7 +198,7 @@ struct MatchesView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    showingAddMatch = true
+                    Task { await tapAddMatch() }
                 } label: {
                     Label("Add Match", systemImage: "plus")
                 }
@@ -206,6 +208,9 @@ struct MatchesView: View {
             AddMatchView {
                 Task { await load() }
             }
+        }
+        .sheet(isPresented: $showingPaywall) {
+            PremiumPaywallView(reason: "You've reached the 10-match free limit. Upgrade to log more.")
         }
         .sheet(isPresented: $showingFilters) {
             MatchFiltersView(
@@ -292,6 +297,15 @@ struct MatchesView: View {
             get: { expandedYears.contains(year) },
             set: { if $0 { expandedYears.insert(year) } else { expandedYears.remove(year) } }
         )
+    }
+
+    private func tapAddMatch() async {
+        guard let userId = auth.userId else { return }
+        if await MatchService.canLogAnotherMatch(userId: userId, isPremium: premium.isPremium) {
+            showingAddMatch = true
+        } else {
+            showingPaywall = true
+        }
     }
 
     private func load() async {
