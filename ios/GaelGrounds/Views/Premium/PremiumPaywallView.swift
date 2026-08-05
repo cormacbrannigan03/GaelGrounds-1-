@@ -76,6 +76,20 @@ struct PremiumPaywallView: View {
                     Text("Cancel any time in Settings › Apple ID › Subscriptions.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    // App Store Review Guideline 3.1.2 requires the purchase
+                    // screen itself to disclose auto-renewal terms and link
+                    // to both policies, not just have them somewhere else
+                    // in the app.
+                    Text("GaelGrounds Premium automatically renews monthly at \(priceText) until cancelled. Payment is charged to your Apple ID account at confirmation of purchase. Your subscription renews automatically unless auto-renew is turned off at least 24 hours before the end of the current period. Manage or cancel any time in Settings › Apple ID › Subscriptions.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 16) {
+                        Link("Privacy Policy", destination: URL(string: "https://www.gaelgrounds.ie/privacy.html")!)
+                        Link("Terms of Service", destination: URL(string: "https://www.gaelgrounds.ie/terms.html")!)
+                    }
+                    .font(.caption2)
                 }
                 .padding()
             }
