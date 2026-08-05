@@ -265,10 +265,14 @@ struct ProfileView: View {
         .task { await start() }
         .onDisappear { stop() }
         .refreshable { await load() }
-        .gaelGroundsBackground()
+        .countyBackground(supportedCountyName)
         .sheet(isPresented: $showingPaywall) {
             PremiumPaywallView()
         }
+    }
+
+    private var supportedCountyName: String? {
+        counties.first { $0.id == savedSupportedCountyId }?.name
     }
 
     @ViewBuilder
