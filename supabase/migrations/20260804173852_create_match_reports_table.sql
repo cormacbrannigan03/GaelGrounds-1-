@@ -4,6 +4,14 @@
 -- pipeline: triage happens directly against this table (Studio's Table
 -- Editor, or the API with the service_role key), not through a built
 -- screen.
+--
+-- NOTE: written 2026-08-04, not actually applied until 2026-08-05 (see
+-- 20260801023427_add_premium_to_user_profiles.sql for how that gap was
+-- found). Applying it also surfaced that newly created public-schema
+-- tables pick up Supabase's default broad grants to `anon`, which RLS
+-- blocks in practice but which this project otherwise revokes explicitly
+-- (see 20260805020100_harden_match_reports_grants.sql) -- adding for
+-- defense in depth, matching user_profiles' existing grant posture.
 create table public.match_reports (
   id uuid primary key default gen_random_uuid(),
   match_id uuid not null references public.matches(id) on delete cascade,

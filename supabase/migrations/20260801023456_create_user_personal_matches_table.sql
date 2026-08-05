@@ -3,6 +3,17 @@
 -- used by AddMatchView.swift and MatchService.fetchPersonalMatches/
 -- insertPersonalMatch/deletePersonalMatch). The Swift side of this feature
 -- already existed with nothing to back it — this is the missing schema.
+--
+-- NOTE: as of 2026-08-05, this file does not match what's live. The table
+-- already existed in production (created ad hoc, outside this migration
+-- history) with a single owner-scoped "ALL" policy -- meaning personal
+-- matches are currently visible ONLY to the user who added them, not
+-- publicly readable like this file intends. That's a real product
+-- difference (nobody's friends/profile page can currently show manually-
+-- logged matches) that hasn't been fixed here, since it changes
+-- user-facing behaviour and wasn't the bug being chased tonight -- flagging
+-- it rather than silently picking a visibility rule. Re-running this file
+-- against production will fail with "relation already exists."
 create table public.user_personal_matches (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,

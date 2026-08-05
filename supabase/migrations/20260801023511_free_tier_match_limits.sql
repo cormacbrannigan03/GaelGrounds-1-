@@ -7,6 +7,10 @@
 -- this adds the limit without needing to know or replace the exact
 -- definition of user_match_attendance's pre-existing insert policy (it
 -- predates this migration history).
+--
+-- NOTE: like 20260801023427_add_premium_to_user_profiles.sql, this file
+-- was written 2026-08-01 but not actually applied until 2026-08-05, applied
+-- for real via the Supabase MCP tools once the is_premium gap was found.
 
 create or replace function public.total_match_count(p_user_id uuid)
 returns int
