@@ -233,6 +233,15 @@ struct ProfileView: View {
                     Task { await auth.signOut() }
                 }
                 .foregroundStyle(.secondary)
+
+                HStack(spacing: 16) {
+                    Link("Privacy Policy", destination: URL(string: "https://www.gaelgrounds.ie/privacy.html")!)
+                    Link("Terms of Service", destination: URL(string: "https://www.gaelgrounds.ie/terms.html")!)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 4)
             }
             .padding()
         }
