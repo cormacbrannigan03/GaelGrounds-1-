@@ -229,3 +229,40 @@ Everything else — the data model, the RLS-respecting query shapes, the
 achievement/check-in logic — mirrors the web app's already-tested behavior
 against the live database, so it should be functionally correct even where
 the exact Swift syntax needs a tweak.
+
+## Migrations that existed only in git (found and fixed 2026-08-05)
+
+Several migration files under `supabase/migrations/` had been written and
+committed but never actually run against the live project — they only ever
+existed as files. Found by chasing a real bug report ("checked into a match
+but my Profile and the Leaderboard didn't update"): `user_profiles` was
+missing the `is_premium`/`premium_expires_at` columns the Swift
+`UserProfile` model expects on every decode, so every fetch of that table —
+in `ProfileView`, `LeaderboardView`, and `CheckInPanel`'s attendee list —
+was silently failing and getting swallowed by a `catch { print(...) }`.
+
+Fixed by applying the pending migrations directly against the live project
+(no local Supabase CLI in this environment, so via MCP tools rather than
+`supabase db push`): `is_premium`/`premium_expires_at` on `user_profiles`,
+the `free_tier_match_limits` restrictive policies, and the `match_reports`
+table. Two more gaps were found in the process and are worth knowing about:
+
+- **`friendships`' INSERT policy had no premium check at all** — "premium
+  required to add friends" was only ever enforced client-side. Fixed in
+  `20260805020000_require_premium_for_friend_requests.sql`.
+- **`user_personal_matches` is currently owner-only, not publicly readable**
+  — `20260801023456_create_user_personal_matches_table.sql` intends
+  manually-added matches to be publicly readable (matching check-ins and
+  ground visits), but the live table has a stricter owner-only policy
+  instead. **Not changed** — flipping match visibility is a product
+  decision, not a bug fix, so this is left as-is pending an explicit call
+  on which behaviour is wanted.
+
+Both `friendships` and `user_personal_matches` turned out to already exist
+live under different, ad-hoc policy definitions than their git migration
+files describe — created outside this migration history at some earlier
+point, the same pattern already documented for the `sync-public-fixtures`
+Edge Function. Re-running `20260801023442_create_friendships_table.sql` or
+`20260801023456_create_user_personal_matches_table.sql` against production
+will fail with "relation already exists"; see the notes at the top of each
+file for what's actually live instead.
