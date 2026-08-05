@@ -3,16 +3,24 @@ import Supabase
 
 private struct VisitedGroundRow: Identifiable {
     let id: UUID
+    let groundId: UUID
     let name: String
     let visitedAt: Date
 }
 
 private struct AttendedMatchRow: Identifiable {
     let id: UUID
+    let matchId: UUID
     let competition: String?
     let playedAt: Date
     let homeName: String
     let awayName: String
+}
+
+private enum ProfileDestination: Hashable {
+    case grounds
+    case matches
+    case achievements
 }
 
 private struct AchievementRow: Identifiable {
@@ -86,10 +94,17 @@ struct ProfileView: View {
                 }
 
                 HStack(spacing: 12) {
-                    StatTile(value: grounds.count, label: "Grounds visited")
-                    StatTile(value: matches.count, label: "Matches attended")
-                    StatTile(value: achievements.count, label: "Achievements")
+                    NavigationLink(value: ProfileDestination.grounds) {
+                        StatTile(value: grounds.count, label: "Grounds visited")
+                    }
+                    NavigationLink(value: ProfileDestination.matches) {
+                        StatTile(value: matches.count, label: "Matches attended")
+                    }
+                    NavigationLink(value: ProfileDestination.achievements) {
+                        StatTile(value: achievements.count, label: "Achievements")
+                    }
                 }
+                .buttonStyle(.plain)
 
                 NavigationLink {
                     FriendsView()
@@ -168,15 +183,22 @@ struct ProfileView: View {
                         } else {
                             VStack(spacing: 8) {
                                 ForEach(matches) { m in
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("\(m.homeName) v \(m.awayName)").font(.subheadline.bold())
-                                        Text("\(m.competition ?? "Gaelic Games") · \(Formatting.matchDate(m.playedAt))")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                    NavigationLink(value: MatchRoute(id: m.matchId)) {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text("\(m.homeName) v \(m.awayName)").font(.subheadline.bold())
+                                                Text("\(m.competition ?? "Gaelic Games") · \(Formatting.matchDate(m.playedAt))")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            Spacer()
+                                            Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding()
+                                        .gaelCard(cornerRadius: 10)
                                     }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding()
-                                    .gaelCard(cornerRadius: 10)
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }
@@ -188,13 +210,17 @@ struct ProfileView: View {
                         } else {
                             VStack(spacing: 8) {
                                 ForEach(grounds) { g in
-                                    HStack {
-                                        Text(g.name).font(.subheadline.bold())
-                                        Spacer()
-                                        Text(Formatting.shortDate(g.visitedAt)).font(.caption).foregroundStyle(.secondary)
+                                    NavigationLink(value: GroundRoute(id: g.groundId)) {
+                                        HStack {
+                                            Text(g.name).font(.subheadline.bold())
+                                            Spacer()
+                                            Text(Formatting.shortDate(g.visitedAt)).font(.caption).foregroundStyle(.secondary)
+                                            Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                                        }
+                                        .padding()
+                                        .gaelCard(cornerRadius: 10)
                                     }
-                                    .padding()
-                                    .gaelCard(cornerRadius: 10)
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }
@@ -209,6 +235,22 @@ struct ProfileView: View {
             .padding()
         }
         .navigationTitle("Profile")
+        .navigationDestination(for: ProfileDestination.self) { destination in
+            switch destination {
+            case .grounds:
+                ProfileGroundsHistoryView(grounds: grounds)
+            case .matches:
+                ProfileMatchesHistoryView(matches: matches)
+            case .achievements:
+                ProfileAchievementsView(achievements: achievements)
+            }
+        }
+        .navigationDestination(for: MatchRoute.self) { route in
+            MatchDetailView(matchId: route.id)
+        }
+        .navigationDestination(for: GroundRoute.self) { route in
+            GroundDetailView(groundId: route.id)
+        }
         .task { await load() }
         .refreshable { await load() }
         .gaelGroundsBackground()
@@ -284,7 +326,12 @@ struct ProfileView: View {
                 .from("grounds").select().in("id", values: groundIds).execute().value
             let groundNameById = Dictionary(uniqueKeysWithValues: groundRows.map { ($0.id, $0.name) })
             grounds = visits.map {
-                VisitedGroundRow(id: $0.id, name: groundNameById[$0.groundId] ?? "Unknown ground", visitedAt: $0.visitedAt)
+                VisitedGroundRow(
+                    id: $0.id,
+                    groundId: $0.groundId,
+                    name: groundNameById[$0.groundId] ?? "Unknown ground",
+                    visitedAt: $0.visitedAt
+                )
             }
 
             let attendance: [UserMatchAttendance] = try await Supa.client
@@ -296,7 +343,14 @@ struct ProfileView: View {
                 let summaryById = Dictionary(uniqueKeysWithValues: summaries.map { ($0.id, $0) })
                 matches = attendance.compactMap { a in
                     guard let s = summaryById[a.matchId], let playedAt = s.playedAt else { return nil }
-                    return AttendedMatchRow(id: a.id, competition: s.competition, playedAt: playedAt, homeName: s.homeName, awayName: s.awayName)
+                    return AttendedMatchRow(
+                        id: a.id,
+                        matchId: a.matchId,
+                        competition: s.competition,
+                        playedAt: playedAt,
+                        homeName: s.homeName,
+                        awayName: s.awayName
+                    )
                 }
             } else {
                 matches = []
@@ -333,6 +387,127 @@ struct ProfileView: View {
         } catch {
             print("Profile load failed: \(error)")
         }
+    }
+}
+
+private struct ProfileMatchesHistoryView: View {
+    let matches: [AttendedMatchRow]
+
+    var body: some View {
+        ScrollView {
+            if matches.isEmpty {
+                ContentUnavailableView("No matches attended", systemImage: "ticket", description: Text("Games you check in to will appear here."))
+                    .padding(.top, 80)
+            } else {
+                LazyVStack(spacing: 10) {
+                    ForEach(matches) { match in
+                        NavigationLink(value: MatchRoute(id: match.matchId)) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("\(match.homeName) v \(match.awayName)").font(.headline)
+                                    Text(match.competition ?? "Gaelic Games").font(.subheadline).foregroundStyle(.secondary)
+                                    Text(Formatting.matchDate(match.playedAt)).font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
+                            }
+                            .padding()
+                            .gaelCard(cornerRadius: 14)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding()
+            }
+        }
+        .navigationTitle("Matches attended")
+        .navigationBarTitleDisplayMode(.inline)
+        .gaelGroundsBackground()
+    }
+}
+
+private struct ProfileGroundsHistoryView: View {
+    let grounds: [VisitedGroundRow]
+
+    var body: some View {
+        ScrollView {
+            if grounds.isEmpty {
+                ContentUnavailableView("No grounds visited", systemImage: "mappin.and.ellipse", description: Text("Grounds from your match check-ins will appear here."))
+                    .padding(.top, 80)
+            } else {
+                LazyVStack(spacing: 10) {
+                    ForEach(grounds) { ground in
+                        NavigationLink(value: GroundRoute(id: ground.groundId)) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "mappin.circle.fill").foregroundStyle(Color.brandGreenLight)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(ground.name).font(.headline)
+                                    Text("Visited \(Formatting.shortDate(ground.visitedAt))").font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
+                            }
+                            .padding()
+                            .gaelCard(cornerRadius: 14)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding()
+            }
+        }
+        .navigationTitle("Grounds visited")
+        .navigationBarTitleDisplayMode(.inline)
+        .gaelGroundsBackground()
+    }
+}
+
+private struct ProfileAchievementsView: View {
+    let achievements: [AchievementRow]
+
+    var body: some View {
+        ScrollView {
+            if achievements.isEmpty {
+                ContentUnavailableView("No achievements yet", systemImage: "trophy", description: Text("Check in to games to start unlocking achievements."))
+                    .padding(.top, 80)
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
+                    ForEach(achievements) { achievement in
+                        ProfileAchievementCard(achievement: achievement)
+                    }
+                }
+                .padding()
+            }
+        }
+        .navigationTitle("Achievements")
+        .navigationBarTitleDisplayMode(.inline)
+        .gaelGroundsBackground()
+    }
+}
+
+private struct ProfileAchievementCard: View {
+    let achievement: AchievementRow
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(achievement.title, systemImage: achievement.icon ?? "trophy.fill")
+                .font(.headline)
+                .foregroundStyle(achievement.tier?.tint ?? Color.brandGold)
+            if let tier = achievement.tier, let count = achievement.homeGameCount {
+                Text(tier == .standard ? "\(count) home games" : "\(tier.label) · \(count) home games")
+                    .font(.caption.bold())
+                    .foregroundStyle(tier.tint)
+            }
+            Text(achievement.description).font(.caption).foregroundStyle(.secondary)
+            if let progressMessage = achievement.progressMessage {
+                Text(progressMessage).font(.caption).foregroundStyle(.primary)
+            }
+            Text("Unlocked \(Formatting.shortDate(achievement.unlockedAt))").font(.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .gaelCard(cornerRadius: 14)
     }
 }
 

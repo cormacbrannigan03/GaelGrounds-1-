@@ -20,6 +20,12 @@ export default function CheckInPanel({ matchId, isPast = false }: { matchId: str
   const [unlockedToast, setUnlockedToast] = useState<string[] | null>(null)
 
   const loadAttendees = useCallback(async () => {
+    if (!user) {
+      setAttendees([])
+      setMyAttendanceId(null)
+      return
+    }
+
     const { data: rows } = await supabase
       .from('user_match_attendance')
       .select('id, user_id, created_at')
@@ -42,6 +48,13 @@ export default function CheckInPanel({ matchId, isPast = false }: { matchId: str
   }, [matchId, user?.id])
 
   useEffect(() => {
+    if (!user) {
+      setAttendees([])
+      setMyAttendanceId(null)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     loadAttendees().finally(() => setLoading(false))
 
@@ -59,7 +72,7 @@ export default function CheckInPanel({ matchId, isPast = false }: { matchId: str
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [matchId, loadAttendees])
+  }, [matchId, loadAttendees, user])
 
   async function handleCheckIn() {
     if (!user) return
