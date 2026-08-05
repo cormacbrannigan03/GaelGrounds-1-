@@ -23,6 +23,12 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
   const [unlockedToast, setUnlockedToast] = useState<string[] | null>(null)
 
   const loadVisits = useCallback(async () => {
+    if (!user) {
+      setVisits([])
+      setMyVisitId(null)
+      return
+    }
+
     const { data: rows } = await supabase
       .from('user_visits')
       .select('id, user_id, visited_at, notes')
@@ -46,6 +52,13 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
   }, [groundId, user?.id])
 
   useEffect(() => {
+    if (!user) {
+      setVisits([])
+      setMyVisitId(null)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     loadVisits().finally(() => setLoading(false))
 
@@ -61,7 +74,7 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [groundId, loadVisits])
+  }, [groundId, loadVisits, user])
 
   async function handleCheckIn() {
     if (!user) return

@@ -71,7 +71,11 @@ enum MatchService {
         async let attendanceTask: [UserMatchAttendance] = fetchAttendance(matchIds: matchIds)
         async let countiesTask: [County] = Supa.client.from("counties").select().execute().value
 
-        let (teams, grounds, attendance, counties) = try await (teamsTask, groundsTask, attendanceTask, countiesTask)
+        // Attendance is supplementary social data. A signed-out user is not
+        // permitted to read it, but that must never prevent public fixtures
+        // and results from rendering.
+        let (teams, grounds, counties) = try await (teamsTask, groundsTask, countiesTask)
+        let attendance = (try? await attendanceTask) ?? []
 
         let countyNameById = Dictionary(uniqueKeysWithValues: counties.map { ($0.id, $0.name) })
         let teamById = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
@@ -150,6 +154,7 @@ enum MatchService {
 
     private static func fetchAttendance(matchIds: [UUID]) async throws -> [UserMatchAttendance] {
         guard !matchIds.isEmpty else { return [] }
+        guard Supa.client.auth.currentSession != nil else { return [] }
         return try await withThrowingTaskGroup(of: [UserMatchAttendance].self) { group in
             for batch in matchIds.chunked(into: lookupBatchSize) {
                 group.addTask {

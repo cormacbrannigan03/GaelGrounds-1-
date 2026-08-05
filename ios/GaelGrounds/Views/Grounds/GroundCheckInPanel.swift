@@ -168,6 +168,14 @@ struct GroundCheckInPanel: View {
     }
 
     private func start() async {
+        guard auth.isSignedIn else {
+            visitors = []
+            myVisitId = nil
+            photoURLs = []
+            myPhotoURLs = []
+            isLoading = false
+            return
+        }
         await loadVisitors()
         isLoading = false
         subscribeToRealtime()

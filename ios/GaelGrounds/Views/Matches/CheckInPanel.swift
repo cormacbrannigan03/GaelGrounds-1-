@@ -102,6 +102,12 @@ struct CheckInPanel: View {
     }
 
     private func start() async {
+        guard auth.isSignedIn else {
+            attendees = []
+            myAttendanceId = nil
+            isLoading = false
+            return
+        }
         await loadAttendees()
         isLoading = false
         subscribeToRealtime()
