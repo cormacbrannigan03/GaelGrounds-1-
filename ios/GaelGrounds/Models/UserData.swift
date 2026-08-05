@@ -15,12 +15,6 @@ struct UserProfilePremiumUpdate: Encodable {
     let premiumExpiresAt: Date?
 }
 
-struct UserProfileInsert: Encodable {
-    let id: UUID
-    let displayName: String?
-    let supportedCountyId: UUID
-}
-
 struct UserProfileUpdate: Encodable {
     let displayName: String
 }
