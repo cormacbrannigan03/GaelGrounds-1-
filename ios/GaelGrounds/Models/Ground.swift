@@ -9,4 +9,5 @@ struct Ground: Codable, Identifiable, Hashable {
     let capacity: Int?
     let photoUrl: String?
     let createdAt: Date?
+    let isPrimary: Bool
 }
