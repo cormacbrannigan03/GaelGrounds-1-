@@ -1,3 +1,12 @@
+-- NOTE: this file was committed to git but, like the premium migration
+-- earlier tonight, never actually run against the live project until now
+-- (2026-08-05, applied via the Supabase MCP tools). Found while chasing a
+-- follow-up report that Profile stats didn't update live after a check-in:
+-- ProfileView now subscribes to realtime changes on user_visits expecting
+-- match check-ins to produce one via this trigger, so without this
+-- migration applied, "Grounds visited" would never move from a match
+-- check-in (only from an explicit ground check-in), independent of the
+-- realtime subscription itself working correctly.
 begin;
 
 alter table public.user_visits

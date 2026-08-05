@@ -50,6 +50,8 @@ struct ProfileView: View {
     @State private var isLoading = true
     @State private var isSaving = false
     @State private var isSavingCounty = false
+    @State private var realtimeTask: Task<Void, Never>?
+    @State private var channel: RealtimeChannelV2?
 
     var body: some View {
         ScrollView {
@@ -251,7 +253,8 @@ struct ProfileView: View {
         .navigationDestination(for: GroundRoute.self) { route in
             GroundDetailView(groundId: route.id)
         }
-        .task { await load() }
+        .task { await start() }
+        .onDisappear { stop() }
         .refreshable { await load() }
         .gaelGroundsBackground()
         .sheet(isPresented: $showingPaywall) {
@@ -297,6 +300,53 @@ struct ProfileView: View {
             savedSupportedCountyId = supportedCountyId
         } catch {
             print("saveSupportedCounty failed: \(error)")
+        }
+    }
+
+    private func start() async {
+        await load()
+        subscribeToRealtime()
+    }
+
+    private func stop() {
+        realtimeTask?.cancel()
+        Task { await channel?.unsubscribe() }
+    }
+
+    // Reloads whenever a check-in, ground visit, or achievement changes for
+    // this user, so the Profile tab's stats stay current without needing a
+    // manual pull-to-refresh when a check-in happens elsewhere (e.g. on a
+    // match's CheckInPanel) while this tab stays mounted in the background.
+    private func subscribeToRealtime() {
+        guard let userId = auth.userId else { return }
+        let ch = Supa.client.realtimeV2.channel("profile-\(userId.uuidString)")
+        let attendanceChanges = ch.postgresChange(
+            AnyAction.self,
+            schema: "public",
+            table: "user_match_attendance",
+            filter: "user_id=eq.\(userId.uuidString)"
+        )
+        let visitChanges = ch.postgresChange(
+            AnyAction.self,
+            schema: "public",
+            table: "user_visits",
+            filter: "user_id=eq.\(userId.uuidString)"
+        )
+        let achievementChanges = ch.postgresChange(
+            AnyAction.self,
+            schema: "public",
+            table: "user_achievements",
+            filter: "user_id=eq.\(userId.uuidString)"
+        )
+        channel = ch
+
+        realtimeTask = Task {
+            await ch.subscribe()
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { for await _ in attendanceChanges { await load() } }
+                group.addTask { for await _ in visitChanges { await load() } }
+                group.addTask { for await _ in achievementChanges { await load() } }
+            }
         }
     }
 
