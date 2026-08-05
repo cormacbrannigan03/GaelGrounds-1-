@@ -57,6 +57,7 @@ struct AchievementDefinition: Codable, Identifiable, Hashable {
     struct RuleParams: Codable, Hashable {
         let count: Int?
         let countyId: UUID?
+        let sportCode: SportCode?
     }
 
     let id: UUID
@@ -67,6 +68,11 @@ struct AchievementDefinition: Codable, Identifiable, Hashable {
     let ruleType: String
     let ruleParams: RuleParams
     let createdAt: Date?
+}
+
+struct HomeAchievementKey: Hashable {
+    let countyId: UUID
+    let sportCode: SportCode
 }
 
 struct AchievementUnlock: Identifiable, Hashable {
