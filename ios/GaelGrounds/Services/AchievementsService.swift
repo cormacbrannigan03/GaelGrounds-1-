@@ -66,7 +66,7 @@ enum AchievementsService {
             // home team and the venue belongs to that county. This excludes neutral
             // championship venues even if the county happens to be listed first.
             let homeCounts = try await homeMatchCounts(attendance: attendanceRows)
-            var eligibleHomeCountyId: UUID?
+            var eligibleHomeKey: HomeAchievementKey?
             if let checkedInMatchId {
                 let checkedInMatch: Match = try await Supa.client
                     .from("matches")
@@ -94,7 +94,10 @@ enum AchievementsService {
                         .value
                     let (homeTeam, ground) = try await (homeTeamTask, groundTask)
                     if homeTeam.countyId == ground.countyId {
-                        eligibleHomeCountyId = homeTeam.countyId
+                        eligibleHomeKey = HomeAchievementKey(
+                            countyId: homeTeam.countyId,
+                            sportCode: homeTeam.sportCode
+                        )
                     }
                 }
             }
@@ -112,7 +115,12 @@ enum AchievementsService {
                 case "all_provinces_visited":
                     earned = provinces.count >= 4
                 case "county_home_match":
-                    earned = (def.ruleParams.countyId.flatMap { homeCounts[$0] } ?? 0) >= 1
+                    if let countyId = def.ruleParams.countyId,
+                       let sportCode = def.ruleParams.sportCode {
+                        earned = (homeCounts[HomeAchievementKey(countyId: countyId, sportCode: sportCode)] ?? 0) >= 1
+                    } else {
+                        earned = false
+                    }
                 default:
                     earned = false
                 }
@@ -136,11 +144,13 @@ enum AchievementsService {
             }
 
             var progress: AchievementProgress?
-            if let countyId = eligibleHomeCountyId,
+            if let key = eligibleHomeKey,
                let definition = defs.first(where: {
-                   $0.ruleType == "county_home_match" && $0.ruleParams.countyId == countyId
+                   $0.ruleType == "county_home_match"
+                       && $0.ruleParams.countyId == key.countyId
+                       && $0.ruleParams.sportCode == key.sportCode
                }) {
-                let count = homeCounts[countyId] ?? 0
+                let count = homeCounts[key] ?? 0
                 let tier = AchievementTier.forHomeMatchCount(count)
 
                 if [10, 25, 50].contains(count) {
@@ -171,7 +181,7 @@ enum AchievementsService {
         }
     }
 
-    static func homeMatchCounts(userId: UUID) async throws -> [UUID: Int] {
+    static func homeMatchCounts(userId: UUID) async throws -> [HomeAchievementKey: Int] {
         let attendance: [UserMatchAttendance] = try await Supa.client
             .from("user_match_attendance")
             .select()
@@ -181,7 +191,7 @@ enum AchievementsService {
         return try await homeMatchCounts(attendance: attendance)
     }
 
-    private static func homeMatchCounts(attendance: [UserMatchAttendance]) async throws -> [UUID: Int] {
+    private static func homeMatchCounts(attendance: [UserMatchAttendance]) async throws -> [HomeAchievementKey: Int] {
         let matchIds = Array(Set(attendance.map(\.matchId)))
         guard !matchIds.isEmpty else { return [:] }
 
@@ -211,14 +221,15 @@ enum AchievementsService {
         let teamById = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
         let groundById = Dictionary(uniqueKeysWithValues: grounds.map { ($0.id, $0) })
 
-        var counts: [UUID: Int] = [:]
+        var counts: [HomeAchievementKey: Int] = [:]
         for match in matches {
             guard let teamId = match.homeCountyTeamId,
                   let groundId = match.groundId,
                   let team = teamById[teamId],
                   let ground = groundById[groundId],
                   team.countyId == ground.countyId else { continue }
-            counts[team.countyId, default: 0] += 1
+            let key = HomeAchievementKey(countyId: team.countyId, sportCode: team.sportCode)
+            counts[key, default: 0] += 1
         }
         return counts
     }

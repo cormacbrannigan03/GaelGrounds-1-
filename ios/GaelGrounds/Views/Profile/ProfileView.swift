@@ -416,9 +416,14 @@ struct ProfileView: View {
                 let defById = Dictionary(uniqueKeysWithValues: defs.map { ($0.id, $0) })
                 achievements = userAchievements.compactMap { ua in
                     guard let d = defById[ua.achievementId] else { return nil }
-                    let homeCount = d.ruleType == "county_home_match"
-                        ? d.ruleParams.countyId.flatMap { homeCounts[$0] }
-                        : nil
+                    let homeCount: Int?
+                    if d.ruleType == "county_home_match",
+                       let countyId = d.ruleParams.countyId,
+                       let sportCode = d.ruleParams.sportCode {
+                        homeCount = homeCounts[HomeAchievementKey(countyId: countyId, sportCode: sportCode)]
+                    } else {
+                        homeCount = nil
+                    }
                     let tier = homeCount.map(AchievementTier.forHomeMatchCount)
                     return AchievementRow(
                         id: ua.id,

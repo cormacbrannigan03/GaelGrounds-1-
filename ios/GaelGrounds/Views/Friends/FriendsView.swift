@@ -341,9 +341,14 @@ struct FriendProfileView: View {
                 let definitionById = Dictionary(uniqueKeysWithValues: definitions.map { ($0.id, $0) })
                 achievements = userAchievements.compactMap { userAchievement in
                     guard let definition = definitionById[userAchievement.achievementId] else { return nil }
-                    let homeCount = definition.ruleType == "county_home_match"
-                        ? definition.ruleParams.countyId.flatMap { homeCounts[$0] }
-                        : nil
+                    let homeCount: Int?
+                    if definition.ruleType == "county_home_match",
+                       let countyId = definition.ruleParams.countyId,
+                       let sportCode = definition.ruleParams.sportCode {
+                        homeCount = homeCounts[HomeAchievementKey(countyId: countyId, sportCode: sportCode)]
+                    } else {
+                        homeCount = nil
+                    }
                     return FriendAchievementRow(
                         id: userAchievement.id,
                         title: definition.title,
