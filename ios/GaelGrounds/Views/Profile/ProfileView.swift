@@ -6,6 +6,7 @@ private struct VisitedGroundRow: Identifiable {
     let groundId: UUID
     let name: String
     let visitedAt: Date
+    let province: Province
 }
 
 private struct AttendedMatchRow: Identifiable {
@@ -265,10 +266,14 @@ struct ProfileView: View {
         .task { await start() }
         .onDisappear { stop() }
         .refreshable { await load() }
-        .gaelGroundsBackground()
+        .countyBackground(supportedCountyName)
         .sheet(isPresented: $showingPaywall) {
             PremiumPaywallView()
         }
+    }
+
+    private var supportedCountyName: String? {
+        counties.first { $0.id == savedSupportedCountyId }?.name
     }
 
     @ViewBuilder
@@ -383,13 +388,16 @@ struct ProfileView: View {
             let groundIds = Array(Set(visits.map(\.groundId)))
             let groundRows: [Ground] = groundIds.isEmpty ? [] : try await Supa.client
                 .from("grounds").select().in("id", values: groundIds).execute().value
-            let groundNameById = Dictionary(uniqueKeysWithValues: groundRows.map { ($0.id, $0.name) })
-            grounds = visits.map {
-                VisitedGroundRow(
-                    id: $0.id,
-                    groundId: $0.groundId,
-                    name: groundNameById[$0.groundId] ?? "Unknown ground",
-                    visitedAt: $0.visitedAt
+            let groundById = Dictionary(uniqueKeysWithValues: groundRows.map { ($0.id, $0) })
+            let provinceByCountyId = Dictionary(uniqueKeysWithValues: loadedCounties.map { ($0.id, $0.province) })
+            grounds = visits.map { v in
+                let ground = groundById[v.groundId]
+                return VisitedGroundRow(
+                    id: v.id,
+                    groundId: v.groundId,
+                    name: ground?.name ?? "Unknown ground",
+                    visitedAt: v.visitedAt,
+                    province: ground.flatMap { provinceByCountyId[$0.countyId] } ?? .leinster
                 )
             }
 
@@ -454,8 +462,31 @@ struct ProfileView: View {
     }
 }
 
+private struct MatchYearGroup: Identifiable {
+    let year: Int
+    let matches: [AttendedMatchRow]
+    var id: Int { year }
+}
+
 private struct ProfileMatchesHistoryView: View {
     let matches: [AttendedMatchRow]
+
+    @State private var expandedYears: Set<Int>
+
+    init(matches: [AttendedMatchRow]) {
+        self.matches = matches
+        let calendar = Calendar.current
+        let years = Set(matches.map { calendar.component(.year, from: $0.playedAt) })
+        _expandedYears = State(initialValue: years.max().map { [$0] } ?? [])
+    }
+
+    private var groupedByYear: [MatchYearGroup] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: matches) { calendar.component(.year, from: $0.playedAt) }
+        return grouped
+            .map { MatchYearGroup(year: $0.key, matches: $0.value.sorted { $0.playedAt > $1.playedAt }) }
+            .sorted { $0.year > $1.year }
+    }
 
     var body: some View {
         ScrollView {
@@ -464,22 +495,39 @@ private struct ProfileMatchesHistoryView: View {
                     .padding(.top, 80)
             } else {
                 LazyVStack(spacing: 10) {
-                    ForEach(matches) { match in
-                        NavigationLink(value: MatchRoute(id: match.matchId)) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text("\(match.homeName) v \(match.awayName)").font(.headline)
-                                    Text(match.competition ?? "Gaelic Games").font(.subheadline).foregroundStyle(.secondary)
-                                    Text(Formatting.matchDate(match.playedAt)).font(.caption).foregroundStyle(.secondary)
+                    ForEach(groupedByYear) { group in
+                        DisclosureGroup(isExpanded: isExpanded(group.year)) {
+                            VStack(spacing: 8) {
+                                ForEach(group.matches) { match in
+                                    NavigationLink(value: MatchRoute(id: match.matchId)) {
+                                        HStack(spacing: 12) {
+                                            Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text("\(match.homeName) v \(match.awayName)").font(.headline)
+                                                Text(match.competition ?? "Gaelic Games").font(.subheadline).foregroundStyle(.secondary)
+                                                Text(Formatting.matchDate(match.playedAt)).font(.caption).foregroundStyle(.secondary)
+                                            }
+                                            Spacer()
+                                            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
+                                        }
+                                        .padding()
+                                        .gaelInsetCard(cornerRadius: 10)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                Spacer()
-                                Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
                             }
-                            .padding()
-                            .gaelCard(cornerRadius: 14)
+                            .padding(.top, 8)
+                        } label: {
+                            HStack {
+                                Text(String(group.year)).font(.headline)
+                                Spacer()
+                                Text("\(group.matches.count) match\(group.matches.count == 1 ? "" : "es")")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                        .buttonStyle(.plain)
+                        .padding()
+                        .gaelCard(cornerRadius: 14)
                     }
                 }
                 .padding()
@@ -489,10 +537,45 @@ private struct ProfileMatchesHistoryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .gaelGroundsBackground()
     }
+
+    private func isExpanded(_ year: Int) -> Binding<Bool> {
+        Binding(
+            get: { expandedYears.contains(year) },
+            set: { isExpanded in
+                if isExpanded { expandedYears.insert(year) } else { expandedYears.remove(year) }
+            }
+        )
+    }
+}
+
+private struct GroundProvinceGroup: Identifiable {
+    let province: Province
+    let grounds: [VisitedGroundRow]
+    var id: String { province.rawValue }
 }
 
 private struct ProfileGroundsHistoryView: View {
     let grounds: [VisitedGroundRow]
+
+    // Matches the order already used for the Leaderboard's province tabs.
+    private static let provinceOrder: [Province] = [.ulster, .munster, .leinster, .connacht]
+
+    @State private var expandedProvinces: Set<Province>
+
+    init(grounds: [VisitedGroundRow]) {
+        self.grounds = grounds
+        let provincesWithVisits = Set(grounds.map(\.province))
+        let firstNonEmpty = Self.provinceOrder.first { provincesWithVisits.contains($0) }
+        _expandedProvinces = State(initialValue: firstNonEmpty.map { [$0] } ?? [])
+    }
+
+    private var groupedByProvince: [GroundProvinceGroup] {
+        let grouped = Dictionary(grouping: grounds, by: \.province)
+        return Self.provinceOrder.compactMap { province in
+            guard let rows = grouped[province], !rows.isEmpty else { return nil }
+            return GroundProvinceGroup(province: province, grounds: rows.sorted { $0.visitedAt > $1.visitedAt })
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -501,21 +584,38 @@ private struct ProfileGroundsHistoryView: View {
                     .padding(.top, 80)
             } else {
                 LazyVStack(spacing: 10) {
-                    ForEach(grounds) { ground in
-                        NavigationLink(value: GroundRoute(id: ground.groundId)) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "mappin.circle.fill").foregroundStyle(Color.brandGreenLight)
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(ground.name).font(.headline)
-                                    Text("Visited \(Formatting.shortDate(ground.visitedAt))").font(.caption).foregroundStyle(.secondary)
+                    ForEach(groupedByProvince) { group in
+                        DisclosureGroup(isExpanded: isExpanded(group.province)) {
+                            VStack(spacing: 8) {
+                                ForEach(group.grounds) { ground in
+                                    NavigationLink(value: GroundRoute(id: ground.groundId)) {
+                                        HStack(spacing: 12) {
+                                            Image(systemName: "mappin.circle.fill").foregroundStyle(Color.brandGreenLight)
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text(ground.name).font(.headline)
+                                                Text("Visited \(Formatting.shortDate(ground.visitedAt))").font(.caption).foregroundStyle(.secondary)
+                                            }
+                                            Spacer()
+                                            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
+                                        }
+                                        .padding()
+                                        .gaelInsetCard(cornerRadius: 10)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                Spacer()
-                                Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
                             }
-                            .padding()
-                            .gaelCard(cornerRadius: 14)
+                            .padding(.top, 8)
+                        } label: {
+                            HStack {
+                                Text(group.province.rawValue).font(.headline)
+                                Spacer()
+                                Text("\(group.grounds.count) ground\(group.grounds.count == 1 ? "" : "s")")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                        .buttonStyle(.plain)
+                        .padding()
+                        .gaelCard(cornerRadius: 14)
                     }
                 }
                 .padding()
@@ -524,6 +624,15 @@ private struct ProfileGroundsHistoryView: View {
         .navigationTitle("Grounds visited")
         .navigationBarTitleDisplayMode(.inline)
         .gaelGroundsBackground()
+    }
+
+    private func isExpanded(_ province: Province) -> Binding<Bool> {
+        Binding(
+            get: { expandedProvinces.contains(province) },
+            set: { isExpanded in
+                if isExpanded { expandedProvinces.insert(province) } else { expandedProvinces.remove(province) }
+            }
+        )
     }
 }
 
