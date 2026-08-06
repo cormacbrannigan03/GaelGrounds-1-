@@ -2,10 +2,11 @@ import SwiftUI
 import Supabase
 
 private struct VisitedGroundRow: Identifiable {
-    let id: UUID
+    var id: UUID { groundId }
     let groundId: UUID
     let name: String
-    let visitedAt: Date
+    let visitCount: Int
+    let mostRecentVisit: Date
     let province: Province
 }
 
@@ -184,18 +185,22 @@ struct ProfileView: View {
                         if matches.isEmpty {
                             Text("No matches logged yet — find a match to check in to.").foregroundStyle(.secondary)
                         } else {
-                            VStack(spacing: 8) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                                 ForEach(matches) { m in
                                     NavigationLink(value: MatchRoute(id: m.matchId)) {
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text("\(m.homeName) v \(m.awayName)").font(.subheadline.bold())
-                                                Text("\(m.competition ?? "Gaelic Games") · \(Formatting.matchDate(m.playedAt))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack {
+                                                Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
+                                                Spacer()
+                                                Image(systemName: "chevron.right").foregroundStyle(.secondary)
                                             }
-                                            Spacer()
-                                            Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                                            Text("\(m.homeName) v \(m.awayName)").font(.subheadline.bold())
+                                            Text(m.competition ?? "Gaelic Games")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                            Text(Formatting.matchDate(m.playedAt))
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
                                         }
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding()
@@ -211,15 +216,21 @@ struct ProfileView: View {
                         if grounds.isEmpty {
                             Text("No grounds logged yet — browse grounds to check in.").foregroundStyle(.secondary)
                         } else {
-                            VStack(spacing: 8) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                                 ForEach(grounds) { g in
                                     NavigationLink(value: GroundRoute(id: g.groundId)) {
-                                        HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack {
+                                                Image(systemName: "mappin.circle.fill").foregroundStyle(Color.brandGreenLight)
+                                                Spacer()
+                                                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                                            }
                                             Text(g.name).font(.subheadline.bold())
-                                            Spacer()
-                                            Text(Formatting.shortDate(g.visitedAt)).font(.caption).foregroundStyle(.secondary)
-                                            Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                                            Text(g.visitCount == 1 ? "1 visit" : "\(g.visitCount) visits")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
                                         }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding()
                                         .gaelCard(cornerRadius: 10)
                                     }
@@ -390,13 +401,14 @@ struct ProfileView: View {
                 .from("grounds").select().in("id", values: groundIds).execute().value
             let groundById = Dictionary(uniqueKeysWithValues: groundRows.map { ($0.id, $0) })
             let provinceByCountyId = Dictionary(uniqueKeysWithValues: loadedCounties.map { ($0.id, $0.province) })
-            grounds = visits.map { v in
-                let ground = groundById[v.groundId]
+            let visitsByGround = Dictionary(grouping: visits, by: \.groundId)
+            grounds = visitsByGround.map { groundId, visitsHere in
+                let ground = groundById[groundId]
                 return VisitedGroundRow(
-                    id: v.id,
-                    groundId: v.groundId,
+                    groundId: groundId,
                     name: ground?.name ?? "Unknown ground",
-                    visitedAt: v.visitedAt,
+                    visitCount: visitsHere.count,
+                    mostRecentVisit: visitsHere.map(\.visitedAt).max() ?? Date.distantPast,
                     province: ground.flatMap { provinceByCountyId[$0.countyId] } ?? .leinster
                 )
             }
@@ -497,19 +509,20 @@ private struct ProfileMatchesHistoryView: View {
                 LazyVStack(spacing: 10) {
                     ForEach(groupedByYear) { group in
                         DisclosureGroup(isExpanded: isExpanded(group.year)) {
-                            VStack(spacing: 8) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                                 ForEach(group.matches) { match in
                                     NavigationLink(value: MatchRoute(id: match.matchId)) {
-                                        HStack(spacing: 12) {
-                                            Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
-                                            VStack(alignment: .leading, spacing: 3) {
-                                                Text("\(match.homeName) v \(match.awayName)").font(.headline)
-                                                Text(match.competition ?? "Gaelic Games").font(.subheadline).foregroundStyle(.secondary)
-                                                Text(Formatting.matchDate(match.playedAt)).font(.caption).foregroundStyle(.secondary)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack {
+                                                Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
+                                                Spacer()
+                                                Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
                                             }
-                                            Spacer()
-                                            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
+                                            Text("\(match.homeName) v \(match.awayName)").font(.headline)
+                                            Text(match.competition ?? "Gaelic Games").font(.caption).foregroundStyle(.secondary)
+                                            Text(Formatting.matchDate(match.playedAt)).font(.caption).foregroundStyle(.secondary)
                                         }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding()
                                         .gaelInsetCard(cornerRadius: 10)
                                     }
@@ -573,7 +586,7 @@ private struct ProfileGroundsHistoryView: View {
         let grouped = Dictionary(grouping: grounds, by: \.province)
         return Self.provinceOrder.compactMap { province in
             guard let rows = grouped[province], !rows.isEmpty else { return nil }
-            return GroundProvinceGroup(province: province, grounds: rows.sorted { $0.visitedAt > $1.visitedAt })
+            return GroundProvinceGroup(province: province, grounds: rows.sorted { $0.mostRecentVisit > $1.mostRecentVisit })
         }
     }
 
@@ -586,18 +599,21 @@ private struct ProfileGroundsHistoryView: View {
                 LazyVStack(spacing: 10) {
                     ForEach(groupedByProvince) { group in
                         DisclosureGroup(isExpanded: isExpanded(group.province)) {
-                            VStack(spacing: 8) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                                 ForEach(group.grounds) { ground in
                                     NavigationLink(value: GroundRoute(id: ground.groundId)) {
-                                        HStack(spacing: 12) {
-                                            Image(systemName: "mappin.circle.fill").foregroundStyle(Color.brandGreenLight)
-                                            VStack(alignment: .leading, spacing: 3) {
-                                                Text(ground.name).font(.headline)
-                                                Text("Visited \(Formatting.shortDate(ground.visitedAt))").font(.caption).foregroundStyle(.secondary)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack {
+                                                Image(systemName: "mappin.circle.fill").foregroundStyle(Color.brandGreenLight)
+                                                Spacer()
+                                                Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
                                             }
-                                            Spacer()
-                                            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
+                                            Text(ground.name).font(.headline)
+                                            Text(ground.visitCount == 1 ? "1 visit" : "\(ground.visitCount) visits")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
                                         }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding()
                                         .gaelInsetCard(cornerRadius: 10)
                                     }
