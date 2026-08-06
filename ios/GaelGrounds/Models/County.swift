@@ -8,6 +8,7 @@ struct County: Codable, Identifiable, Hashable {
     let primaryColour: String?
     let secondaryColour: String?
     let createdAt: Date?
+    let nickname: String?
 
     var colours: CountyColours? {
         guard let primaryColour, let secondaryColour else { return nil }

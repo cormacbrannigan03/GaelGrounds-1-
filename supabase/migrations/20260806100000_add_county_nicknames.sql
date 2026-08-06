@@ -1,0 +1,46 @@
+-- Traditional/informal nicknames for each county, shown on CountyDetailView
+-- between the county name and its intercounty teams section.
+alter table public.counties
+  add column if not exists nickname text;
+
+update public.counties set nickname = case name
+  when 'Antrim' then 'The Saffrons'
+  when 'Armagh' then 'The Orchard County'
+  when 'Carlow' then 'The Barrowsiders'
+  when 'Cavan' then 'The Breffni Men'
+  when 'Clare' then 'The Banner'
+  when 'Cork' then 'The Rebels'
+  when 'Derry' then 'The Oak Leafers'
+  when 'Donegal' then 'Tír Chonaill'
+  when 'Down' then 'The Mourne Men'
+  when 'Dublin' then 'The Dubs'
+  when 'Fermanagh' then 'The Erne Men'
+  when 'Fingal' then 'The Ravens'
+  when 'Galway' then 'The Tribesmen'
+  when 'Kerry' then 'The Kingdom'
+  when 'Kildare' then 'The Lilywhites'
+  when 'Kilkenny' then 'The Cats'
+  when 'Lancashire' then 'The Red Rose'
+  when 'Laois' then 'The O''Moore Men'
+  when 'Leitrim' then 'The Wild Rose'
+  when 'Limerick' then 'The Treaty Men'
+  when 'London' then 'The Exiles'
+  when 'Longford' then 'The O''Farrell County'
+  when 'Louth' then 'The Wee County'
+  when 'Mayo' then 'The Westerners'
+  when 'Meath' then 'The Royals'
+  when 'Monaghan' then 'The Farney Men'
+  when 'New York' then 'The Exiles'
+  when 'Offaly' then 'The Faithful'
+  when 'Roscommon' then 'The Rossies'
+  when 'Sligo' then 'The Yeats County'
+  when 'South Down' then 'South Down'
+  when 'Tipperary' then 'The Premier County'
+  when 'Tyrone' then 'The Red Hand'
+  when 'Warwickshire' then 'The Bear'
+  when 'Waterford' then 'The Déise'
+  when 'Westmeath' then 'The Lake County'
+  when 'Wexford' then 'The Yellowbellies'
+  when 'Wicklow' then 'The Garden County'
+  else nickname
+end;
