@@ -745,9 +745,17 @@ private struct ProfileAchievementsView: View {
     }
 
     // Anything with no county/province attached -- ground/match counts,
-    // "all provinces visited," and the top-level "Ireland Complete".
-    private var generalLocked: [LockedAchievementRow] {
-        locked.filter { $0.countyId == nil && $0.province == nil }
+    // "all provinces visited," and the top-level "Ireland Complete" --
+    // split into a couple of labeled sections rather than one flat,
+    // unheaded grid.
+    private static let groundRuleTypes: Set<String> = ["ground_visit_count", "all_provinces_visited", "country_grounds_complete"]
+
+    private var groundsLocked: [LockedAchievementRow] {
+        locked.filter { $0.countyId == nil && $0.province == nil && Self.groundRuleTypes.contains($0.ruleType) }
+    }
+
+    private var matchesLocked: [LockedAchievementRow] {
+        locked.filter { $0.countyId == nil && $0.province == nil && !Self.groundRuleTypes.contains($0.ruleType) }
     }
 
     private var countyGroups: [CountyAchievementGroup] {
@@ -823,12 +831,30 @@ private struct ProfileAchievementsView: View {
                                 .gaelCard(cornerRadius: 14)
                             }
 
-                            if !generalLocked.isEmpty {
-                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
-                                    ForEach(generalLocked) { achievement in
-                                        ProfileLockedAchievementCard(achievement: achievement)
+                            if !groundsLocked.isEmpty {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text("Grounds").font(.headline)
+                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
+                                        ForEach(groundsLocked) { achievement in
+                                            ProfileLockedAchievementCard(achievement: achievement)
+                                        }
                                     }
                                 }
+                                .padding()
+                                .gaelCard(cornerRadius: 14)
+                            }
+
+                            if !matchesLocked.isEmpty {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text("Matches").font(.headline)
+                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
+                                        ForEach(matchesLocked) { achievement in
+                                            ProfileLockedAchievementCard(achievement: achievement)
+                                        }
+                                    }
+                                }
+                                .padding()
+                                .gaelCard(cornerRadius: 14)
                             }
 
                             if !countyGroups.isEmpty {
@@ -901,6 +927,9 @@ private struct ProfileAchievementsView: View {
         }
         .navigationTitle("Achievements")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(for: CountyRoute.self) { route in
+            CountyDetailView(countyId: route.id)
+        }
         .gaelGroundsBackground()
     }
 
@@ -942,17 +971,38 @@ private struct ProfileAchievementCard: View {
 private struct ProfileLockedAchievementCard: View {
     let achievement: LockedAchievementRow
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(achievement.title, systemImage: "lock.fill")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-            Text(achievement.description).font(.caption).foregroundStyle(.secondary)
+    private var content: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Label(achievement.title, systemImage: "lock.fill")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+                Text(achievement.description).font(.caption).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if isCountyComplete {
+                Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .gaelCard(cornerRadius: 14)
         .opacity(0.6)
+    }
+
+    // Only "Complete a county" achievements have somewhere useful to link
+    // to -- tapping through shows the grounds that make up that county's
+    // completion target.
+    private var isCountyComplete: Bool {
+        achievement.ruleType == "county_grounds_complete" && achievement.countyId != nil
+    }
+
+    var body: some View {
+        if isCountyComplete, let countyId = achievement.countyId {
+            NavigationLink(value: CountyRoute(id: countyId)) { content }
+                .buttonStyle(.plain)
+        } else {
+            content
+        }
     }
 }
 
