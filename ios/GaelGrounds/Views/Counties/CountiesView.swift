@@ -77,7 +77,10 @@ private struct FlowChips: View {
                 NavigationLink(value: CountyRoute(id: county.id)) {
                     HStack(spacing: 6) {
                         CountyBanner(countyName: county.name)
-                        Text(county.name).font(.subheadline.bold())
+                        Text(county.name)
+                            .font(.subheadline.bold())
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
