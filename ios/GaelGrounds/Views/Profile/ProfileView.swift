@@ -497,19 +497,20 @@ private struct ProfileMatchesHistoryView: View {
                 LazyVStack(spacing: 10) {
                     ForEach(groupedByYear) { group in
                         DisclosureGroup(isExpanded: isExpanded(group.year)) {
-                            VStack(spacing: 8) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                                 ForEach(group.matches) { match in
                                     NavigationLink(value: MatchRoute(id: match.matchId)) {
-                                        HStack(spacing: 12) {
-                                            Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
-                                            VStack(alignment: .leading, spacing: 3) {
-                                                Text("\(match.homeName) v \(match.awayName)").font(.headline)
-                                                Text(match.competition ?? "Gaelic Games").font(.subheadline).foregroundStyle(.secondary)
-                                                Text(Formatting.matchDate(match.playedAt)).font(.caption).foregroundStyle(.secondary)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack {
+                                                Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
+                                                Spacer()
+                                                Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
                                             }
-                                            Spacer()
-                                            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
+                                            Text("\(match.homeName) v \(match.awayName)").font(.headline)
+                                            Text(match.competition ?? "Gaelic Games").font(.caption).foregroundStyle(.secondary)
+                                            Text(Formatting.matchDate(match.playedAt)).font(.caption).foregroundStyle(.secondary)
                                         }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding()
                                         .gaelInsetCard(cornerRadius: 10)
                                     }
@@ -586,18 +587,19 @@ private struct ProfileGroundsHistoryView: View {
                 LazyVStack(spacing: 10) {
                     ForEach(groupedByProvince) { group in
                         DisclosureGroup(isExpanded: isExpanded(group.province)) {
-                            VStack(spacing: 8) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                                 ForEach(group.grounds) { ground in
                                     NavigationLink(value: GroundRoute(id: ground.groundId)) {
-                                        HStack(spacing: 12) {
-                                            Image(systemName: "mappin.circle.fill").foregroundStyle(Color.brandGreenLight)
-                                            VStack(alignment: .leading, spacing: 3) {
-                                                Text(ground.name).font(.headline)
-                                                Text("Visited \(Formatting.shortDate(ground.visitedAt))").font(.caption).foregroundStyle(.secondary)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack {
+                                                Image(systemName: "mappin.circle.fill").foregroundStyle(Color.brandGreenLight)
+                                                Spacer()
+                                                Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
                                             }
-                                            Spacer()
-                                            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
+                                            Text(ground.name).font(.headline)
+                                            Text("Visited \(Formatting.shortDate(ground.visitedAt))").font(.caption).foregroundStyle(.secondary)
                                         }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding()
                                         .gaelInsetCard(cornerRadius: 10)
                                     }
