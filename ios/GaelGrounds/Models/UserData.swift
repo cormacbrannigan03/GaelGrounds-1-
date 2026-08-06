@@ -84,7 +84,7 @@ struct AchievementUnlock: Identifiable, Hashable {
     let tier: AchievementTier?
 }
 
-enum AchievementTier: String, Hashable {
+enum AchievementTier: String, Hashable, CaseIterable {
     case standard
     case bronze
     case silver
