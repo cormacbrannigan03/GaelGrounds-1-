@@ -36,6 +36,13 @@ private struct AchievementRow: Identifiable {
     let progressMessage: String?
 }
 
+private struct LockedAchievementRow: Identifiable {
+    let id: UUID
+    let title: String
+    let description: String
+    let icon: String?
+}
+
 struct ProfileView: View {
     @EnvironmentObject private var auth: AuthViewModel
     @EnvironmentObject private var premium: PremiumStore
@@ -46,6 +53,7 @@ struct ProfileView: View {
     @State private var grounds: [VisitedGroundRow] = []
     @State private var matches: [AttendedMatchRow] = []
     @State private var achievements: [AchievementRow] = []
+    @State private var lockedAchievements: [LockedAchievementRow] = []
     @State private var counties: [County] = []
     @State private var supportedCountyId: UUID?
     @State private var savedSupportedCountyId: UUID?
@@ -150,35 +158,38 @@ struct ProfileView: View {
                 if isLoading {
                     ProgressView().frame(maxWidth: .infinity)
                 } else {
-                    if !achievements.isEmpty {
-                        section("Achievements") {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
-                                ForEach(achievements) { a in
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Label(a.title, systemImage: a.icon ?? "trophy.fill")
-                                            .font(.headline)
-                                            .foregroundStyle(a.tier?.tint ?? Color.brandGold)
-                                        if let tier = a.tier, let count = a.homeGameCount {
-                                            Text(tier == .standard ? "\(count) home games" : "\(tier.label) · \(count) home games")
-                                                .font(.caption.bold())
-                                                .foregroundStyle(tier.tint)
+                    if !achievements.isEmpty || !lockedAchievements.isEmpty {
+                        NavigationLink(value: ProfileDestination.achievements) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack {
+                                    Text("Achievements").font(.title3.bold())
+                                    Spacer()
+                                    Text("\(achievements.count) of \(achievements.count + lockedAchievements.count)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                                }
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
+                                    ForEach(achievements.prefix(4)) { a in
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Label(a.title, systemImage: a.icon ?? "trophy.fill")
+                                                .font(.headline)
+                                                .foregroundStyle(a.tier?.tint ?? Color.brandGold)
+                                            if let tier = a.tier, let count = a.homeGameCount {
+                                                Text(tier == .standard ? "\(count) home games" : "\(tier.label) · \(count) home games")
+                                                    .font(.caption.bold())
+                                                    .foregroundStyle(tier.tint)
+                                            }
+                                            Text(a.description).font(.caption).foregroundStyle(.secondary)
                                         }
-                                        Text(a.description).font(.caption).foregroundStyle(.secondary)
-                                        if let progressMessage = a.progressMessage {
-                                            Text(progressMessage)
-                                                .font(.caption)
-                                                .foregroundStyle(.primary)
-                                        }
-                                        Text("Unlocked \(Formatting.shortDate(a.unlockedAt))")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding()
+                                        .gaelCard(cornerRadius: 14)
                                     }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding()
-                                    .gaelCard(cornerRadius: 14)
                                 }
                             }
                         }
+                        .buttonStyle(.plain)
                     }
 
                     section("Matches attended") {
@@ -265,7 +276,7 @@ struct ProfileView: View {
             case .matches:
                 ProfileMatchesHistoryView(matches: matches)
             case .achievements:
-                ProfileAchievementsView(achievements: achievements)
+                ProfileAchievementsView(unlocked: achievements, locked: lockedAchievements)
             }
         }
         .navigationDestination(for: MatchRoute.self) { route in
@@ -437,37 +448,47 @@ struct ProfileView: View {
 
             let userAchievements: [UserAchievement] = try await Supa.client
                 .from("user_achievements").select().eq("user_id", value: userId).order("unlocked_at", ascending: false).execute().value
-            let achievementIds = userAchievements.map(\.achievementId)
             let homeCounts = (try? await AchievementsService.homeMatchCounts(userId: userId)) ?? [:]
-            if !achievementIds.isEmpty {
-                let defs: [AchievementDefinition] = try await Supa.client
-                    .from("achievement_definitions").select().in("id", values: achievementIds).execute().value
-                let defById = Dictionary(uniqueKeysWithValues: defs.map { ($0.id, $0) })
-                achievements = userAchievements.compactMap { ua in
-                    guard let d = defById[ua.achievementId] else { return nil }
-                    let homeCount: Int?
-                    if d.ruleType == "county_home_match",
-                       let countyId = d.ruleParams.countyId,
-                       let sportCode = d.ruleParams.sportCode {
-                        homeCount = homeCounts[HomeAchievementKey(countyId: countyId, sportCode: sportCode)]
-                    } else {
-                        homeCount = nil
-                    }
-                    let tier = homeCount.map(AchievementTier.forHomeMatchCount)
-                    return AchievementRow(
-                        id: ua.id,
-                        title: d.title,
-                        description: d.description,
-                        icon: d.icon,
-                        unlockedAt: ua.unlockedAt,
-                        tier: tier,
-                        homeGameCount: homeCount,
-                        progressMessage: homeCount.map(AchievementsService.progressMessage)
-                    )
+            let allDefs: [AchievementDefinition] = try await Supa.client
+                .from("achievement_definitions").select().execute().value
+            let defById = Dictionary(uniqueKeysWithValues: allDefs.map { ($0.id, $0) })
+
+            achievements = userAchievements.compactMap { ua in
+                guard let d = defById[ua.achievementId] else { return nil }
+                // For county_home_match achievements, always show a tier/count
+                // (defaulting to 0 rather than nil) so every unlocked county+sport
+                // achievement displays consistently -- previously a sport with
+                // zero recorded home games (e.g. football, if all check-ins were
+                // at away/neutral grounds) showed no tier line at all, which
+                // looked like the tier system only existed for the other sport.
+                let homeCount: Int?
+                if d.ruleType == "county_home_match",
+                   let countyId = d.ruleParams.countyId,
+                   let sportCode = d.ruleParams.sportCode {
+                    homeCount = homeCounts[HomeAchievementKey(countyId: countyId, sportCode: sportCode)] ?? 0
+                } else {
+                    homeCount = nil
                 }
-            } else {
-                achievements = []
+                let tier = homeCount.map(AchievementTier.forHomeMatchCount)
+                return AchievementRow(
+                    id: ua.id,
+                    title: d.title,
+                    description: d.description,
+                    icon: d.icon,
+                    unlockedAt: ua.unlockedAt,
+                    tier: tier,
+                    homeGameCount: homeCount,
+                    progressMessage: homeCount.map(AchievementsService.progressMessage)
+                )
             }
+
+            let unlockedDefIds = Set(userAchievements.map(\.achievementId))
+            lockedAchievements = allDefs
+                .filter { !unlockedDefIds.contains($0.id) }
+                .map { d in
+                    LockedAchievementRow(id: d.id, title: d.title, description: d.description, icon: d.icon)
+                }
+                .sorted { $0.title < $1.title }
         } catch {
             print("Profile load failed: \(error)")
         }
@@ -653,20 +674,51 @@ private struct ProfileGroundsHistoryView: View {
 }
 
 private struct ProfileAchievementsView: View {
-    let achievements: [AchievementRow]
+    let unlocked: [AchievementRow]
+    let locked: [LockedAchievementRow]
+
+    private enum Tab: String, CaseIterable {
+        case unlocked = "Unlocked"
+        case locked = "Locked"
+    }
+
+    @State private var tab: Tab = .unlocked
 
     var body: some View {
-        ScrollView {
-            if achievements.isEmpty {
-                ContentUnavailableView("No achievements yet", systemImage: "trophy", description: Text("Check in to games to start unlocking achievements."))
-                    .padding(.top, 80)
-            } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
-                    ForEach(achievements) { achievement in
-                        ProfileAchievementCard(achievement: achievement)
+        VStack(spacing: 0) {
+            Picker("", selection: $tab) {
+                ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .padding()
+
+            ScrollView {
+                switch tab {
+                case .unlocked:
+                    if unlocked.isEmpty {
+                        ContentUnavailableView("No achievements yet", systemImage: "trophy", description: Text("Check in to games to start unlocking achievements."))
+                            .padding(.top, 80)
+                    } else {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
+                            ForEach(unlocked) { achievement in
+                                ProfileAchievementCard(achievement: achievement)
+                            }
+                        }
+                        .padding()
+                    }
+                case .locked:
+                    if locked.isEmpty {
+                        ContentUnavailableView("All achievements unlocked!", systemImage: "trophy.fill", description: Text("You've earned everything there is right now."))
+                            .padding(.top, 80)
+                    } else {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
+                            ForEach(locked) { achievement in
+                                ProfileLockedAchievementCard(achievement: achievement)
+                            }
+                        }
+                        .padding()
                     }
                 }
-                .padding()
             }
         }
         .navigationTitle("Achievements")
@@ -697,6 +749,23 @@ private struct ProfileAchievementCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .gaelCard(cornerRadius: 14)
+    }
+}
+
+private struct ProfileLockedAchievementCard: View {
+    let achievement: LockedAchievementRow
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(achievement.title, systemImage: "lock.fill")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            Text(achievement.description).font(.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .gaelCard(cornerRadius: 14)
+        .opacity(0.6)
     }
 }
 

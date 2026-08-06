@@ -22,6 +22,11 @@ struct CountyDetailView: View {
                             Text(county.name).font(.title.bold())
                         }
                         Text(county.province.rawValue).foregroundStyle(.secondary)
+                        if let nickname = county.nickname {
+                            Text(nickname)
+                                .font(.subheadline.italic())
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .padding(.leading, 12)
                     .overlay(alignment: .leading) {
