@@ -1,4 +1,6 @@
 import Foundation
+import PostgREST
+import Supabase
 
 /// Evaluates achievement_definitions.rule_type against the signed-in user's
 /// current stats and inserts any newly-earned rows into user_achievements.

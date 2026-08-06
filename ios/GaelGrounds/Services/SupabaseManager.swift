@@ -23,7 +23,7 @@ enum Supa {
             supabaseURL: SupabaseConfig.url,
             supabaseKey: SupabaseConfig.anonKey,
             options: SupabaseClientOptions(
-                db: .init(decoder: decoder, encoder: encoder)
+                db: .init(encoder: encoder, decoder: decoder)
             )
         )
     }()

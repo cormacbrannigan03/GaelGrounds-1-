@@ -1,4 +1,6 @@
 import SwiftUI
+import PostgREST
+import Supabase
 
 struct GroundDetailView: View {
     let groundId: UUID

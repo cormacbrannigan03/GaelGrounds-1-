@@ -3,8 +3,8 @@ import SwiftUI
 struct MatchCardView: View {
     let match: MatchSummary
 
-    private var homeColors: (Color, Color) { CountyColours.colours(for: match.homeName) }
-    private var awayColors: (Color, Color) { CountyColours.colours(for: match.awayName) }
+    private var homeColors: (Color, Color) { CountyPalette.colours(for: match.homeName) }
+    private var awayColors: (Color, Color) { CountyPalette.colours(for: match.awayName) }
 
     var body: some View {
         NavigationLink(value: MatchRoute(id: match.id, isFinal: match.isFinal, winnerName: match.winnerName)) {

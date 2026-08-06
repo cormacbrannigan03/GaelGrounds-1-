@@ -29,7 +29,7 @@ struct MatchDetailView: View {
             .countyBackground(winnerNameOnLoad ?? summary?.winnerName)
 
             if let winner = confettiWinner {
-                let (primary, secondary) = CountyColours.colours(for: winner)
+                let (primary, secondary) = CountyPalette.colours(for: winner)
                 ConfettiOverlayView(colors: [primary, secondary])
             }
 
