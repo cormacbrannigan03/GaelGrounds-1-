@@ -34,33 +34,34 @@ enum AchievementsService {
                 .execute()
                 .value
 
+            // Full grounds/counties tables, not just the user's own visited
+            // subset -- needed as the denominator for the county/province/
+            // country "visit every ground" completionist achievements.
+            async let allGroundsTask: [Ground] = Supa.client.from("grounds").select().execute().value
+            async let allCountiesTask: [County] = Supa.client.from("counties").select().execute().value
+
             let defs = try await definitions
             let unlockedIds = Set(try await unlocked.map(\.achievementId))
             let visitRows = try await visits
             let attendanceRows = try await attendance
             let matchCount = attendanceRows.count
+            let allGrounds = try await allGroundsTask
+            let allCounties = try await allCountiesTask
 
-            let groundIds = Array(Set(visitRows.map(\.groundId)))
-            var provinces = Set<Province>()
-            if !groundIds.isEmpty {
-                let grounds: [Ground] = try await Supa.client
-                    .from("grounds")
-                    .select()
-                    .in("id", values: groundIds)
-                    .execute()
-                    .value
-                let countyIds = Array(Set(grounds.map(\.countyId)))
-                if !countyIds.isEmpty {
-                    let counties: [County] = try await Supa.client
-                        .from("counties")
-                        .select()
-                        .in("id", values: countyIds)
-                        .execute()
-                        .value
-                    provinces = Set(counties.map(\.province))
+            let visitedGroundIds = Set(visitRows.map(\.groundId))
+            let groundCount = visitedGroundIds.count
+
+            let groundById = Dictionary(uniqueKeysWithValues: allGrounds.map { ($0.id, $0) })
+            let provinceByCountyId = Dictionary(uniqueKeysWithValues: allCounties.map { ($0.id, $0.province) })
+            let provinces = Set(visitedGroundIds.compactMap { groundById[$0]?.countyId }.compactMap { provinceByCountyId[$0] })
+
+            let groundsByCounty = Dictionary(grouping: allGrounds, by: \.countyId)
+            var groundsByProvince: [Province: [Ground]] = [:]
+            for g in allGrounds {
+                if let province = provinceByCountyId[g.countyId] {
+                    groundsByProvince[province, default: []].append(g)
                 }
             }
-            let groundCount = groundIds.count
 
             // County achievements only count when the county is both the designated
             // home team and the venue belongs to that county. This excludes neutral
@@ -121,6 +122,20 @@ enum AchievementsService {
                     } else {
                         earned = false
                     }
+                case "county_grounds_complete":
+                    if let countyId = def.ruleParams.countyId, let countyGrounds = groundsByCounty[countyId], !countyGrounds.isEmpty {
+                        earned = countyGrounds.allSatisfy { visitedGroundIds.contains($0.id) }
+                    } else {
+                        earned = false
+                    }
+                case "province_grounds_complete":
+                    if let province = def.ruleParams.province, let provinceGrounds = groundsByProvince[province], !provinceGrounds.isEmpty {
+                        earned = provinceGrounds.allSatisfy { visitedGroundIds.contains($0.id) }
+                    } else {
+                        earned = false
+                    }
+                case "country_grounds_complete":
+                    earned = !allGrounds.isEmpty && allGrounds.allSatisfy { visitedGroundIds.contains($0.id) }
                 default:
                     earned = false
                 }

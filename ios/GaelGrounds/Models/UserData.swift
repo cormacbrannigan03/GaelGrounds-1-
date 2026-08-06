@@ -58,6 +58,7 @@ struct AchievementDefinition: Codable, Identifiable, Hashable {
         let count: Int?
         let countyId: UUID?
         let sportCode: SportCode?
+        let province: Province?
     }
 
     let id: UUID

@@ -41,6 +41,8 @@ private struct LockedAchievementRow: Identifiable {
     let title: String
     let description: String
     let icon: String?
+    let countyId: UUID?
+    let province: Province?
 }
 
 struct ProfileView: View {
@@ -268,7 +270,7 @@ struct ProfileView: View {
             case .matches:
                 ProfileMatchesHistoryView(matches: matches)
             case .achievements:
-                ProfileAchievementsView(unlocked: achievements, locked: lockedAchievements)
+                ProfileAchievementsView(unlocked: achievements, locked: lockedAchievements, counties: counties)
             }
         }
         .navigationDestination(for: MatchRoute.self) { route in
@@ -478,7 +480,14 @@ struct ProfileView: View {
             lockedAchievements = allDefs
                 .filter { !unlockedDefIds.contains($0.id) }
                 .map { d in
-                    LockedAchievementRow(id: d.id, title: d.title, description: d.description, icon: d.icon)
+                    LockedAchievementRow(
+                        id: d.id,
+                        title: d.title,
+                        description: d.description,
+                        icon: d.icon,
+                        countyId: d.ruleParams.countyId,
+                        province: d.ruleParams.province
+                    )
                 }
                 .sorted { $0.title < $1.title }
         } catch {
@@ -665,16 +674,74 @@ private struct ProfileGroundsHistoryView: View {
     }
 }
 
+private struct CountyAchievementGroup: Identifiable {
+    let countyId: UUID
+    let countyName: String
+    let achievements: [LockedAchievementRow]
+    var id: UUID { countyId }
+}
+
+private struct ProvinceAchievementGroup: Identifiable {
+    let province: Province
+    let ownAchievement: LockedAchievementRow?
+    let counties: [CountyAchievementGroup]
+    var id: String { province.rawValue }
+}
+
 private struct ProfileAchievementsView: View {
     let unlocked: [AchievementRow]
     let locked: [LockedAchievementRow]
+    let counties: [County]
 
     private enum Tab: String, CaseIterable {
         case unlocked = "Unlocked"
         case locked = "Locked"
     }
 
+    private static let provinceOrder: [Province] = [.leinster, .munster, .connacht, .ulster]
+
     @State private var tab: Tab = .unlocked
+    @State private var isCountiesExpanded = false
+    @State private var isProvincesExpanded = false
+    @State private var expandedProvinces: Set<Province> = []
+
+    private var countyNameById: [UUID: String] {
+        Dictionary(uniqueKeysWithValues: counties.map { ($0.id, $0.name) })
+    }
+
+    private var provinceByCountyId: [UUID: Province] {
+        Dictionary(uniqueKeysWithValues: counties.map { ($0.id, $0.province) })
+    }
+
+    // Anything with no county/province attached -- ground/match counts,
+    // "all provinces visited," and the top-level "Ireland Complete".
+    private var generalLocked: [LockedAchievementRow] {
+        locked.filter { $0.countyId == nil && $0.province == nil }
+    }
+
+    private var countyGroups: [CountyAchievementGroup] {
+        let byCounty = Dictionary(grouping: locked.filter { $0.countyId != nil }, by: { $0.countyId! })
+        return byCounty
+            .map { countyId, rows in
+                CountyAchievementGroup(
+                    countyId: countyId,
+                    countyName: countyNameById[countyId] ?? "Unknown county",
+                    achievements: rows.sorted { $0.title < $1.title }
+                )
+            }
+            .sorted { $0.countyName < $1.countyName }
+    }
+
+    private var provinceGroups: [ProvinceAchievementGroup] {
+        let ownByProvince = Dictionary(uniqueKeysWithValues: locked.filter { $0.province != nil }.map { ($0.province!, $0) })
+        let countiesByProvince = Dictionary(grouping: countyGroups) { provinceByCountyId[$0.countyId] }
+        return Self.provinceOrder.compactMap { province in
+            let own = ownByProvince[province]
+            let countiesHere = (countiesByProvince[province] ?? []).sorted { $0.countyName < $1.countyName }
+            guard own != nil || !countiesHere.isEmpty else { return nil }
+            return ProvinceAchievementGroup(province: province, ownAchievement: own, counties: countiesHere)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -703,9 +770,76 @@ private struct ProfileAchievementsView: View {
                         ContentUnavailableView("All achievements unlocked!", systemImage: "trophy.fill", description: Text("You've earned everything there is right now."))
                             .padding(.top, 80)
                     } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
-                            ForEach(locked) { achievement in
-                                ProfileLockedAchievementCard(achievement: achievement)
+                        VStack(spacing: 10) {
+                            if !generalLocked.isEmpty {
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
+                                    ForEach(generalLocked) { achievement in
+                                        ProfileLockedAchievementCard(achievement: achievement)
+                                    }
+                                }
+                            }
+
+                            if !countyGroups.isEmpty {
+                                DisclosureGroup(isExpanded: $isCountiesExpanded) {
+                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
+                                        ForEach(countyGroups.flatMap(\.achievements)) { achievement in
+                                            ProfileLockedAchievementCard(achievement: achievement)
+                                        }
+                                    }
+                                    .padding(.top, 8)
+                                } label: {
+                                    HStack {
+                                        Text("Counties").font(.headline)
+                                        Spacer()
+                                        Text("\(countyGroups.flatMap(\.achievements).count)")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .padding()
+                                .gaelCard(cornerRadius: 14)
+                            }
+
+                            if !provinceGroups.isEmpty {
+                                DisclosureGroup(isExpanded: $isProvincesExpanded) {
+                                    VStack(spacing: 8) {
+                                        ForEach(provinceGroups) { group in
+                                            DisclosureGroup(isExpanded: provinceExpanded(group.province)) {
+                                                VStack(alignment: .leading, spacing: 10) {
+                                                    if let own = group.ownAchievement {
+                                                        ProfileLockedAchievementCard(achievement: own)
+                                                    }
+                                                    ForEach(group.counties) { county in
+                                                        VStack(alignment: .leading, spacing: 6) {
+                                                            Text(county.countyName).font(.subheadline.bold())
+                                                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
+                                                                ForEach(county.achievements) { achievement in
+                                                                    ProfileLockedAchievementCard(achievement: achievement)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                .padding(.top, 8)
+                                            } label: {
+                                                Text(group.province.rawValue).font(.subheadline.bold())
+                                            }
+                                            .padding()
+                                            .gaelInsetCard(cornerRadius: 10)
+                                        }
+                                    }
+                                    .padding(.top, 8)
+                                } label: {
+                                    HStack {
+                                        Text("Provinces").font(.headline)
+                                        Spacer()
+                                        Text("\(provinceGroups.count)")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .padding()
+                                .gaelCard(cornerRadius: 14)
                             }
                         }
                         .padding()
@@ -716,6 +850,15 @@ private struct ProfileAchievementsView: View {
         .navigationTitle("Achievements")
         .navigationBarTitleDisplayMode(.inline)
         .gaelGroundsBackground()
+    }
+
+    private func provinceExpanded(_ province: Province) -> Binding<Bool> {
+        Binding(
+            get: { expandedProvinces.contains(province) },
+            set: { isExpanded in
+                if isExpanded { expandedProvinces.insert(province) } else { expandedProvinces.remove(province) }
+            }
+        )
     }
 }
 
