@@ -2,10 +2,11 @@ import SwiftUI
 import Supabase
 
 private struct VisitedGroundRow: Identifiable {
-    let id: UUID
+    var id: UUID { groundId }
     let groundId: UUID
     let name: String
-    let visitedAt: Date
+    let visitCount: Int
+    let mostRecentVisit: Date
     let province: Province
 }
 
@@ -217,7 +218,9 @@ struct ProfileView: View {
                                         HStack {
                                             Text(g.name).font(.subheadline.bold())
                                             Spacer()
-                                            Text(Formatting.shortDate(g.visitedAt)).font(.caption).foregroundStyle(.secondary)
+                                            Text(g.visitCount == 1 ? "1 visit" : "\(g.visitCount) visits")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
                                             Image(systemName: "chevron.right").foregroundStyle(.secondary)
                                         }
                                         .padding()
@@ -390,13 +393,14 @@ struct ProfileView: View {
                 .from("grounds").select().in("id", values: groundIds).execute().value
             let groundById = Dictionary(uniqueKeysWithValues: groundRows.map { ($0.id, $0) })
             let provinceByCountyId = Dictionary(uniqueKeysWithValues: loadedCounties.map { ($0.id, $0.province) })
-            grounds = visits.map { v in
-                let ground = groundById[v.groundId]
+            let visitsByGround = Dictionary(grouping: visits, by: \.groundId)
+            grounds = visitsByGround.map { groundId, visitsHere in
+                let ground = groundById[groundId]
                 return VisitedGroundRow(
-                    id: v.id,
-                    groundId: v.groundId,
+                    groundId: groundId,
                     name: ground?.name ?? "Unknown ground",
-                    visitedAt: v.visitedAt,
+                    visitCount: visitsHere.count,
+                    mostRecentVisit: visitsHere.map(\.visitedAt).max() ?? Date.distantPast,
                     province: ground.flatMap { provinceByCountyId[$0.countyId] } ?? .leinster
                 )
             }
@@ -574,7 +578,7 @@ private struct ProfileGroundsHistoryView: View {
         let grouped = Dictionary(grouping: grounds, by: \.province)
         return Self.provinceOrder.compactMap { province in
             guard let rows = grouped[province], !rows.isEmpty else { return nil }
-            return GroundProvinceGroup(province: province, grounds: rows.sorted { $0.visitedAt > $1.visitedAt })
+            return GroundProvinceGroup(province: province, grounds: rows.sorted { $0.mostRecentVisit > $1.mostRecentVisit })
         }
     }
 
@@ -597,7 +601,9 @@ private struct ProfileGroundsHistoryView: View {
                                                 Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
                                             }
                                             Text(ground.name).font(.headline)
-                                            Text("Visited \(Formatting.shortDate(ground.visitedAt))").font(.caption).foregroundStyle(.secondary)
+                                            Text(ground.visitCount == 1 ? "1 visit" : "\(ground.visitCount) visits")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
                                         }
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding()
