@@ -9,7 +9,7 @@ struct CountyBanner: View {
     private var width: CGFloat { height * 0.67 }
 
     var body: some View {
-        let (primary, secondary) = CountyPalette.colours(for: countyName)
+        let (primary, secondary) = CountyColours.colours(for: countyName)
         HStack(spacing: 0) {
             Rectangle().fill(primary)
             Rectangle().fill(secondary)
@@ -20,7 +20,7 @@ struct CountyBanner: View {
     }
 }
 
-enum CountyPalette {
+enum CountyColours {
     static func colours(for name: String) -> (Color, Color) {
         lookup[name] ?? (Color.gray.opacity(0.4), Color.gray.opacity(0.2))
     }

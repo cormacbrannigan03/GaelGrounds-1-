@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 -- NOTE: this file was committed to git but, like the premium migration
 -- earlier tonight, never actually run against the live project until now
 -- (2026-08-05, applied via the Supabase MCP tools). Found while chasing a
@@ -9,7 +7,6 @@
 -- migration applied, "Grounds visited" would never move from a match
 -- check-in (only from an explicit ground check-in), independent of the
 -- realtime subscription itself working correctly.
->>>>>>> county-achievements-20260804
 begin;
 
 alter table public.user_visits

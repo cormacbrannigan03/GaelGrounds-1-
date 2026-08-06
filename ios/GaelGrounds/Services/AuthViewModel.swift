@@ -5,7 +5,6 @@ import Supabase
 @MainActor
 final class AuthViewModel: ObservableObject {
     @Published var session: Session?
-    @Published private(set) var isLoading = false
 
     var userId: UUID? { session?.user.id }
     var userEmail: String? { session?.user.email }

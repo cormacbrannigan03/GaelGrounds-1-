@@ -55,14 +55,6 @@ confirmation for this project in the Supabase dashboard under
   `Views/Grounds/GroundCheckInPanel.swift` subscribe to Postgres changes via
   `client.realtimeV2.channel(...).postgresChange(...)`, so check-ins from
   other users appear without a refresh.
-<<<<<<< HEAD
-- **Counties → teams → grounds → roll of honour**, **fixtures/results with
-  search**, and a **profile** with stats + achievements — one-to-one with
-  the feature set of the web app.
-- The Supabase URL and anon key are hardcoded in `Config/SupabaseConfig.swift`
-  (same reasoning as the web app: the anon key is safe client-side, every
-  table is behind Row Level Security).
-=======
 - **User-submitted ground photos** — `GroundCheckInPanel` also has a Photos
   section: `PhotosPicker` lets a signed-in user pick a photo, which is
   re-encoded as JPEG and uploaded to the public `ground-photos` storage
@@ -182,7 +174,6 @@ confirmation for this project in the Supabase dashboard under
   triaging these, by design — same pattern as `manual_match_submissions`
   in the sync-matches pipeline: it's meant to be reviewed directly against
   the table (Studio's Table Editor, or the API with the service_role key).
->>>>>>> county-achievements-20260804
 
 ## Honest caveats
 
@@ -193,16 +184,6 @@ small fix on first build:
 
 1. **The `supabase-swift` API surface.** Method names used here
    (`signInWithPassword`, `client.from(_:)`, `client.realtimeV2.channel(_:)`,
-<<<<<<< HEAD
-   `.postgresChange(AnyAction.self, ...)`, `SupabaseClientOptions(db: .init(decoder:encoder:))`)
-   were checked against the current SDK docs/source, but this library has
-   renamed things across major versions before. If Xcode flags a signature
-   mismatch, check `Sources/Supabase/Types.swift` and `Sources/Auth/AuthClient.swift`
-   in the `supabase-swift` repo for whatever version Xcode resolves.
-2. **Date decoding.** `Services/SupabaseManager.swift` tries ISO 8601 with
-   and without fractional seconds. If a decode ever fails, it's almost
-   always this.
-=======
    `.postgresChange(AnyAction.self, ...)`, `SupabaseClientOptions(db: .init(decoder:encoder:))`,
    and — new in the ground-photos feature — `client.storage.from(_:).upload(_:data:options:)`
    and `.getPublicURL(path:)`; and new in the premium/friends work —
@@ -243,14 +224,11 @@ small fix on first build:
    APNs auth-token shape itself (ES256, `kid`/`iss`/`iat`, bearer token to
    `api.push.apple.com`) is Apple's documented token-based provider auth,
    not guessed.
->>>>>>> county-achievements-20260804
 
 Everything else — the data model, the RLS-respecting query shapes, the
 achievement/check-in logic — mirrors the web app's already-tested behavior
 against the live database, so it should be functionally correct even where
 the exact Swift syntax needs a tweak.
-<<<<<<< HEAD
-=======
 
 ## Migrations that existed only in git (found and fixed 2026-08-05)
 
@@ -288,4 +266,3 @@ Edge Function. Re-running `20260801023442_create_friendships_table.sql` or
 `20260801023456_create_user_personal_matches_table.sql` against production
 will fail with "relation already exists"; see the notes at the top of each
 file for what's actually live instead.
->>>>>>> county-achievements-20260804

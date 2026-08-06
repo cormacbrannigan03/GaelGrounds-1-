@@ -27,9 +27,9 @@ struct DashboardView: View {
 
                 if auth.isSignedIn {
                     HStack(spacing: 12) {
-                        DashboardStatTile(value: groundsVisited, label: "Grounds visited")
-                        DashboardStatTile(value: matchesAttended, label: "Matches attended")
-                        DashboardStatTile(value: achievementsUnlocked, label: "Achievements")
+                        StatTile(value: groundsVisited, label: "Grounds visited")
+                        StatTile(value: matchesAttended, label: "Matches attended")
+                        StatTile(value: achievementsUnlocked, label: "Achievements")
                     }
                 }
 
@@ -78,7 +78,7 @@ struct DashboardView: View {
         defer { if showSpinner { isLoading = false } }
 
         do {
-            let matches = try await MatchService.fetchUpcomingAndLive()
+            let matches = try await MatchService.fetchUpcoming()
             upcoming = try await MatchService.resolveSummaries(matches)
         } catch {
             print("Dashboard load failed: \(error)")
@@ -103,7 +103,7 @@ struct DashboardView: View {
 /// for detail routes.
 private struct MatchesRouteTag: Hashable {}
 
-private struct DashboardStatTile: View {
+private struct StatTile: View {
     let value: Int
     let label: String
 

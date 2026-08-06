@@ -1,5 +1,3 @@
-import PostgREST
-import Supabase
 import SwiftUI
 
 struct GroundDetailView: View {
