@@ -13,14 +13,26 @@ struct LeaderboardView: View {
         case munster  = "Munster"
         case leinster = "Leinster"
         case connacht = "Connacht"
+        case bronze   = "Most Bronze"
+        case silver   = "Most Silver"
+        case gold     = "Top Gold"
 
         var province: Province? {
             switch self {
-            case .overall, .myCounty: return nil
+            case .overall, .myCounty, .bronze, .silver, .gold: return nil
             case .ulster:   return .ulster
             case .munster:  return .munster
             case .leinster: return .leinster
             case .connacht: return .connacht
+            }
+        }
+
+        var tier: AchievementTier? {
+            switch self {
+            case .bronze: return .bronze
+            case .silver: return .silver
+            case .gold: return .gold
+            default: return nil
             }
         }
     }
@@ -48,6 +60,11 @@ struct LeaderboardView: View {
             return entries
                 .filter { ($0.provinceMatchCounts[province] ?? 0) > 0 }
                 .sorted { ($0.provinceMatchCounts[province] ?? 0) > ($1.provinceMatchCounts[province] ?? 0) }
+        }
+        if let tier = activeTab.tier {
+            return entries
+                .filter { $0.tierCounts[tier, default: 0] > 0 }
+                .sorted { $0.tierCounts[tier, default: 0] > $1.tierCounts[tier, default: 0] }
         }
         return sortedOverall(entries)
     }
@@ -156,6 +173,9 @@ struct LeaderboardView: View {
         if let province = activeTab.province {
             return "No \(province.rawValue) matches attended yet."
         }
+        if let tier = activeTab.tier {
+            return "No \(tier.label) achievements unlocked yet."
+        }
         return "No activity yet. Be the first to check in!"
     }
 
@@ -168,12 +188,17 @@ struct LeaderboardView: View {
             async let profilesTask: [UserProfile]        = Supa.client.from("user_profiles").select().execute().value
             async let attendanceTask: [AttendanceRecord] = Supa.client.from("user_match_attendance").select("user_id, match_id").execute().value
             async let visitsTask: [UserIdOnly]           = Supa.client.from("user_visits").select("user_id").execute().value
-            async let matchTeamsTask: [MatchTeamRef]     = Supa.client.from("matches").select("id, home_county_team_id, away_county_team_id").execute().value
-            async let countyTeamsTask: [CountyTeamRef]   = Supa.client.from("county_teams").select("id, county_id").execute().value
+            async let matchTeamsTask: [MatchTeamRef]     = Supa.client.from("matches").select("id, home_county_team_id, away_county_team_id, ground_id").execute().value
+            async let countyTeamsTask: [CountyTeamRef]   = Supa.client.from("county_teams").select("id, county_id, sport_code").execute().value
             async let countiesTask: [CountyProvinceRef]  = Supa.client.from("counties").select("id, name, province").execute().value
+            async let groundsTask: [GroundCountyRef]     = Supa.client.from("grounds").select("id, county_id").execute().value
+            async let userAchievementsTask: [UserAchievementRef] = Supa.client.from("user_achievements").select("user_id, achievement_id").execute().value
+            async let achievementDefsTask: [AchievementDefinition] = Supa.client.from("achievement_definitions").select().execute().value
 
             let (profiles, attendance, visits, matchTeams, countyTeams, counties) =
                 try await (profilesTask, attendanceTask, visitsTask, matchTeamsTask, countyTeamsTask, countiesTask)
+            let (grounds, userAchievements, achievementDefs) =
+                try await (groundsTask, userAchievementsTask, achievementDefsTask)
 
             // Build lookup maps
             let teamToCounty    = Dictionary(uniqueKeysWithValues: countyTeams.map { ($0.id, $0.countyId) })
@@ -206,6 +231,50 @@ struct LeaderboardView: View {
             var groundCounts: [UUID: Int] = [:]
             for v in visits { groundCounts[v.userId, default: 0] += 1 }
 
+            // Home/road match counts per user, per (county, sport) — the
+            // same basis county_home_match/county_away_match achievements
+            // are tiered on in AchievementsService, computed here globally
+            // across every user instead of one at a time.
+            struct TierKey: Hashable { let userId: UUID; let countyId: UUID; let sportCode: SportCode }
+            let matchById = Dictionary(uniqueKeysWithValues: matchTeams.map { ($0.id, $0) })
+            let groundCountyById = Dictionary(uniqueKeysWithValues: grounds.map { ($0.id, $0.countyId) })
+            let teamSportById = Dictionary(uniqueKeysWithValues: countyTeams.map { ($0.id, $0.sportCode) })
+
+            var homeCountsByUser: [TierKey: Int] = [:]
+            var roadCountsByUser: [TierKey: Int] = [:]
+            for a in attendance {
+                guard let match = matchById[a.matchId],
+                      let groundId = match.groundId,
+                      let groundCountyId = groundCountyById[groundId] else { continue }
+                let participatingTeamIds = [match.homeCountyTeamId, match.awayCountyTeamId].compactMap { $0 }
+                for teamId in participatingTeamIds {
+                    guard let teamCountyId = teamToCounty[teamId], let sportCode = teamSportById[teamId] else { continue }
+                    let key = TierKey(userId: a.userId, countyId: teamCountyId, sportCode: sportCode)
+                    if teamCountyId == groundCountyId {
+                        homeCountsByUser[key, default: 0] += 1
+                    } else {
+                        roadCountsByUser[key, default: 0] += 1
+                    }
+                }
+            }
+
+            // Tally each user's unlocked county_home_match/county_away_match
+            // achievements into bronze/silver/gold buckets for the tier
+            // leaderboards ("Most Bronze", "Most Silver", "Top Gold").
+            let defById = Dictionary(uniqueKeysWithValues: achievementDefs.map { ($0.id, $0) })
+            var tierCountsByUser: [UUID: [AchievementTier: Int]] = [:]
+            for ua in userAchievements {
+                guard let def = defById[ua.achievementId],
+                      def.ruleType == "county_home_match" || def.ruleType == "county_away_match",
+                      let countyId = def.ruleParams.countyId,
+                      let sportCode = def.ruleParams.sportCode else { continue }
+                let key = TierKey(userId: ua.userId, countyId: countyId, sportCode: sportCode)
+                let count = def.ruleType == "county_home_match" ? (homeCountsByUser[key] ?? 0) : (roadCountsByUser[key] ?? 0)
+                let tier = AchievementTier.forHomeMatchCount(count)
+                guard tier != .standard else { continue }
+                tierCountsByUser[ua.userId, default: [:]][tier, default: 0] += 1
+            }
+
             // Build entries
             let profileById = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
             let allIds = Set(overallMatchCounts.keys).union(groundCounts.keys)
@@ -221,6 +290,7 @@ struct LeaderboardView: View {
                     matchCount: overallMatchCounts[uid] ?? 0,
                     groundCount: groundCounts[uid] ?? 0,
                     provinceMatchCounts: provMap,
+                    tierCounts: tierCountsByUser[uid] ?? [:],
                     supportedCountyId: profile.supportedCountyId
                 )
             }
@@ -238,6 +308,7 @@ private struct LeaderboardEntry: Identifiable {
     let matchCount: Int
     let groundCount: Int
     let provinceMatchCounts: [Province: Int]
+    let tierCounts: [AchievementTier: Int]
     let supportedCountyId: UUID?
 }
 
@@ -254,11 +325,23 @@ private struct MatchTeamRef: Decodable {
     let id: UUID
     let homeCountyTeamId: UUID?
     let awayCountyTeamId: UUID?
+    let groundId: UUID?
 }
 
 private struct CountyTeamRef: Decodable {
     let id: UUID
     let countyId: UUID
+    let sportCode: SportCode
+}
+
+private struct GroundCountyRef: Decodable {
+    let id: UUID
+    let countyId: UUID
+}
+
+private struct UserAchievementRef: Decodable {
+    let userId: UUID
+    let achievementId: UUID
 }
 
 private struct CountyProvinceRef: Decodable {
@@ -286,15 +369,24 @@ private struct LeaderboardRow: View {
     }
 
     private var primaryCount: Int {
+        if let tier = tab.tier { return entry.tierCounts[tier, default: 0] }
         if let p = tab.province { return entry.provinceMatchCounts[p] ?? 0 }
         return sortBy == .matches ? entry.matchCount : entry.groundCount
     }
 
     private var primaryLabel: String {
-        tab.province != nil ? "matches" : (sortBy == .matches ? "matches" : "grounds")
+        if let tier = tab.tier { return tier.label.lowercased() }
+        return tab.province != nil ? "matches" : (sortBy == .matches ? "matches" : "grounds")
     }
 
     private var secondaryText: String {
+        if let tier = tab.tier {
+            let others = AchievementTier.allCases
+                .filter { $0 != .standard && $0 != tier }
+                .map { "\(entry.tierCounts[$0, default: 0]) \($0.label.lowercased())" }
+                .joined(separator: " · ")
+            return others
+        }
         if tab.province != nil {
             return "\(entry.matchCount) total · \(entry.groundCount) grounds"
         }
