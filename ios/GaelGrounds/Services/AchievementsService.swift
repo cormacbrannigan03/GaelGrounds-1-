@@ -67,6 +67,10 @@ enum AchievementsService {
             // home team and the venue belongs to that county. This excludes neutral
             // championship venues even if the county happens to be listed first.
             let homeCounts = try await homeMatchCounts(attendance: attendanceRows)
+            // "Road Traveller" — the inverse: any match a county's team plays (home
+            // or away side of the fixture) at a ground that isn't their own county's,
+            // which deliberately includes neutral championship venues as away games.
+            let roadCounts = try await roadMatchCounts(attendance: attendanceRows)
             var eligibleHomeKey: HomeAchievementKey?
             if let checkedInMatchId {
                 let checkedInMatch: Match = try await Supa.client
@@ -122,6 +126,13 @@ enum AchievementsService {
                     } else {
                         earned = false
                     }
+                case "county_away_match":
+                    if let countyId = def.ruleParams.countyId,
+                       let sportCode = def.ruleParams.sportCode {
+                        earned = (roadCounts[HomeAchievementKey(countyId: countyId, sportCode: sportCode)] ?? 0) >= 1
+                    } else {
+                        earned = false
+                    }
                 case "county_grounds_complete":
                     if let countyId = def.ruleParams.countyId, let countyGrounds = groundsByCounty[countyId], !countyGrounds.isEmpty {
                         earned = countyGrounds.allSatisfy { visitedGroundIds.contains($0.id) }
@@ -148,7 +159,7 @@ enum AchievementsService {
                             title: def.title,
                             description: def.description,
                             icon: def.icon,
-                            tier: def.ruleType == "county_home_match" ? .standard : nil
+                            tier: (def.ruleType == "county_home_match" || def.ruleType == "county_away_match") ? .standard : nil
                         )
                     )
                 }
@@ -206,6 +217,16 @@ enum AchievementsService {
         return try await homeMatchCounts(attendance: attendance)
     }
 
+    static func roadMatchCounts(userId: UUID) async throws -> [HomeAchievementKey: Int] {
+        let attendance: [UserMatchAttendance] = try await Supa.client
+            .from("user_match_attendance")
+            .select()
+            .eq("user_id", value: userId)
+            .execute()
+            .value
+        return try await roadMatchCounts(attendance: attendance)
+    }
+
     private static func homeMatchCounts(attendance: [UserMatchAttendance]) async throws -> [HomeAchievementKey: Int] {
         let matchIds = Array(Set(attendance.map(\.matchId)))
         guard !matchIds.isEmpty else { return [:] }
@@ -249,7 +270,55 @@ enum AchievementsService {
         return counts
     }
 
-    static func progressMessage(count: Int) -> String {
+    /// "Road Traveller" counts: for each attended match, every participating
+    /// team (home or away side of the fixture) whose own county doesn't
+    /// match the ground's county gets a road-game credit -- this naturally
+    /// includes neutral championship venues as away games for both sides,
+    /// not just fixtures played at the true opposing county's ground.
+    private static func roadMatchCounts(attendance: [UserMatchAttendance]) async throws -> [HomeAchievementKey: Int] {
+        let matchIds = Array(Set(attendance.map(\.matchId)))
+        guard !matchIds.isEmpty else { return [:] }
+
+        let matches: [Match] = try await Supa.client
+            .from("matches")
+            .select()
+            .in("id", values: matchIds)
+            .execute()
+            .value
+        let teamIds = Array(Set(matches.compactMap(\.homeCountyTeamId) + matches.compactMap(\.awayCountyTeamId)))
+        let groundIds = Array(Set(matches.compactMap(\.groundId)))
+        guard !teamIds.isEmpty, !groundIds.isEmpty else { return [:] }
+
+        async let teamsTask: [CountyTeam] = Supa.client
+            .from("county_teams")
+            .select()
+            .in("id", values: teamIds)
+            .execute()
+            .value
+        async let groundsTask: [Ground] = Supa.client
+            .from("grounds")
+            .select()
+            .in("id", values: groundIds)
+            .execute()
+            .value
+        let (teams, grounds) = try await (teamsTask, groundsTask)
+        let teamById = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
+        let groundById = Dictionary(uniqueKeysWithValues: grounds.map { ($0.id, $0) })
+
+        var counts: [HomeAchievementKey: Int] = [:]
+        for match in matches {
+            guard let groundId = match.groundId, let ground = groundById[groundId] else { continue }
+            let participatingTeamIds = [match.homeCountyTeamId, match.awayCountyTeamId].compactMap { $0 }
+            for teamId in participatingTeamIds {
+                guard let team = teamById[teamId], team.countyId != ground.countyId else { continue }
+                let key = HomeAchievementKey(countyId: team.countyId, sportCode: team.sportCode)
+                counts[key, default: 0] += 1
+            }
+        }
+        return counts
+    }
+
+    static func progressMessage(count: Int, kind: String = "home") -> String {
         let next: (threshold: Int, name: String)?
         if count < 10 {
             next = (10, "Bronze")
@@ -262,7 +331,7 @@ enum AchievementsService {
         }
 
         guard let next else {
-            return "Outstanding — you've earned Gold level with \(count) home games."
+            return "Outstanding — you've earned Gold level with \(count) \(kind) games."
         }
         let remaining = next.threshold - count
         let noun = remaining == 1 ? "game" : "games"
