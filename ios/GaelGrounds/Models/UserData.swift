@@ -19,6 +19,10 @@ struct UserProfileUpdate: Encodable {
     let displayName: String
 }
 
+struct UserProfileAvatarUpdate: Encodable {
+    let avatarUrl: String
+}
+
 struct SupportedCountyUpdate: Encodable {
     let supportedCountyId: UUID
 }
