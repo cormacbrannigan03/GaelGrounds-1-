@@ -42,31 +42,43 @@ struct LeaderboardView: View {
         case grounds = "Grounds"
     }
 
+    enum Scope: String, CaseIterable {
+        case everyone = "Everyone"
+        case friends  = "Friends"
+    }
+
     @State private var entries:   [LeaderboardEntry] = []
+    @State private var friendIds: Set<UUID> = []
     @State private var supportedCountyId: UUID?
     @State private var supportedCountyName: String?
     @State private var isLoading = true
     @State private var activeTab: Tab     = .overall
     @State private var sortBy:    SortKey = .matches
+    @State private var scope:     Scope   = .everyone
+
+    private var scoped: [LeaderboardEntry] {
+        guard scope == .friends else { return entries }
+        return entries.filter { $0.id == auth.userId || friendIds.contains($0.id) }
+    }
 
     private var displayed: [LeaderboardEntry] {
         if activeTab == .myCounty {
             guard let supportedCountyId else { return [] }
             return sortedOverall(
-                entries.filter { $0.supportedCountyId == supportedCountyId }
+                scoped.filter { $0.supportedCountyId == supportedCountyId }
             )
         }
         if let province = activeTab.province {
-            return entries
+            return scoped
                 .filter { ($0.provinceMatchCounts[province] ?? 0) > 0 }
                 .sorted { ($0.provinceMatchCounts[province] ?? 0) > ($1.provinceMatchCounts[province] ?? 0) }
         }
         if let tier = activeTab.tier {
-            return entries
+            return scoped
                 .filter { $0.tierCounts[tier, default: 0] > 0 }
                 .sorted { $0.tierCounts[tier, default: 0] > $1.tierCounts[tier, default: 0] }
         }
-        return sortedOverall(entries)
+        return sortedOverall(scoped)
     }
 
     private func sortedOverall(_ entries: [LeaderboardEntry]) -> [LeaderboardEntry] {
@@ -123,6 +135,11 @@ struct LeaderboardView: View {
                         .buttonStyle(.plain)
                     }
 
+                    Picker("Scope", selection: $scope) {
+                        ForEach(Scope.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+
                     if activeTab == .overall || activeTab == .myCounty {
                         Picker("Sort by", selection: $sortBy) {
                             ForEach(SortKey.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -164,6 +181,9 @@ struct LeaderboardView: View {
     }
 
     private var emptyMessage: String {
+        if scope == .friends && friendIds.isEmpty {
+            return "Add some friends to see how you compare against them."
+        }
         if activeTab == .myCounty {
             if let supportedCountyName {
                 return "No \(supportedCountyName) supporters have checked in yet."
@@ -207,6 +227,13 @@ struct LeaderboardView: View {
             let currentProfile = profiles.first { $0.id == auth.userId }
             supportedCountyId = currentProfile?.supportedCountyId
             supportedCountyName = currentProfile?.supportedCountyId.flatMap { countyNames[$0] }
+
+            if let uid = auth.userId {
+                let friends = try await FriendService.fetchFriends(userId: uid)
+                friendIds = Set(friends.map(\.id))
+            } else {
+                friendIds = []
+            }
 
             // Province(s) for each match
             var matchProvinces: [UUID: Set<Province>] = [:]
