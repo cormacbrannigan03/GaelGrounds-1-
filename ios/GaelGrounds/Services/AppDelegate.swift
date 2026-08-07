@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import UIKit
 
 /// SwiftUI apps still need a UIApplicationDelegate for APNs device-token
@@ -19,3 +20,4 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         print("Push notification registration failed: \(error)")
     }
 }
+#endif

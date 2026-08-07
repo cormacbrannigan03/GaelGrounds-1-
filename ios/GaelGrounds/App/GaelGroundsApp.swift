@@ -2,7 +2,9 @@ import SwiftUI
 
 @main
 struct GaelGroundsApp: App {
+    #if canImport(UIKit)
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    #endif
     @StateObject private var auth = AuthViewModel()
     @StateObject private var premium = PremiumStore()
     @StateObject private var push = PushNotificationService.shared
@@ -13,6 +15,7 @@ struct GaelGroundsApp: App {
                 .environmentObject(auth)
                 .environmentObject(premium)
                 .environmentObject(push)
+                .task { await auth.startObserving() }
                 .task { await premium.start() }
                 .task(id: auth.userId) { premium.userId = auth.userId }
                 .task(id: auth.userId) {
