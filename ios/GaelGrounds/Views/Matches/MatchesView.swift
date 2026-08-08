@@ -43,7 +43,7 @@ struct MatchesView: View {
     private var filteredMatches: [MatchSummary] {
         searchFiltered.filter { match in
             matchesSelection(selectedCounty, in: [match.homeName, match.awayName])
-                && matchesSelection(selectedCompetition, in: [match.competition])
+                && matchesCompetition(selectedCompetition, in: [match.competition])
                 && matchesSelection(selectedVenue, in: [match.groundName])
         }
     }
@@ -59,7 +59,7 @@ struct MatchesView: View {
                 || normalizedForSearch(m.round ?? "").contains(q)
             return matchesSearch
                 && matchesSelection(selectedCounty, in: [m.homeTeam, m.awayTeam])
-                && matchesSelection(selectedCompetition, in: [m.competition])
+                && matchesCompetition(selectedCompetition, in: [m.competition])
                 && matchesSelection(selectedVenue, in: [m.venue])
         }
     }
@@ -361,6 +361,27 @@ struct MatchesView: View {
     private func matchesSelection(_ selection: String, in values: [String?]) -> Bool {
         guard !selection.isEmpty else { return true }
         return values.contains { $0 == selection }
+    }
+
+    // National Football League / National Hurling League both have
+    // "Division N" tagged for the regular season, but promotion-relegation
+    // playoff and final rounds -- which don't belong to a single division --
+    // are tagged with just the bare league name. Filtering by the bare name
+    // is meant to mean "the whole league," so it needs to also catch every
+    // division's matches, not just the handful of undivided playoff rows.
+    // Everything else (a specific "Division 2", a championship, etc.)
+    // still matches exactly.
+    private static let umbrellaCompetitions: Set<String> = [
+        "National Football League",
+        "National Hurling League",
+    ]
+
+    private func matchesCompetition(_ selection: String, in competitions: [String?]) -> Bool {
+        guard !selection.isEmpty else { return true }
+        if Self.umbrellaCompetitions.contains(selection) {
+            return competitions.contains { $0?.hasPrefix(selection) == true }
+        }
+        return competitions.contains { $0 == selection }
     }
 
     private func uniqueSorted(_ values: [String]) -> [String] {
