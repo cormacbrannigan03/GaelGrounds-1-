@@ -174,7 +174,7 @@ struct LeaderboardView: View {
         .navigationTitle("Leaderboard")
         .task { await load() }
         .refreshable { await load() }
-        .gaelGroundsBackground()
+        .countyBackground(supportedCountyName)
         .sheet(isPresented: $showingPaywall) {
             PremiumPaywallView(reason: "Only Premium members appear on the leaderboard.")
         }

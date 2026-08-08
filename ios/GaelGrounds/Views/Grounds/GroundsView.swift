@@ -10,6 +10,7 @@ struct GroundsView: View {
     @State private var search = ""
     @State private var isLoading = true
     @State private var showMap = false
+    @State private var supportedCountyName: String?
 
     private var filtered: [GroundSummary] {
         let q = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -60,7 +61,7 @@ struct GroundsView: View {
         }
         .task { await load() }
         .refreshable { await load() }
-        .gaelGroundsBackground()
+        .countyBackground(supportedCountyName)
     }
 
     private func load() async {
@@ -76,6 +77,7 @@ struct GroundsView: View {
                 let visits: [UserVisit] = try await Supa.client
                     .from("user_visits").select().eq("user_id", value: userId).execute().value
                 visitedIds = Set(visits.map(\.groundId))
+                supportedCountyName = await SupportedCountyService.fetchName(userId: userId)
             }
 
             mapGrounds = groundRows.map { g in

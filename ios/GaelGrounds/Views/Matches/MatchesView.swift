@@ -20,6 +20,7 @@ struct MatchesView: View {
     @State private var selectedCounty = ""
     @State private var selectedCompetition = ""
     @State private var selectedVenue = ""
+    @State private var supportedCountyName: String?
 
     // MARK: - Filtered helpers
 
@@ -228,7 +229,7 @@ struct MatchesView: View {
         }
         .task { await load() }
         .refreshable { await load() }
-        .gaelGroundsBackground()
+        .countyBackground(supportedCountyName)
     }
 
     // MARK: - Tab content
@@ -327,6 +328,7 @@ struct MatchesView: View {
         }
         if let userId = auth.userId {
             personalMatches = (try? await MatchService.fetchPersonalMatches(userId: userId)) ?? []
+            supportedCountyName = await SupportedCountyService.fetchName(userId: userId)
         }
         setDefaultExpansion()
     }
