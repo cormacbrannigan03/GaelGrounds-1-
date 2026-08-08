@@ -129,11 +129,16 @@ struct UserAchievement: Codable, Identifiable, Hashable {
     let userId: UUID
     let achievementId: UUID
     let unlockedAt: Date
+    var pinned: Bool = false
 }
 
 struct UserAchievementInsert: Encodable {
     let achievementId: UUID
     let userId: UUID
+}
+
+struct UserAchievementPinnedUpdate: Encodable {
+    let pinned: Bool
 }
 
 struct Friendship: Codable, Identifiable {

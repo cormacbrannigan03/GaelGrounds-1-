@@ -35,6 +35,7 @@ private struct AchievementRow: Identifiable {
     let homeGameCount: Int?
     let gameKindLabel: String
     let progressMessage: String?
+    var pinned: Bool
 }
 
 private struct LockedAchievementRow: Identifiable {
@@ -66,6 +67,13 @@ struct ProfileView: View {
     @State private var isSavingCounty = false
     @State private var realtimeTask: Task<Void, Never>?
     @State private var channel: RealtimeChannelV2?
+
+    // Starred achievements are what shows in the preview below -- falls
+    // back to the 4 most recently unlocked when nothing's been starred yet.
+    private var homeScreenAchievements: [AchievementRow] {
+        let pinned = achievements.filter(\.pinned)
+        return pinned.isEmpty ? Array(achievements.prefix(4)) : pinned
+    }
 
     var body: some View {
         ScrollView {
@@ -174,7 +182,7 @@ struct ProfileView: View {
                                     Image(systemName: "chevron.right").foregroundStyle(.secondary)
                                 }
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
-                                    ForEach(achievements.prefix(4)) { a in
+                                    ForEach(homeScreenAchievements) { a in
                                         VStack(alignment: .leading, spacing: 4) {
                                             Label(a.title, systemImage: a.icon ?? "trophy.fill")
                                                 .font(.headline)
@@ -189,6 +197,14 @@ struct ProfileView: View {
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding()
                                         .gaelCard(cornerRadius: 14)
+                                        .overlay(alignment: .topTrailing) {
+                                            if a.pinned {
+                                                Image(systemName: "star.fill")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.brandGold)
+                                                    .padding(8)
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -276,7 +292,8 @@ struct ProfileView: View {
                     unlocked: achievements,
                     locked: lockedAchievements,
                     counties: counties,
-                    supportedCountyId: savedSupportedCountyId
+                    supportedCountyId: savedSupportedCountyId,
+                    onTogglePinned: togglePinned
                 )
             }
         }
@@ -337,6 +354,30 @@ struct ProfileView: View {
             savedSupportedCountyId = supportedCountyId
         } catch {
             print("saveSupportedCounty failed: \(error)")
+        }
+    }
+
+    // Tapping an unlocked achievement stars/unstars it -- starred
+    // achievements are what shows in the "Achievements" preview at the top
+    // of this screen instead of just the most recently unlocked ones.
+    // Updates local state immediately and reverts it if the write fails.
+    private func togglePinned(_ achievement: AchievementRow) {
+        guard let index = achievements.firstIndex(where: { $0.id == achievement.id }) else { return }
+        let newValue = !achievements[index].pinned
+        achievements[index].pinned = newValue
+        Task {
+            do {
+                try await Supa.client
+                    .from("user_achievements")
+                    .update(UserAchievementPinnedUpdate(pinned: newValue))
+                    .eq("id", value: achievement.id)
+                    .execute()
+            } catch {
+                print("togglePinned failed: \(error)")
+                if let index = achievements.firstIndex(where: { $0.id == achievement.id }) {
+                    achievements[index].pinned = !newValue
+                }
+            }
         }
     }
 
@@ -489,7 +530,8 @@ struct ProfileView: View {
                     tier: tier,
                     homeGameCount: homeCount,
                     gameKindLabel: gameKind,
-                    progressMessage: homeCount.map { AchievementsService.progressMessage(count: $0, kind: gameKind) }
+                    progressMessage: homeCount.map { AchievementsService.progressMessage(count: $0, kind: gameKind) },
+                    pinned: ua.pinned
                 )
             }
 
@@ -711,6 +753,7 @@ private struct ProfileAchievementsView: View {
     let locked: [LockedAchievementRow]
     let counties: [County]
     let supportedCountyId: UUID?
+    let onTogglePinned: (AchievementRow) -> Void
 
     private enum Tab: String, CaseIterable {
         case unlocked = "Unlocked"
@@ -799,7 +842,9 @@ private struct ProfileAchievementsView: View {
                     } else {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                             ForEach(unlocked) { achievement in
-                                ProfileAchievementCard(achievement: achievement)
+                                ProfileAchievementCard(achievement: achievement) {
+                                    onTogglePinned(achievement)
+                                }
                             }
                         }
                         .padding()
@@ -945,26 +990,38 @@ private struct ProfileAchievementsView: View {
 
 private struct ProfileAchievementCard: View {
     let achievement: AchievementRow
+    let onToggle: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(achievement.title, systemImage: achievement.icon ?? "trophy.fill")
-                .font(.headline)
-                .foregroundStyle(achievement.tier?.tint ?? Color.brandGold)
-            if let tier = achievement.tier, let count = achievement.homeGameCount {
-                Text(tier == .standard ? "\(count) \(achievement.gameKindLabel) games" : "\(tier.label) · \(count) \(achievement.gameKindLabel) games")
-                    .font(.caption.bold())
-                    .foregroundStyle(tier.tint)
+        Button(action: onToggle) {
+            VStack(alignment: .leading, spacing: 4) {
+                Label(achievement.title, systemImage: achievement.icon ?? "trophy.fill")
+                    .font(.headline)
+                    .foregroundStyle(achievement.tier?.tint ?? Color.brandGold)
+                if let tier = achievement.tier, let count = achievement.homeGameCount {
+                    Text(tier == .standard ? "\(count) \(achievement.gameKindLabel) games" : "\(tier.label) · \(count) \(achievement.gameKindLabel) games")
+                        .font(.caption.bold())
+                        .foregroundStyle(tier.tint)
+                }
+                Text(achievement.description).font(.caption).foregroundStyle(.secondary)
+                if let progressMessage = achievement.progressMessage {
+                    Text(progressMessage).font(.caption).foregroundStyle(.primary)
+                }
+                Text("Unlocked \(Formatting.shortDate(achievement.unlockedAt))").font(.caption).foregroundStyle(.secondary)
             }
-            Text(achievement.description).font(.caption).foregroundStyle(.secondary)
-            if let progressMessage = achievement.progressMessage {
-                Text(progressMessage).font(.caption).foregroundStyle(.primary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .gaelCard(cornerRadius: 14)
+            .overlay(alignment: .topTrailing) {
+                if achievement.pinned {
+                    Image(systemName: "star.fill")
+                        .font(.caption)
+                        .foregroundStyle(.brandGold)
+                        .padding(8)
+                }
             }
-            Text("Unlocked \(Formatting.shortDate(achievement.unlockedAt))").font(.caption).foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .gaelCard(cornerRadius: 14)
+        .buttonStyle(.plain)
     }
 }
 
