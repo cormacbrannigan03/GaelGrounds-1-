@@ -124,7 +124,7 @@ struct DashboardView: View {
         defer { if showSpinner { isLoading = false } }
 
         do {
-            let matches = try await MatchService.fetchUpcoming()
+            let matches = try await MatchService.fetchUpcomingAndLive()
             upcoming = try await MatchService.resolveSummaries(matches)
         } catch {
             print("Dashboard load failed: \(error)")

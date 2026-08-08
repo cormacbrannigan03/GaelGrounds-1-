@@ -1,0 +1,1030 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		FF0000013025000000000001 /* Competition.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001013025000000000001 /* Competition.swift */; };
+		FF0000023025000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001023025000000000002 /* AppDelegate.swift */; };
+		FF0000033025000000000003 /* FriendService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001033025000000000003 /* FriendService.swift */; };
+		FF0000043025000000000004 /* GroundPhotoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001043025000000000004 /* GroundPhotoService.swift */; };
+		FF0000053025000000000005 /* PremiumStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001053025000000000005 /* PremiumStore.swift */; };
+		FF0000063025000000000006 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001063025000000000006 /* PushNotificationService.swift */; };
+		FF0000073025000000000007 /* RealtimeWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001073025000000000007 /* RealtimeWatcher.swift */; };
+		FF0000083025000000000008 /* ReportMatchIssueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001083025000000000008 /* ReportMatchIssueView.swift */; };
+		FF0000093025000000000009 /* PremiumPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0001093025000000000009 /* PremiumPaywallView.swift */; };
+		FF21C6CF301C14140037E4D5 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF21C6CE301C14140037E4D5 /* LeaderboardView.swift */; };
+		FF3CA037301A47A300DE33C0 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF3CA036301A47A300DE33C0 /* ConfettiView.swift */; };
+		FF89D95630121F9E0006EFFF /* GroundsMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF89D95530121F9E0006EFFF /* GroundsMapView.swift */; };
+		FF9438103012B85F00BCE40E /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF94380F3012B85F00BCE40E /* FriendsView.swift */; };
+		FF9438123012B86C00BCE40E /* FriendProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9438113012B86C00BCE40E /* FriendProfileView.swift */; };
+		FF9438143012BB2300BCE40E /* CountyBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9438133012BB2300BCE40E /* CountyBanner.swift */; };
+		FF9438163012BC4700BCE40E /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9438153012BC4700BCE40E /* TeamDetailView.swift */; };
+		FF9DAA2B3015AF48006EC3F7 /* UserPersonalMatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9DAA2A3015AF48006EC3F7 /* UserPersonalMatch.swift */; };
+		FF9DAA2F3015B047006EC3F7 /* AddMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF9DAA2E3015B047006EC3F7 /* AddMatchView.swift */; };
+		FFDAAC3630118DF200456573 /* MatchCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1D30118DF200456573 /* MatchCardView.swift */; };
+		FFDAAC3730118DF200456573 /* Routes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1730118DF200456573 /* Routes.swift */; };
+		FFDAAC3830118DF200456573 /* CheckInPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2830118DF200456573 /* CheckInPanel.swift */; };
+		FFDAAC3930118DF200456573 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1A30118DF200456573 /* AuthView.swift */; };
+		FFDAAC3A30118DF200456573 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1830118DF200456573 /* Theme.swift */; };
+		FFDAAC3B30118DF200456573 /* GroundsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2630118DF200456573 /* GroundsView.swift */; };
+		FFDAAC3C30118DF200456573 /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC0A30118DF200456573 /* Enums.swift */; };
+		FFDAAC3D30118DF200456573 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1230118DF200456573 /* AuthViewModel.swift */; };
+		FFDAAC3E30118DF200456573 /* GroundDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2530118DF200456573 /* GroundDetailView.swift */; };
+		FFDAAC3F30118DF200456573 /* MatchesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2A30118DF200456573 /* MatchesView.swift */; };
+		FFDAAC4030118DF200456573 /* GroundCheckInPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2430118DF200456573 /* GroundCheckInPanel.swift */; };
+		FFDAAC4130118DF200456573 /* MatchDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2930118DF200456573 /* MatchDetailView.swift */; };
+		FFDAAC4230118DF200456573 /* MatchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1330118DF200456573 /* MatchService.swift */; };
+		FFDAAC4330118DF200456573 /* Honour.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC0C30118DF200456573 /* Honour.swift */; };
+		FFDAAC4430118DF200456573 /* CountyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2030118DF200456573 /* CountyDetailView.swift */; };
+		FFDAAC4530118DF200456573 /* SupabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1430118DF200456573 /* SupabaseManager.swift */; };
+		FFDAAC4630118DF200456573 /* GroundCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1C30118DF200456573 /* GroundCardView.swift */; };
+		FFDAAC4730118DF200456573 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2F30118DF200456573 /* RootView.swift */; };
+		FFDAAC4830118DF200456573 /* GaelGroundsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC0530118DF200456573 /* GaelGroundsApp.swift */; };
+		FFDAAC4930118DF200456573 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2230118DF200456573 /* DashboardView.swift */; };
+		FFDAAC4A30118DF200456573 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2E30118DF200456573 /* MainTabView.swift */; };
+		FFDAAC4B30118DF200456573 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC0730118DF200456573 /* SupabaseConfig.swift */; };
+		FFDAAC4C30118DF200456573 /* Ground.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC0B30118DF200456573 /* Ground.swift */; };
+		FFDAAC4D30118DF200456573 /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1630118DF200456573 /* Formatting.swift */; };
+		FFDAAC4E30118DF200456573 /* AchievementsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1130118DF200456573 /* AchievementsService.swift */; };
+		FFDAAC4F30118DF200456573 /* Match.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC0D30118DF200456573 /* Match.swift */; };
+		FFDAAC5030118DF200456573 /* MatchSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC0E30118DF200456573 /* MatchSummary.swift */; };
+		FFDAAC5130118DF200456573 /* UserData.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC0F30118DF200456573 /* UserData.swift */; };
+		FFDAAC5230118DF200456573 /* County.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC0930118DF200456573 /* County.swift */; };
+		FFDAAC5330118DF200456573 /* CountiesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1F30118DF200456573 /* CountiesView.swift */; };
+		FFDAAC5430118DF200456573 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2C30118DF200456573 /* ProfileView.swift */; };
+		FFDAAC5530118DF200456573 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = FFDAAC3430118DF200456573 /* README.md */; };
+		FFDAAC5630118DF200456573 /* GaelGrounds-1--claude-gaelic-sports-checkin-app-g7dd0m.zip in Resources */ = {isa = PBXBuildFile; fileRef = FFDAAC3330118DF200456573 /* GaelGrounds-1--claude-gaelic-sports-checkin-app-g7dd0m.zip */; };
+		FFDAAC5930118F0400456573 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = FFDAAC5830118F0400456573 /* Supabase */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXBuildRule section */
+		FFA4D72A3024216B00DC9B38 /* PBXBuildRule */ = {
+			isa = PBXBuildRule;
+			compilerSpec = com.apple.compilers.proxy.script;
+			fileType = pattern.proxy;
+			inputFiles = (
+			);
+			isEditable = 1;
+			outputFiles = (
+			);
+			script = "# Type a script or drag a script file from your workspace to insert its path.\n";
+		};
+/* End PBXBuildRule section */
+
+/* Begin PBXContainerItemProxy section */
+		FFDAABD430118A1A00456573 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FFDAABB730118A1800456573 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FFDAABBE30118A1800456573;
+			remoteInfo = GaelGrounds;
+		};
+		FFDAABDE30118A1A00456573 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FFDAABB730118A1800456573 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FFDAABBE30118A1800456573;
+			remoteInfo = GaelGrounds;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		FF0001013025000000000001 /* Competition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Competition.swift; sourceTree = "<group>"; };
+		FF0001023025000000000002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		FF0001033025000000000003 /* FriendService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendService.swift; sourceTree = "<group>"; };
+		FF0001043025000000000004 /* GroundPhotoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroundPhotoService.swift; sourceTree = "<group>"; };
+		FF0001053025000000000005 /* PremiumStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumStore.swift; sourceTree = "<group>"; };
+		FF0001063025000000000006 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
+		FF0001073025000000000007 /* RealtimeWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeWatcher.swift; sourceTree = "<group>"; };
+		FF0001083025000000000008 /* ReportMatchIssueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportMatchIssueView.swift; sourceTree = "<group>"; };
+		FF0001093025000000000009 /* PremiumPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumPaywallView.swift; sourceTree = "<group>"; };
+		FF21C6CE301C14140037E4D5 /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
+		FF3CA036301A47A300DE33C0 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
+		FF89D95530121F9E0006EFFF /* GroundsMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroundsMapView.swift; sourceTree = "<group>"; };
+		FF94380F3012B85F00BCE40E /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
+		FF9438113012B86C00BCE40E /* FriendProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendProfileView.swift; sourceTree = "<group>"; };
+		FF9438133012BB2300BCE40E /* CountyBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountyBanner.swift; sourceTree = "<group>"; };
+		FF9438153012BC4700BCE40E /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
+		FF9DAA2A3015AF48006EC3F7 /* UserPersonalMatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPersonalMatch.swift; sourceTree = "<group>"; };
+		FF9DAA2E3015B047006EC3F7 /* AddMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMatchView.swift; sourceTree = "<group>"; };
+		FFDAABBF30118A1800456573 /* GaelGrounds.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GaelGrounds.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FFDAABD330118A1A00456573 /* GaelGroundsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GaelGroundsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FFDAABDD30118A1A00456573 /* GaelGroundsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GaelGroundsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FFDAAC0530118DF200456573 /* GaelGroundsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaelGroundsApp.swift; sourceTree = "<group>"; };
+		FFDAAC0730118DF200456573 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
+		FFDAAC0930118DF200456573 /* County.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = County.swift; sourceTree = "<group>"; };
+		FFDAAC0A30118DF200456573 /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
+		FFDAAC0B30118DF200456573 /* Ground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ground.swift; sourceTree = "<group>"; };
+		FFDAAC0C30118DF200456573 /* Honour.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Honour.swift; sourceTree = "<group>"; };
+		FFDAAC0D30118DF200456573 /* Match.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Match.swift; sourceTree = "<group>"; };
+		FFDAAC0E30118DF200456573 /* MatchSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchSummary.swift; sourceTree = "<group>"; };
+		FFDAAC0F30118DF200456573 /* UserData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserData.swift; sourceTree = "<group>"; };
+		FFDAAC1130118DF200456573 /* AchievementsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementsService.swift; sourceTree = "<group>"; };
+		FFDAAC1230118DF200456573 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		FFDAAC1330118DF200456573 /* MatchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchService.swift; sourceTree = "<group>"; };
+		FFDAAC1430118DF200456573 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseManager.swift; sourceTree = "<group>"; };
+		FFDAAC1630118DF200456573 /* Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
+		FFDAAC1730118DF200456573 /* Routes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Routes.swift; sourceTree = "<group>"; };
+		FFDAAC1830118DF200456573 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		FFDAAC1A30118DF200456573 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
+		FFDAAC1C30118DF200456573 /* GroundCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroundCardView.swift; sourceTree = "<group>"; };
+		FFDAAC1D30118DF200456573 /* MatchCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchCardView.swift; sourceTree = "<group>"; };
+		FFDAAC1F30118DF200456573 /* CountiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountiesView.swift; sourceTree = "<group>"; };
+		FFDAAC2030118DF200456573 /* CountyDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountyDetailView.swift; sourceTree = "<group>"; };
+		FFDAAC2230118DF200456573 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		FFDAAC2430118DF200456573 /* GroundCheckInPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroundCheckInPanel.swift; sourceTree = "<group>"; };
+		FFDAAC2530118DF200456573 /* GroundDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroundDetailView.swift; sourceTree = "<group>"; };
+		FFDAAC2630118DF200456573 /* GroundsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroundsView.swift; sourceTree = "<group>"; };
+		FFDAAC2830118DF200456573 /* CheckInPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInPanel.swift; sourceTree = "<group>"; };
+		FFDAAC2930118DF200456573 /* MatchDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchDetailView.swift; sourceTree = "<group>"; };
+		FFDAAC2A30118DF200456573 /* MatchesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchesView.swift; sourceTree = "<group>"; };
+		FFDAAC2C30118DF200456573 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		FFDAAC2E30118DF200456573 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		FFDAAC2F30118DF200456573 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		FFDAAC3330118DF200456573 /* GaelGrounds-1--claude-gaelic-sports-checkin-app-g7dd0m.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; path = "GaelGrounds-1--claude-gaelic-sports-checkin-app-g7dd0m.zip"; sourceTree = "<group>"; };
+		FFDAAC3430118DF200456573 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		FFDAABE530118A1A00456573 /* Exceptions for "GaelGrounds" folder in "GaelGrounds" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = FFDAABBE30118A1800456573 /* GaelGrounds */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		FFDAABC130118A1800456573 /* GaelGrounds */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				FFDAABE530118A1A00456573 /* Exceptions for "GaelGrounds" folder in "GaelGrounds" target */,
+			);
+			path = GaelGrounds;
+			sourceTree = "<group>";
+		};
+		FFDAABD630118A1A00456573 /* GaelGroundsTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = GaelGroundsTests;
+			sourceTree = "<group>";
+		};
+		FFDAABE030118A1A00456573 /* GaelGroundsUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = GaelGroundsUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FFDAABBC30118A1800456573 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FFDAAC5930118F0400456573 /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFDAABD030118A1A00456573 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFDAABDA30118A1A00456573 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		FF21C6CD301C14130037E4D5 /* Leaderboard */ = {
+			isa = PBXGroup;
+			children = (
+				FF21C6CE301C14140037E4D5 /* LeaderboardView.swift */,
+			);
+			path = Leaderboard;
+			sourceTree = "<group>";
+		};
+		FFDAABB630118A1800456573 = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC3530118DF200456573 /* ios */,
+				FFDAABC130118A1800456573 /* GaelGrounds */,
+				FFDAABD630118A1A00456573 /* GaelGroundsTests */,
+				FFDAABE030118A1A00456573 /* GaelGroundsUITests */,
+				FFDAABC030118A1800456573 /* Products */,
+				FF9DAA2E3015B047006EC3F7 /* AddMatchView.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		FFDAABC030118A1800456573 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAABBF30118A1800456573 /* GaelGrounds.app */,
+				FFDAABD330118A1A00456573 /* GaelGroundsTests.xctest */,
+				FFDAABDD30118A1A00456573 /* GaelGroundsUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FFDAAC0630118DF200456573 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC0530118DF200456573 /* GaelGroundsApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		FFDAAC0830118DF200456573 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC0730118DF200456573 /* SupabaseConfig.swift */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		FFDAAC1030118DF200456573 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				FF0001013025000000000001 /* Competition.swift */,
+				FFDAAC0930118DF200456573 /* County.swift */,
+				FFDAAC0A30118DF200456573 /* Enums.swift */,
+				FFDAAC0B30118DF200456573 /* Ground.swift */,
+				FFDAAC0C30118DF200456573 /* Honour.swift */,
+				FFDAAC0D30118DF200456573 /* Match.swift */,
+				FFDAAC0E30118DF200456573 /* MatchSummary.swift */,
+				FFDAAC0F30118DF200456573 /* UserData.swift */,
+				FF9DAA2A3015AF48006EC3F7 /* UserPersonalMatch.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		FFDAAC1530118DF200456573 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				FF0001023025000000000002 /* AppDelegate.swift */,
+				FF0001033025000000000003 /* FriendService.swift */,
+				FF0001043025000000000004 /* GroundPhotoService.swift */,
+				FF0001053025000000000005 /* PremiumStore.swift */,
+				FF0001063025000000000006 /* PushNotificationService.swift */,
+				FF0001073025000000000007 /* RealtimeWatcher.swift */,
+				FFDAAC1130118DF200456573 /* AchievementsService.swift */,
+				FFDAAC1230118DF200456573 /* AuthViewModel.swift */,
+				FFDAAC1330118DF200456573 /* MatchService.swift */,
+				FFDAAC1430118DF200456573 /* SupabaseManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		FFDAAC1930118DF200456573 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC1630118DF200456573 /* Formatting.swift */,
+				FFDAAC1730118DF200456573 /* Routes.swift */,
+				FFDAAC1830118DF200456573 /* Theme.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		FFDAAC1B30118DF200456573 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC1A30118DF200456573 /* AuthView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		FFDAAC1E30118DF200456573 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC1C30118DF200456573 /* GroundCardView.swift */,
+				FFDAAC1D30118DF200456573 /* MatchCardView.swift */,
+				FF9438133012BB2300BCE40E /* CountyBanner.swift */,
+				FF3CA036301A47A300DE33C0 /* ConfettiView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		FFDAAC2130118DF200456573 /* Counties */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC1F30118DF200456573 /* CountiesView.swift */,
+				FFDAAC2030118DF200456573 /* CountyDetailView.swift */,
+				FF9438153012BC4700BCE40E /* TeamDetailView.swift */,
+			);
+			path = Counties;
+			sourceTree = "<group>";
+		};
+		FFDAAC2330118DF200456573 /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC2230118DF200456573 /* DashboardView.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		FFDAAC2730118DF200456573 /* Grounds */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC2430118DF200456573 /* GroundCheckInPanel.swift */,
+				FFDAAC2530118DF200456573 /* GroundDetailView.swift */,
+				FFDAAC2630118DF200456573 /* GroundsView.swift */,
+				FF89D95530121F9E0006EFFF /* GroundsMapView.swift */,
+			);
+			path = Grounds;
+			sourceTree = "<group>";
+		};
+		FFDAAC2B30118DF200456573 /* Matches */ = {
+			isa = PBXGroup;
+			children = (
+				FF0001083025000000000008 /* ReportMatchIssueView.swift */,
+				FFDAAC2830118DF200456573 /* CheckInPanel.swift */,
+				FFDAAC2930118DF200456573 /* MatchDetailView.swift */,
+				FFDAAC2A30118DF200456573 /* MatchesView.swift */,
+			);
+			path = Matches;
+			sourceTree = "<group>";
+		};
+		FFDAAC2D30118DF200456573 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC2C30118DF200456573 /* ProfileView.swift */,
+				FF94380F3012B85F00BCE40E /* FriendsView.swift */,
+				FF9438113012B86C00BCE40E /* FriendProfileView.swift */,
+			);
+			path = Profile;
+			sourceTree = "<group>";
+		};
+		FFDAAC3030118DF200456573 /* Root */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC2E30118DF200456573 /* MainTabView.swift */,
+				FFDAAC2F30118DF200456573 /* RootView.swift */,
+			);
+			path = Root;
+			sourceTree = "<group>";
+		};
+		FFDAAC3130118DF200456573 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				FF0001093025000000000009 /* PremiumPaywallView.swift */,
+				FFDAAC1B30118DF200456573 /* Auth */,
+				FFDAAC1E30118DF200456573 /* Components */,
+				FFDAAC2130118DF200456573 /* Counties */,
+				FFDAAC2330118DF200456573 /* Dashboard */,
+				FFDAAC2730118DF200456573 /* Grounds */,
+				FFDAAC2B30118DF200456573 /* Matches */,
+				FFDAAC2D30118DF200456573 /* Profile */,
+				FFDAAC3030118DF200456573 /* Root */,
+				FF21C6CD301C14130037E4D5 /* Leaderboard */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		FFDAAC3230118DF200456573 /* GaelGrounds */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC0630118DF200456573 /* App */,
+				FFDAAC0830118DF200456573 /* Config */,
+				FFDAAC1030118DF200456573 /* Models */,
+				FFDAAC1530118DF200456573 /* Services */,
+				FFDAAC1930118DF200456573 /* Utilities */,
+				FFDAAC3130118DF200456573 /* Views */,
+			);
+			path = GaelGrounds;
+			sourceTree = "<group>";
+		};
+		FFDAAC3530118DF200456573 /* ios */ = {
+			isa = PBXGroup;
+			children = (
+				FFDAAC3230118DF200456573 /* GaelGrounds */,
+				FFDAAC3330118DF200456573 /* GaelGrounds-1--claude-gaelic-sports-checkin-app-g7dd0m.zip */,
+				FFDAAC3430118DF200456573 /* README.md */,
+			);
+			path = ios;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FFDAABBE30118A1800456573 /* GaelGrounds */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FFDAABE630118A1A00456573 /* Build configuration list for PBXNativeTarget "GaelGrounds" */;
+			buildPhases = (
+				FFDAABBB30118A1800456573 /* Sources */,
+				FFDAABBC30118A1800456573 /* Frameworks */,
+				FFDAABBD30118A1800456573 /* Resources */,
+			);
+			buildRules = (
+				FFA4D72A3024216B00DC9B38 /* PBXBuildRule */,
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				FFDAABC130118A1800456573 /* GaelGrounds */,
+			);
+			name = GaelGrounds;
+			packageProductDependencies = (
+				FFDAAC5830118F0400456573 /* Supabase */,
+			);
+			productName = GaelGrounds;
+			productReference = FFDAABBF30118A1800456573 /* GaelGrounds.app */;
+			productType = "com.apple.product-type.application";
+		};
+		FFDAABD230118A1A00456573 /* GaelGroundsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FFDAABEB30118A1A00456573 /* Build configuration list for PBXNativeTarget "GaelGroundsTests" */;
+			buildPhases = (
+				FFDAABCF30118A1A00456573 /* Sources */,
+				FFDAABD030118A1A00456573 /* Frameworks */,
+				FFDAABD130118A1A00456573 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FFDAABD530118A1A00456573 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				FFDAABD630118A1A00456573 /* GaelGroundsTests */,
+			);
+			name = GaelGroundsTests;
+			packageProductDependencies = (
+			);
+			productName = GaelGroundsTests;
+			productReference = FFDAABD330118A1A00456573 /* GaelGroundsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		FFDAABDC30118A1A00456573 /* GaelGroundsUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FFDAABEE30118A1A00456573 /* Build configuration list for PBXNativeTarget "GaelGroundsUITests" */;
+			buildPhases = (
+				FFDAABD930118A1A00456573 /* Sources */,
+				FFDAABDA30118A1A00456573 /* Frameworks */,
+				FFDAABDB30118A1A00456573 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FFDAABDF30118A1A00456573 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				FFDAABE030118A1A00456573 /* GaelGroundsUITests */,
+			);
+			name = GaelGroundsUITests;
+			packageProductDependencies = (
+			);
+			productName = GaelGroundsUITests;
+			productReference = FFDAABDD30118A1A00456573 /* GaelGroundsUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FFDAABB730118A1800456573 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					FFDAABBE30118A1800456573 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					FFDAABD230118A1A00456573 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = FFDAABBE30118A1800456573;
+					};
+					FFDAABDC30118A1A00456573 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = FFDAABBE30118A1800456573;
+					};
+				};
+			};
+			buildConfigurationList = FFDAABBA30118A1800456573 /* Build configuration list for PBXProject "GaelGrounds" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = FFDAABB630118A1800456573;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				FFDAAC5730118F0300456573 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = FFDAABC030118A1800456573 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FFDAABBE30118A1800456573 /* GaelGrounds */,
+				FFDAABD230118A1A00456573 /* GaelGroundsTests */,
+				FFDAABDC30118A1A00456573 /* GaelGroundsUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		FFDAABBD30118A1800456573 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FFDAAC5530118DF200456573 /* README.md in Resources */,
+				FFDAAC5630118DF200456573 /* GaelGrounds-1--claude-gaelic-sports-checkin-app-g7dd0m.zip in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFDAABD130118A1A00456573 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFDAABDB30118A1A00456573 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		FFDAABBB30118A1800456573 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FF0000013025000000000001 /* Competition.swift in Sources */,
+				FF0000023025000000000002 /* AppDelegate.swift in Sources */,
+				FF0000033025000000000003 /* FriendService.swift in Sources */,
+				FF0000043025000000000004 /* GroundPhotoService.swift in Sources */,
+				FF0000053025000000000005 /* PremiumStore.swift in Sources */,
+				FF0000063025000000000006 /* PushNotificationService.swift in Sources */,
+				FF0000073025000000000007 /* RealtimeWatcher.swift in Sources */,
+				FF0000083025000000000008 /* ReportMatchIssueView.swift in Sources */,
+				FF0000093025000000000009 /* PremiumPaywallView.swift in Sources */,
+				FF3CA037301A47A300DE33C0 /* ConfettiView.swift in Sources */,
+				FF9438103012B85F00BCE40E /* FriendsView.swift in Sources */,
+				FFDAAC3630118DF200456573 /* MatchCardView.swift in Sources */,
+				FF9438123012B86C00BCE40E /* FriendProfileView.swift in Sources */,
+				FFDAAC3730118DF200456573 /* Routes.swift in Sources */,
+				FFDAAC3830118DF200456573 /* CheckInPanel.swift in Sources */,
+				FFDAAC3930118DF200456573 /* AuthView.swift in Sources */,
+				FFDAAC3A30118DF200456573 /* Theme.swift in Sources */,
+				FFDAAC3B30118DF200456573 /* GroundsView.swift in Sources */,
+				FF9DAA2B3015AF48006EC3F7 /* UserPersonalMatch.swift in Sources */,
+				FF21C6CF301C14140037E4D5 /* LeaderboardView.swift in Sources */,
+				FFDAAC3C30118DF200456573 /* Enums.swift in Sources */,
+				FFDAAC3D30118DF200456573 /* AuthViewModel.swift in Sources */,
+				FFDAAC3E30118DF200456573 /* GroundDetailView.swift in Sources */,
+				FFDAAC3F30118DF200456573 /* MatchesView.swift in Sources */,
+				FFDAAC4030118DF200456573 /* GroundCheckInPanel.swift in Sources */,
+				FF9DAA2F3015B047006EC3F7 /* AddMatchView.swift in Sources */,
+				FFDAAC4130118DF200456573 /* MatchDetailView.swift in Sources */,
+				FF9438143012BB2300BCE40E /* CountyBanner.swift in Sources */,
+				FFDAAC4230118DF200456573 /* MatchService.swift in Sources */,
+				FFDAAC4330118DF200456573 /* Honour.swift in Sources */,
+				FFDAAC4430118DF200456573 /* CountyDetailView.swift in Sources */,
+				FFDAAC4530118DF200456573 /* SupabaseManager.swift in Sources */,
+				FFDAAC4630118DF200456573 /* GroundCardView.swift in Sources */,
+				FFDAAC4730118DF200456573 /* RootView.swift in Sources */,
+				FFDAAC4830118DF200456573 /* GaelGroundsApp.swift in Sources */,
+				FFDAAC4930118DF200456573 /* DashboardView.swift in Sources */,
+				FFDAAC4A30118DF200456573 /* MainTabView.swift in Sources */,
+				FFDAAC4B30118DF200456573 /* SupabaseConfig.swift in Sources */,
+				FFDAAC4C30118DF200456573 /* Ground.swift in Sources */,
+				FFDAAC4D30118DF200456573 /* Formatting.swift in Sources */,
+				FFDAAC4E30118DF200456573 /* AchievementsService.swift in Sources */,
+				FFDAAC4F30118DF200456573 /* Match.swift in Sources */,
+				FFDAAC5030118DF200456573 /* MatchSummary.swift in Sources */,
+				FF9438163012BC4700BCE40E /* TeamDetailView.swift in Sources */,
+				FFDAAC5130118DF200456573 /* UserData.swift in Sources */,
+				FFDAAC5230118DF200456573 /* County.swift in Sources */,
+				FFDAAC5330118DF200456573 /* CountiesView.swift in Sources */,
+				FF89D95630121F9E0006EFFF /* GroundsMapView.swift in Sources */,
+				FFDAAC5430118DF200456573 /* ProfileView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFDAABCF30118A1A00456573 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFDAABD930118A1A00456573 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		FFDAABD530118A1A00456573 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FFDAABBE30118A1800456573 /* GaelGrounds */;
+			targetProxy = FFDAABD430118A1A00456573 /* PBXContainerItemProxy */;
+		};
+		FFDAABDF30118A1A00456573 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FFDAABBE30118A1800456573 /* GaelGrounds */;
+			targetProxy = FFDAABDE30118A1A00456573 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		FFDAABE730118A1A00456573 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = GaelGrounds/GaelGrounds.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U45AAPLAB8;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = YES;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = GaelGrounds/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GaelGrounds;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 11.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Cormac-Brannigan-";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FFDAABE830118A1A00456573 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = GaelGrounds/GaelGrounds.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U45AAPLAB8;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = YES;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = GaelGrounds/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GaelGrounds;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 11.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = GaelGrounds;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		FFDAABE930118A1A00456573 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = U45AAPLAB8;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				NEW_SETTING = "";
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		FFDAABEA30118A1A00456573 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = U45AAPLAB8;
+				ENABLE_NS_ASSERTIONS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				NEW_SETTING = "";
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		FFDAABEC30118A1A00456573 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U45AAPLAB8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Gaelgrounds.GaelGroundsTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GaelGrounds.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GaelGrounds";
+			};
+			name = Debug;
+		};
+		FFDAABED30118A1A00456573 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U45AAPLAB8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Gaelgrounds.GaelGroundsTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GaelGrounds.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GaelGrounds";
+			};
+			name = Release;
+		};
+		FFDAABEF30118A1A00456573 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U45AAPLAB8;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Gaelgrounds.GaelGroundsUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = GaelGrounds;
+			};
+			name = Debug;
+		};
+		FFDAABF030118A1A00456573 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U45AAPLAB8;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Gaelgrounds.GaelGroundsUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = GaelGrounds;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		FFDAABBA30118A1800456573 /* Build configuration list for PBXProject "GaelGrounds" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FFDAABE930118A1A00456573 /* Debug */,
+				FFDAABEA30118A1A00456573 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FFDAABE630118A1A00456573 /* Build configuration list for PBXNativeTarget "GaelGrounds" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FFDAABE730118A1A00456573 /* Debug */,
+				FFDAABE830118A1A00456573 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FFDAABEB30118A1A00456573 /* Build configuration list for PBXNativeTarget "GaelGroundsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FFDAABEC30118A1A00456573 /* Debug */,
+				FFDAABED30118A1A00456573 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FFDAABEE30118A1A00456573 /* Build configuration list for PBXNativeTarget "GaelGroundsUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FFDAABEF30118A1A00456573 /* Debug */,
+				FFDAABF030118A1A00456573 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		FFDAAC5730118F0300456573 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+			traits = (
+			);
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FFDAAC5830118F0400456573 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFDAAC5730118F0300456573 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = FFDAABB730118A1800456573 /* Project object */;
+}

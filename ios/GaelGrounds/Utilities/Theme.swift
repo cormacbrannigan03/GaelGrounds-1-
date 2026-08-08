@@ -65,7 +65,7 @@ extension View {
 
     @MainActor
     func countyBackground(_ countyName: String?) -> some View {
-        let colours = countyName.map(CountyColours.colours(for:))
+        let colours = countyName.map(CountyPalette.colours(for:))
         let primary = colours?.0 ?? Color.brandGreen
         let secondary = colours?.1 ?? Color.brandGold
         return background(

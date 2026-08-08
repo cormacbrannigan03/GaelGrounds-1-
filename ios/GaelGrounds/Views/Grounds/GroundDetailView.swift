@@ -1,4 +1,6 @@
 import SwiftUI
+import PostgREST
+import Supabase
 
 private struct GameSeenHereRow: Identifiable {
     let id: UUID
@@ -112,26 +114,34 @@ struct GroundDetailView: View {
                 let matchesHere: [Match] = try await Supa.client
                     .from("matches").select().eq("ground_id", value: groundId).execute().value
                 let matchIdsHere = Set(matchesHere.map(\.id))
-                guard !matchIdsHere.isEmpty else { gamesSeenHere = []; return }
+                guard !matchIdsHere.isEmpty else {
+                    gamesSeenHere = []
+                    return
+                }
 
                 let attendance: [UserMatchAttendance] = try await Supa.client
                     .from("user_match_attendance").select().eq("user_id", value: userId).execute().value
                 let myAttendanceHere = attendance.filter { matchIdsHere.contains($0.matchId) }
-                guard !myAttendanceHere.isEmpty else { gamesSeenHere = []; return }
+                guard !myAttendanceHere.isEmpty else {
+                    gamesSeenHere = []
+                    return
+                }
 
-                let attendedMatches = matchesHere.filter { m in myAttendanceHere.contains { $0.matchId == m.id } }
+                let attendedMatches = matchesHere.filter { match in
+                    myAttendanceHere.contains { $0.matchId == match.id }
+                }
                 let summaries = try await MatchService.resolveSummaries(attendedMatches)
                 let summaryById = Dictionary(uniqueKeysWithValues: summaries.map { ($0.id, $0) })
                 gamesSeenHere = myAttendanceHere
-                    .compactMap { a -> GameSeenHereRow? in
-                        guard let s = summaryById[a.matchId], let playedAt = s.playedAt else { return nil }
+                    .compactMap { attendance -> GameSeenHereRow? in
+                        guard let summary = summaryById[attendance.matchId], let playedAt = summary.playedAt else { return nil }
                         return GameSeenHereRow(
-                            id: a.id,
-                            matchId: a.matchId,
-                            competition: s.competition,
+                            id: attendance.id,
+                            matchId: attendance.matchId,
+                            competition: summary.competition,
                             playedAt: playedAt,
-                            homeName: s.homeName,
-                            awayName: s.awayName
+                            homeName: summary.homeName,
+                            awayName: summary.awayName
                         )
                     }
                     .sorted { $0.playedAt > $1.playedAt }

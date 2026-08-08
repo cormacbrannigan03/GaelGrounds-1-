@@ -216,18 +216,22 @@ struct ProfileView: View {
                         if matches.isEmpty {
                             Text("No matches logged yet — find a match to check in to.").foregroundStyle(.secondary)
                         } else {
-                            VStack(spacing: 8) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                                 ForEach(matches) { m in
                                     NavigationLink(value: MatchRoute(id: m.matchId)) {
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text("\(m.homeName) v \(m.awayName)").font(.subheadline.bold())
-                                                Text("\(m.competition ?? "Gaelic Games") · \(Formatting.matchDate(m.playedAt))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack {
+                                                Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
+                                                Spacer()
+                                                Image(systemName: "chevron.right").foregroundStyle(.secondary)
                                             }
-                                            Spacer()
-                                            Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                                            Text("\(m.homeName) v \(m.awayName)").font(.subheadline.bold())
+                                            Text(m.competition ?? "Gaelic Games")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                            Text(Formatting.matchDate(m.playedAt))
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
                                         }
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding()
@@ -243,17 +247,21 @@ struct ProfileView: View {
                         if grounds.isEmpty {
                             Text("No grounds logged yet — browse grounds to check in.").foregroundStyle(.secondary)
                         } else {
-                            VStack(spacing: 8) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                                 ForEach(grounds) { g in
                                     NavigationLink(value: GroundRoute(id: g.groundId)) {
-                                        HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack {
+                                                Image(systemName: "mappin.circle.fill").foregroundStyle(Color.brandGreenLight)
+                                                Spacer()
+                                                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                                            }
                                             Text(g.name).font(.subheadline.bold())
-                                            Spacer()
                                             Text(g.visitCount == 1 ? "1 visit" : "\(g.visitCount) visits")
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
-                                            Image(systemName: "chevron.right").foregroundStyle(.secondary)
                                         }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding()
                                         .gaelCard(cornerRadius: 10)
                                     }
