@@ -28,15 +28,15 @@ struct MatchesView: View {
     }
 
     private var searchFiltered: [MatchSummary] {
-        let q = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let q = normalizedForSearch(search)
         guard !q.isEmpty else { return sportFiltered }
         return sportFiltered.filter { m in
-            m.homeName.lowercased().contains(q)
-                || m.awayName.lowercased().contains(q)
-                || (m.competition ?? "").lowercased().contains(q)
-                || (m.groundName ?? "").lowercased().contains(q)
-                || (m.round ?? "").lowercased().contains(q)
-                || m.playedAt.map { String(Calendar.current.component(.year, from: $0)) == q } == true
+            normalizedForSearch(m.homeName).contains(q)
+                || normalizedForSearch(m.awayName).contains(q)
+                || normalizedForSearch(m.competition ?? "").contains(q)
+                || normalizedForSearch(m.groundName ?? "").contains(q)
+                || normalizedForSearch(m.round ?? "").contains(q)
+                || m.playedAt.map { String(Calendar.current.component(.year, from: $0)).contains(q) } == true
         }
     }
 
@@ -49,14 +49,14 @@ struct MatchesView: View {
     }
 
     private var filteredPersonalMatches: [UserPersonalMatch] {
-        let q = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let q = normalizedForSearch(search)
         return personalMatches.filter { m in
             let matchesSearch = q.isEmpty
-                || m.homeTeam.lowercased().contains(q)
-                || m.awayTeam.lowercased().contains(q)
-                || (m.competition ?? "").lowercased().contains(q)
-                || (m.venue ?? "").lowercased().contains(q)
-                || (m.round ?? "").lowercased().contains(q)
+                || normalizedForSearch(m.homeTeam).contains(q)
+                || normalizedForSearch(m.awayTeam).contains(q)
+                || normalizedForSearch(m.competition ?? "").contains(q)
+                || normalizedForSearch(m.venue ?? "").contains(q)
+                || normalizedForSearch(m.round ?? "").contains(q)
             return matchesSearch
                 && matchesSelection(selectedCounty, in: [m.homeTeam, m.awayTeam])
                 && matchesSelection(selectedCompetition, in: [m.competition])
@@ -347,6 +347,15 @@ struct MatchesView: View {
         if let month = mostRecentMonth {
             expandedMonths = ["\(mostRecentYear)-\(month)"]
         }
+    }
+
+    // Folds accents (e.g. "Páirc" -> "pairc") and case before comparing, so
+    // searching without fada/síneadh fada on Irish-language ground and
+    // competition names -- which most people typing on a phone won't --
+    // still matches. Plain .lowercased() alone leaves "á" != "a".
+    private func normalizedForSearch(_ s: String) -> String {
+        s.trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
     }
 
     private func matchesSelection(_ selection: String, in values: [String?]) -> Bool {
