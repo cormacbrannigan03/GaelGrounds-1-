@@ -267,10 +267,14 @@ struct MatchesView: View {
         let hasOfficial = !yearGroups.isEmpty || !undatedResults.isEmpty
 
         if !hasPersonal && !hasOfficial {
-            Text(hasQueryOrFilters ? "No matches found." : "No results found.")
-                .foregroundStyle(.secondary)
+            ContentUnavailableView(
+                hasQueryOrFilters ? "No matches found" : "No results yet",
+                systemImage: "sportscourt",
+                description: Text(hasQueryOrFilters ? "Try a different search or filter." : "Check back once games have been played.")
+            )
+            .padding(.top, 40)
         } else {
-            VStack(spacing: 8) {
+            VStack(spacing: 12) {
                 if hasPersonal {
                     MyMatchesSection(matches: filteredPersonalMatches) { match in
                         Task {
@@ -438,21 +442,32 @@ private struct UndatedResultsSection: View {
                     MatchCardView(match: match)
                 }
             }
-            .padding(.top, 8)
+            .padding(.top, 10)
         } label: {
-            HStack {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(Color.secondary.opacity(0.16))
+                    Image(systemName: "calendar.badge.exclamationmark")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 34, height: 34)
+
                 Text("Date unavailable")
                     .font(.headline.bold())
                     .foregroundStyle(.primary)
                 Spacer()
                 Text("\(matches.count) match\(matches.count == 1 ? "" : "es")")
-                    .font(.caption)
+                    .font(.caption.bold())
+                    .padding(.horizontal, 10).padding(.vertical, 4)
+                    .background(Color.secondary.opacity(0.12), in: Capsule())
                     .foregroundStyle(.secondary)
             }
             .padding(.vertical, 4)
         }
+        .tint(.brandGreenLight)
         .padding()
-        .gaelCard(cornerRadius: 14)
+        .gaelCard(cornerRadius: 16)
     }
 }
 
@@ -473,21 +488,51 @@ private struct MyMatchesSection: View {
                     }
                 }
             }
-            .padding(.top, 8)
+            .padding(.top, 10)
         } label: {
-            HStack {
-                Label("My Matches", systemImage: "person.badge.plus")
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(
+                        LinearGradient(colors: [.brandGreenLight, .brandGreen], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                    Image(systemName: "person.fill.badge.plus")
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 34, height: 34)
+
+                Text("My Matches")
                     .font(.headline.bold())
                     .foregroundStyle(.primary)
                 Spacer()
                 Text("\(matches.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.caption.bold())
+                    .padding(.horizontal, 10).padding(.vertical, 4)
+                    .background(Color.brandGreenLight.opacity(0.14), in: Capsule())
+                    .foregroundStyle(.brandGreenLight)
             }
             .padding(.vertical, 4)
         }
+        .tint(.brandGreenLight)
         .padding()
-        .gaelCard(cornerRadius: 14)
+        .background {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.brandSurfaceRaised)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.brandGreenLight.opacity(0.14), .clear],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.brandBorder, lineWidth: 1)
+                }
+                .shadow(color: Color.brandGreen.opacity(0.08), radius: 8, y: 3)
+        }
     }
 }
 
@@ -566,31 +611,60 @@ private struct YearSection: View {
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 ForEach(monthEntries, id: \.month) { entry in
                     MonthSection(
                         month: entry.month,
                         matches: entry.matches,
                         isExpanded: monthBinding(entry.month)
                     )
-                    .padding(.leading, 4)
                 }
             }
-            .padding(.top, 8)
+            .padding(.top, 10)
         } label: {
-            HStack {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(
+                        LinearGradient(colors: [.brandGold, .brandGold.opacity(0.65)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                    Image(systemName: "trophy.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 34, height: 34)
+
                 Text(String(year))
-                    .font(.headline.bold())
+                    .font(.title3.bold())
                     .foregroundStyle(.primary)
                 Spacer()
                 Text("\(totalCount) match\(totalCount == 1 ? "" : "es")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.caption.bold())
+                    .padding(.horizontal, 10).padding(.vertical, 4)
+                    .background(Color.brandGreenLight.opacity(0.14), in: Capsule())
+                    .foregroundStyle(.brandGreenLight)
             }
             .padding(.vertical, 4)
         }
+        .tint(.brandGreenLight)
         .padding()
-        .gaelCard(cornerRadius: 14)
+        .background {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.brandSurfaceRaised)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.brandGold.opacity(0.12), .clear],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.brandBorder, lineWidth: 1)
+                }
+                .shadow(color: Color.brandGreen.opacity(0.08), radius: 8, y: 3)
+        }
     }
 
     private func monthBinding(_ month: Int) -> Binding<Bool> {
@@ -618,19 +692,29 @@ private struct MonthSection: View {
                     MatchCardView(match: match)
                 }
             }
-            .padding(.top, 8)
+            .padding(.top, 10)
         } label: {
-            HStack {
+            HStack(spacing: 10) {
+                Image(systemName: "calendar")
+                    .font(.caption.bold())
+                    .foregroundStyle(.brandGreenLight)
+                    .frame(width: 24, height: 24)
+                    .background(Color.brandGreenLight.opacity(0.14), in: Circle())
+
                 Text(monthName)
                     .font(.subheadline.bold())
                     .foregroundStyle(.primary)
                 Spacer()
                 Text("\(matches.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.caption.bold())
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Color.brandGreenLight.opacity(0.12), in: Capsule())
+                    .foregroundStyle(.brandGreenLight)
             }
             .padding(.vertical, 2)
         }
         .tint(.brandGreenLight)
+        .padding(10)
+        .gaelInsetCard(cornerRadius: 12)
     }
 }
