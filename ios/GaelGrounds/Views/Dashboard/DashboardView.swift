@@ -210,18 +210,3 @@ private struct AvatarPickerSection: View {
         .disabled(isUploading)
     }
 }
-
-private struct StatTile: View {
-    let value: Int
-    let label: String
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Text("\(value)").font(.title.bold()).foregroundStyle(.brandGreenLight)
-            Text(label).font(.caption).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .gaelCard(cornerRadius: 14)
-    }
-}
