@@ -7,6 +7,7 @@ struct UserProfile: Codable, Identifiable, Hashable {
     var supportedCountyId: UUID?
     var isPremium: Bool = false
     var premiumExpiresAt: Date?
+    var bestMatchId: UUID?
     let createdAt: Date?
 }
 
@@ -21,6 +22,10 @@ struct UserProfileUpdate: Encodable {
 
 struct UserProfileAvatarUpdate: Encodable {
     let avatarUrl: String
+}
+
+struct UserProfileBestMatchUpdate: Encodable {
+    let bestMatchId: UUID?
 }
 
 struct SupportedCountyUpdate: Encodable {

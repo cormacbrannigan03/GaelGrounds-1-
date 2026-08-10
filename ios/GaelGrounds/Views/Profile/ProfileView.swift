@@ -17,12 +17,16 @@ private struct AttendedMatchRow: Identifiable {
     let playedAt: Date
     let homeName: String
     let awayName: String
+    let homeScore: String?
+    let awayScore: String?
+    let groundName: String?
 }
 
 private enum ProfileDestination: Hashable {
     case grounds
     case matches
     case achievements
+    case bestGame
 }
 
 private struct AchievementRow: Identifiable {
@@ -68,6 +72,7 @@ struct ProfileView: View {
     @State private var realtimeTask: Task<Void, Never>?
     @State private var channel: RealtimeChannelV2?
     @State private var pinLimitMessage: String?
+    @State private var bestMatchId: UUID?
 
     static let maxPinnedAchievements = 4
 
@@ -130,6 +135,32 @@ struct ProfileView: View {
                     NavigationLink(value: ProfileDestination.achievements) {
                         StatTile(value: achievements.count, label: "Achievements")
                     }
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink(value: ProfileDestination.bestGame) {
+                    HStack {
+                        Image(systemName: "star.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.blue)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Best Game Ever").font(.subheadline.bold())
+                            if let best = matches.first(where: { $0.matchId == bestMatchId }) {
+                                Text("\(best.homeName) v \(best.awayName)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            } else {
+                                Text("Star your favourite match")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    }
+                    .padding()
+                    .gaelCard(cornerRadius: 14)
                 }
                 .buttonStyle(.plain)
 
@@ -226,6 +257,12 @@ struct ProfileView: View {
                                             HStack {
                                                 Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
                                                 Spacer()
+                                                Button { toggleBestGame(m.matchId) } label: {
+                                                    Image(systemName: bestMatchId == m.matchId ? "star.fill" : "star")
+                                                        .foregroundStyle(bestMatchId == m.matchId ? Color.blue : Color.secondary)
+                                                }
+                                                .buttonStyle(.plain)
+                                                .accessibilityLabel(bestMatchId == m.matchId ? "Remove as best game ever" : "Mark as best game ever")
                                                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
                                             }
                                             Text("\(m.homeName) v \(m.awayName)").font(.subheadline.bold())
@@ -297,7 +334,7 @@ struct ProfileView: View {
             case .grounds:
                 ProfileGroundsHistoryView(grounds: grounds)
             case .matches:
-                ProfileMatchesHistoryView(matches: matches)
+                ProfileMatchesHistoryView(matches: matches, bestMatchId: bestMatchId, onToggleBest: toggleBestGame)
             case .achievements:
                 ProfileAchievementsView(
                     unlocked: achievements,
@@ -305,6 +342,13 @@ struct ProfileView: View {
                     counties: counties,
                     supportedCountyId: savedSupportedCountyId,
                     onTogglePinned: togglePinned
+                )
+            case .bestGame:
+                ProfileBestGameView(
+                    bestMatch: matches.first(where: { $0.matchId == bestMatchId }),
+                    onClear: {
+                        if let bestMatchId { toggleBestGame(bestMatchId) }
+                    }
                 )
             }
         }
@@ -407,6 +451,31 @@ struct ProfileView: View {
         }
     }
 
+    // Tapping the blue star on an attended match sets/clears it as the
+    // single "best game ever attended." Only one may be picked at a time --
+    // stored as a single column on user_profiles rather than a per-row
+    // flag, so picking a new match automatically un-picks the old one with
+    // no extra step. Updates local state immediately and reverts it if the
+    // write fails.
+    private func toggleBestGame(_ matchId: UUID) {
+        guard let userId = auth.userId else { return }
+        let previous = bestMatchId
+        let newValue: UUID? = (bestMatchId == matchId) ? nil : matchId
+        bestMatchId = newValue
+        Task {
+            do {
+                try await Supa.client
+                    .from("user_profiles")
+                    .update(UserProfileBestMatchUpdate(bestMatchId: newValue))
+                    .eq("id", value: userId)
+                    .execute()
+            } catch {
+                print("toggleBestGame failed: \(error)")
+                bestMatchId = previous
+            }
+        }
+    }
+
     private func start() async {
         await load()
         subscribeToRealtime()
@@ -468,6 +537,7 @@ struct ProfileView: View {
             counties = loadedCounties
             supportedCountyId = profile.supportedCountyId
             savedSupportedCountyId = profile.supportedCountyId
+            bestMatchId = profile.bestMatchId
             if let name = profile.displayName {
                 displayName = name
                 savedName = name
@@ -507,7 +577,10 @@ struct ProfileView: View {
                         competition: s.competition,
                         playedAt: playedAt,
                         homeName: s.homeName,
-                        awayName: s.awayName
+                        awayName: s.awayName,
+                        homeScore: s.homeScore,
+                        awayScore: s.awayScore,
+                        groundName: s.groundName
                     )
                 }
             } else {
@@ -590,11 +663,15 @@ private struct MatchYearGroup: Identifiable {
 
 private struct ProfileMatchesHistoryView: View {
     let matches: [AttendedMatchRow]
+    let bestMatchId: UUID?
+    let onToggleBest: (UUID) -> Void
 
     @State private var expandedYears: Set<Int>
 
-    init(matches: [AttendedMatchRow]) {
+    init(matches: [AttendedMatchRow], bestMatchId: UUID?, onToggleBest: @escaping (UUID) -> Void) {
         self.matches = matches
+        self.bestMatchId = bestMatchId
+        self.onToggleBest = onToggleBest
         let calendar = Calendar.current
         let years = Set(matches.map { calendar.component(.year, from: $0.playedAt) })
         _expandedYears = State(initialValue: years.max().map { [$0] } ?? [])
@@ -624,6 +701,12 @@ private struct ProfileMatchesHistoryView: View {
                                             HStack {
                                                 Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
                                                 Spacer()
+                                                Button { onToggleBest(match.matchId) } label: {
+                                                    Image(systemName: bestMatchId == match.matchId ? "star.fill" : "star")
+                                                        .foregroundStyle(bestMatchId == match.matchId ? Color.blue : Color.secondary)
+                                                }
+                                                .buttonStyle(.plain)
+                                                .accessibilityLabel(bestMatchId == match.matchId ? "Remove as best game ever" : "Mark as best game ever")
                                                 Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
                                             }
                                             Text("\(match.homeName) v \(match.awayName)").font(.headline)
@@ -666,6 +749,78 @@ private struct ProfileMatchesHistoryView: View {
                 if isExpanded { expandedYears.insert(year) } else { expandedYears.remove(year) }
             }
         )
+    }
+}
+
+// MARK: - Best game ever
+
+private struct ProfileBestGameView: View {
+    let bestMatch: AttendedMatchRow?
+    let onClear: () -> Void
+
+    var body: some View {
+        ScrollView {
+            if let bestMatch {
+                VStack(alignment: .leading, spacing: 14) {
+                    Label("Best Game Ever", systemImage: "star.fill")
+                        .font(.headline)
+                        .foregroundStyle(.blue)
+
+                    NavigationLink(value: MatchRoute(id: bestMatch.matchId)) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(bestMatch.competition ?? "Gaelic Games")
+                                .font(.caption.bold())
+                                .foregroundStyle(.brandGold)
+                                .textCase(.uppercase)
+
+                            HStack {
+                                Text(bestMatch.homeName).font(.title3.bold()).lineLimit(1)
+                                Spacer()
+                                if let homeScore = bestMatch.homeScore, let awayScore = bestMatch.awayScore {
+                                    Text("\(homeScore) – \(awayScore)")
+                                        .font(.title3.bold())
+                                        .foregroundStyle(.brandGreenLight)
+                                } else {
+                                    Text("v").font(.title3.bold()).foregroundStyle(.brandGreenLight)
+                                }
+                                Spacer()
+                                Text(bestMatch.awayName).font(.title3.bold()).lineLimit(1).multilineTextAlignment(.trailing)
+                            }
+
+                            HStack(spacing: 6) {
+                                Text(Formatting.matchDate(bestMatch.playedAt))
+                                if let groundName = bestMatch.groundName {
+                                    Text("· \(groundName)")
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                        .padding()
+                        .gaelCard(cornerRadius: 14)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(role: .destructive, action: onClear) {
+                        Label("Clear best game", systemImage: "star.slash")
+                    }
+                    .font(.subheadline)
+                }
+                .padding()
+            } else {
+                ContentUnavailableView(
+                    "No best game picked yet",
+                    systemImage: "star",
+                    description: Text("Tap the star on any match in \"Matches attended\" to mark it as the best game you've ever attended.")
+                )
+                .padding(.top, 80)
+            }
+        }
+        .navigationTitle("Best Game")
+        .navigationBarTitleDisplayMode(.inline)
+        .gaelGroundsBackground()
     }
 }
 
