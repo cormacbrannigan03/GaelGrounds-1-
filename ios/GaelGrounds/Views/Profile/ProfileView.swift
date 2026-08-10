@@ -67,6 +67,9 @@ struct ProfileView: View {
     @State private var isSavingCounty = false
     @State private var realtimeTask: Task<Void, Never>?
     @State private var channel: RealtimeChannelV2?
+    @State private var pinLimitMessage: String?
+
+    static let maxPinnedAchievements = 4
 
     // Starred achievements are what shows in the preview below -- falls
     // back to the 4 most recently unlocked when nothing's been starred yet.
@@ -318,6 +321,17 @@ struct ProfileView: View {
         .sheet(isPresented: $showingPaywall) {
             PremiumPaywallView()
         }
+        .alert(
+            "Favourites full",
+            isPresented: Binding(
+                get: { pinLimitMessage != nil },
+                set: { if !$0 { pinLimitMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(pinLimitMessage ?? "")
+        }
     }
 
     private var supportedCountyName: String? {
@@ -365,13 +379,17 @@ struct ProfileView: View {
         }
     }
 
-    // Tapping an unlocked achievement stars/unstars it -- starred
-    // achievements are what shows in the "Achievements" preview at the top
-    // of this screen instead of just the most recently unlocked ones.
-    // Updates local state immediately and reverts it if the write fails.
+    // Tapping the star on an unlocked achievement stars/unstars it -- up to
+    // 4 starred achievements are what shows in the "Achievements" preview
+    // at the top of this screen instead of just the most recently unlocked
+    // ones. Updates local state immediately and reverts it if the write fails.
     private func togglePinned(_ achievement: AchievementRow) {
         guard let index = achievements.firstIndex(where: { $0.id == achievement.id }) else { return }
         let newValue = !achievements[index].pinned
+        if newValue && achievements.filter(\.pinned).count >= Self.maxPinnedAchievements {
+            pinLimitMessage = "You can only feature \(Self.maxPinnedAchievements) achievements on your profile — unstar one first."
+            return
+        }
         achievements[index].pinned = newValue
         Task {
             do {
@@ -1001,35 +1019,35 @@ private struct ProfileAchievementCard: View {
     let onToggle: () -> Void
 
     var body: some View {
-        Button(action: onToggle) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 6) {
                 Label(achievement.title, systemImage: achievement.icon ?? "trophy.fill")
                     .font(.headline)
                     .foregroundStyle(achievement.tier?.tint ?? Color.brandGold)
-                if let tier = achievement.tier, let count = achievement.homeGameCount {
-                    Text(tier == .standard ? "\(count) \(achievement.gameKindLabel) games" : "\(tier.label) · \(count) \(achievement.gameKindLabel) games")
-                        .font(.caption.bold())
-                        .foregroundStyle(tier.tint)
+                Spacer(minLength: 8)
+                Button(action: onToggle) {
+                    Image(systemName: achievement.pinned ? "star.fill" : "star")
+                        .font(.subheadline)
+                        .foregroundStyle(achievement.pinned ? Color.brandGold : Color.secondary)
+                        .frame(width: 28, height: 28)
                 }
-                Text(achievement.description).font(.caption).foregroundStyle(.secondary)
-                if let progressMessage = achievement.progressMessage {
-                    Text(progressMessage).font(.caption).foregroundStyle(.primary)
-                }
-                Text("Unlocked \(Formatting.shortDate(achievement.unlockedAt))").font(.caption).foregroundStyle(.secondary)
+                .buttonStyle(.plain)
+                .accessibilityLabel(achievement.pinned ? "Remove from profile favourites" : "Add to profile favourites")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
-            .gaelCard(cornerRadius: 14)
-            .overlay(alignment: .topTrailing) {
-                if achievement.pinned {
-                    Image(systemName: "star.fill")
-                        .font(.caption)
-                        .foregroundStyle(.brandGold)
-                        .padding(8)
-                }
+            if let tier = achievement.tier, let count = achievement.homeGameCount {
+                Text(tier == .standard ? "\(count) \(achievement.gameKindLabel) games" : "\(tier.label) · \(count) \(achievement.gameKindLabel) games")
+                    .font(.caption.bold())
+                    .foregroundStyle(tier.tint)
             }
+            Text(achievement.description).font(.caption).foregroundStyle(.secondary)
+            if let progressMessage = achievement.progressMessage {
+                Text(progressMessage).font(.caption).foregroundStyle(.primary)
+            }
+            Text("Unlocked \(Formatting.shortDate(achievement.unlockedAt))").font(.caption).foregroundStyle(.secondary)
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .gaelCard(cornerRadius: 14)
     }
 }
 
