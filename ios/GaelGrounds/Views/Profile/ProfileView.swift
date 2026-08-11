@@ -253,32 +253,41 @@ struct ProfileView: View {
                         } else {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                                 ForEach(matches) { m in
-                                    NavigationLink(value: MatchRoute(id: m.matchId)) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            HStack {
-                                                Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
-                                                Spacer()
-                                                Button { toggleBestGame(m.matchId) } label: {
-                                                    Image(systemName: bestMatchId == m.matchId ? "star.fill" : "star")
-                                                        .foregroundStyle(bestMatchId == m.matchId ? Color.blue : Color.secondary)
+                                    // The star is a sibling Button next to the NavigationLink,
+                                    // not nested inside its label -- a Button nested inside a
+                                    // NavigationLink's tappable area has its taps swallowed by
+                                    // the link (looks tappable, action never fires).
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack {
+                                            Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
+                                            Spacer()
+                                            Button { toggleBestGame(m.matchId) } label: {
+                                                Image(systemName: bestMatchId == m.matchId ? "star.fill" : "star")
+                                                    .foregroundStyle(bestMatchId == m.matchId ? Color.blue : Color.secondary)
+                                            }
+                                            .buttonStyle(.plain)
+                                            .accessibilityLabel(bestMatchId == m.matchId ? "Remove as best game ever" : "Mark as best game ever")
+                                        }
+                                        NavigationLink(value: MatchRoute(id: m.matchId)) {
+                                            HStack(alignment: .top) {
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text("\(m.homeName) v \(m.awayName)").font(.subheadline.bold())
+                                                    Text(m.competition ?? "Gaelic Games")
+                                                        .font(.caption)
+                                                        .foregroundStyle(.secondary)
+                                                    Text(Formatting.matchDate(m.playedAt))
+                                                        .font(.caption)
+                                                        .foregroundStyle(.secondary)
                                                 }
-                                                .buttonStyle(.plain)
-                                                .accessibilityLabel(bestMatchId == m.matchId ? "Remove as best game ever" : "Mark as best game ever")
+                                                Spacer()
                                                 Image(systemName: "chevron.right").foregroundStyle(.secondary)
                                             }
-                                            Text("\(m.homeName) v \(m.awayName)").font(.subheadline.bold())
-                                            Text(m.competition ?? "Gaelic Games")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                            Text(Formatting.matchDate(m.playedAt))
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
                                         }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding()
-                                        .gaelCard(cornerRadius: 10)
+                                        .buttonStyle(.plain)
                                     }
-                                    .buttonStyle(.plain)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding()
+                                    .gaelCard(cornerRadius: 10)
                                 }
                             }
                         }
@@ -697,28 +706,37 @@ private struct ProfileMatchesHistoryView: View {
                         DisclosureGroup(isExpanded: isExpanded(group.year)) {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                                 ForEach(group.matches) { match in
-                                    NavigationLink(value: MatchRoute(id: match.matchId)) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            HStack {
-                                                Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
-                                                Spacer()
-                                                Button { onToggleBest(match.matchId) } label: {
-                                                    Image(systemName: bestMatchId == match.matchId ? "star.fill" : "star")
-                                                        .foregroundStyle(bestMatchId == match.matchId ? Color.blue : Color.secondary)
+                                    // The star is a sibling Button next to the NavigationLink,
+                                    // not nested inside its label -- a Button nested inside a
+                                    // NavigationLink's tappable area has its taps swallowed by
+                                    // the link (looks tappable, action never fires).
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack {
+                                            Image(systemName: "ticket.fill").foregroundStyle(Color.brandGreenLight)
+                                            Spacer()
+                                            Button { onToggleBest(match.matchId) } label: {
+                                                Image(systemName: bestMatchId == match.matchId ? "star.fill" : "star")
+                                                    .foregroundStyle(bestMatchId == match.matchId ? Color.blue : Color.secondary)
+                                            }
+                                            .buttonStyle(.plain)
+                                            .accessibilityLabel(bestMatchId == match.matchId ? "Remove as best game ever" : "Mark as best game ever")
+                                        }
+                                        NavigationLink(value: MatchRoute(id: match.matchId)) {
+                                            HStack(alignment: .top) {
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text("\(match.homeName) v \(match.awayName)").font(.headline)
+                                                    Text(match.competition ?? "Gaelic Games").font(.caption).foregroundStyle(.secondary)
+                                                    Text(Formatting.matchDate(match.playedAt)).font(.caption).foregroundStyle(.secondary)
                                                 }
-                                                .buttonStyle(.plain)
-                                                .accessibilityLabel(bestMatchId == match.matchId ? "Remove as best game ever" : "Mark as best game ever")
+                                                Spacer()
                                                 Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
                                             }
-                                            Text("\(match.homeName) v \(match.awayName)").font(.headline)
-                                            Text(match.competition ?? "Gaelic Games").font(.caption).foregroundStyle(.secondary)
-                                            Text(Formatting.matchDate(match.playedAt)).font(.caption).foregroundStyle(.secondary)
                                         }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding()
-                                        .gaelInsetCard(cornerRadius: 10)
+                                        .buttonStyle(.plain)
                                     }
-                                    .buttonStyle(.plain)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding()
+                                    .gaelInsetCard(cornerRadius: 10)
                                 }
                             }
                             .padding(.top, 8)
