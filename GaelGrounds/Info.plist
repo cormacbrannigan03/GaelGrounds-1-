@@ -6,5 +6,7 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>GaelGrounds uses your photo library so you can pick a profile photo.</string>
 </dict>
 </plist>
