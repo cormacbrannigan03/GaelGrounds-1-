@@ -4,6 +4,7 @@ import Supabase
 struct LeaderboardView: View {
     @EnvironmentObject private var auth: AuthViewModel
     @EnvironmentObject private var premium: PremiumStore
+    @EnvironmentObject private var supportedCounty: SupportedCountyStore
     @State private var showingPaywall = false
 
     enum Tab: String, CaseIterable {
@@ -174,7 +175,7 @@ struct LeaderboardView: View {
         .navigationTitle("Leaderboard")
         .task { await load() }
         .refreshable { await load() }
-        .countyBackground(supportedCountyName)
+        .countyBackground(supportedCounty.countyName)
         .sheet(isPresented: $showingPaywall) {
             PremiumPaywallView(reason: "Only Premium members appear on the leaderboard.")
         }

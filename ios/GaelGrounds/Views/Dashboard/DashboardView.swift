@@ -4,6 +4,7 @@ import Supabase
 
 struct DashboardView: View {
     @EnvironmentObject private var auth: AuthViewModel
+    @EnvironmentObject private var supportedCounty: SupportedCountyStore
 
     @State private var upcoming: [MatchSummary] = []
     @State private var groundsVisited = 0
@@ -17,7 +18,6 @@ struct DashboardView: View {
     @State private var selectedAvatarItem: PhotosPickerItem?
     @State private var isUploadingAvatar = false
     @State private var avatarError: String?
-    @State private var supportedCountyName: String?
 
     var body: some View {
         ScrollView {
@@ -93,7 +93,7 @@ struct DashboardView: View {
             guard let newItem else { return }
             Task { await addAvatar(from: newItem) }
         }
-        .countyBackground(supportedCountyName)
+        .countyBackground(supportedCounty.countyName)
     }
 
     private func addAvatar(from item: PhotosPickerItem) async {
@@ -148,7 +148,6 @@ struct DashboardView: View {
             .execute()
             .value
         avatarURL = profile?.avatarUrl
-        supportedCountyName = await SupportedCountyService.fetchName(userId: userId)
     }
 
     private func countRows(_ table: String, userId: UUID) async -> Int {

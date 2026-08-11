@@ -55,6 +55,7 @@ private struct LockedAchievementRow: Identifiable {
 struct ProfileView: View {
     @EnvironmentObject private var auth: AuthViewModel
     @EnvironmentObject private var premium: PremiumStore
+    @EnvironmentObject private var supportedCounty: SupportedCountyStore
 
     @State private var showingPaywall = false
     @State private var displayName = ""
@@ -361,7 +362,7 @@ struct ProfileView: View {
         .task { await start() }
         .onDisappear { stop() }
         .refreshable { await load() }
-        .countyBackground(supportedCountyName)
+        .countyBackground(supportedCounty.countyName)
         .sheet(isPresented: $showingPaywall) {
             PremiumPaywallView()
         }
@@ -376,10 +377,6 @@ struct ProfileView: View {
         } message: {
             Text(pinLimitMessage ?? "")
         }
-    }
-
-    private var supportedCountyName: String? {
-        counties.first { $0.id == savedSupportedCountyId }?.name
     }
 
     @ViewBuilder
@@ -418,6 +415,10 @@ struct ProfileView: View {
                 .eq("id", value: userId)
                 .execute()
             savedSupportedCountyId = supportedCountyId
+            // Pushes into the shared store immediately, using the name
+            // already loaded here -- every other tab's background updates
+            // right away instead of waiting on its own next fetch.
+            supportedCounty.setCountyName(counties.first { $0.id == supportedCountyId }?.name)
         } catch {
             print("saveSupportedCounty failed: \(error)")
         }

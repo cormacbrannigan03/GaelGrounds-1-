@@ -5,6 +5,7 @@ struct MatchesView: View {
 
     @EnvironmentObject private var auth: AuthViewModel
     @EnvironmentObject private var premium: PremiumStore
+    @EnvironmentObject private var supportedCounty: SupportedCountyStore
 
     @State private var matches: [MatchSummary] = []
     @State private var personalMatches: [UserPersonalMatch] = []
@@ -20,7 +21,6 @@ struct MatchesView: View {
     @State private var selectedCounty = ""
     @State private var selectedCompetition = ""
     @State private var selectedVenue = ""
-    @State private var supportedCountyName: String?
 
     // MARK: - Filtered helpers
 
@@ -229,7 +229,7 @@ struct MatchesView: View {
         }
         .task { await load() }
         .refreshable { await load() }
-        .countyBackground(supportedCountyName)
+        .countyBackground(supportedCounty.countyName)
     }
 
     // MARK: - Tab content
@@ -328,7 +328,6 @@ struct MatchesView: View {
         }
         if let userId = auth.userId {
             personalMatches = (try? await MatchService.fetchPersonalMatches(userId: userId)) ?? []
-            supportedCountyName = await SupportedCountyService.fetchName(userId: userId)
         }
         setDefaultExpansion()
     }

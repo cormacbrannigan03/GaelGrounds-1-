@@ -61,6 +61,7 @@
 		FFDAAC5930118F0400456573 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = FFDAAC5830118F0400456573 /* Supabase */; };
 		FFFC4F0E30274D23002DCD24 /* AvatarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFFC4F0D30274D23002DCD24 /* AvatarService.swift */; };
 		FFFC4F3030276E58002DCD24 /* SupportedCountyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFFC4F2F30276E58002DCD24 /* SupportedCountyService.swift */; };
+		585CAD4AC3BF11AC0DE0656A /* SupportedCountyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F05E0F45D50548A0269D875 /* SupportedCountyStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -151,6 +152,7 @@
 		FFDAAC3430118DF200456573 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		FFFC4F0D30274D23002DCD24 /* AvatarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarService.swift; sourceTree = "<group>"; };
 		FFFC4F2F30276E58002DCD24 /* SupportedCountyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportedCountyService.swift; sourceTree = "<group>"; };
+		9F05E0F45D50548A0269D875 /* SupportedCountyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportedCountyStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -287,6 +289,7 @@
 				FFDAAC1430118DF200456573 /* SupabaseManager.swift */,
 				FFFC4F0D30274D23002DCD24 /* AvatarService.swift */,
 				FFFC4F2F30276E58002DCD24 /* SupportedCountyService.swift */,
+				9F05E0F45D50548A0269D875 /* SupportedCountyStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -580,6 +583,7 @@
 				FF0000083025000000000008 /* ReportMatchIssueView.swift in Sources */,
 				FF0000093025000000000009 /* PremiumPaywallView.swift in Sources */,
 				FFFC4F3030276E58002DCD24 /* SupportedCountyService.swift in Sources */,
+				585CAD4AC3BF11AC0DE0656A /* SupportedCountyStore.swift in Sources */,
 				FF3CA037301A47A300DE33C0 /* ConfettiView.swift in Sources */,
 				FFFC4F0E30274D23002DCD24 /* AvatarService.swift in Sources */,
 				FF9438103012B85F00BCE40E /* FriendsView.swift in Sources */,

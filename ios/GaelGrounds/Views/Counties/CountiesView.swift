@@ -2,11 +2,10 @@ import SwiftUI
 import Supabase
 
 struct CountiesView: View {
-    @EnvironmentObject private var auth: AuthViewModel
+    @EnvironmentObject private var supportedCounty: SupportedCountyStore
 
     @State private var counties: [County] = []
     @State private var isLoading = true
-    @State private var supportedCountyName: String?
 
     private static let provinceOrder: [Province] = [.leinster, .munster, .connacht, .ulster]
     private static let otherCountyNames: Set<String> = [
@@ -55,7 +54,7 @@ struct CountiesView: View {
         }
         .task { await load() }
         .refreshable { await load() }
-        .countyBackground(supportedCountyName)
+        .countyBackground(supportedCounty.countyName)
     }
 
     private func load() async {
@@ -65,9 +64,6 @@ struct CountiesView: View {
             counties = try await Supa.client.from("counties").select().order("name").execute().value
         } catch {
             print("Counties load failed: \(error)")
-        }
-        if let userId = auth.userId {
-            supportedCountyName = await SupportedCountyService.fetchName(userId: userId)
         }
     }
 }
