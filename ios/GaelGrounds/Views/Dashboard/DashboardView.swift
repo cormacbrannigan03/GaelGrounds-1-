@@ -71,6 +71,19 @@ struct DashboardView: View {
                         }
                     }
                 }
+
+                HStack(spacing: 16) {
+                    Link(destination: URL(string: "https://www.instagram.com/gaelgrounds/")!) {
+                        Label("@gaelgrounds", systemImage: "camera")
+                    }
+                    Link(destination: URL(string: "https://www.tiktok.com/@gaelgrounds")!) {
+                        Label("@gaelgrounds", systemImage: "music.note")
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 4)
             }
             .padding()
         }
