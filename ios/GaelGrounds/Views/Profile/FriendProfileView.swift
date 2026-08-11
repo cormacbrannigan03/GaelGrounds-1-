@@ -166,7 +166,10 @@ struct FriendProfileView: View {
             async let homeCountsTask = AchievementsService.homeMatchCounts(userId: userId)
             async let roadCountsTask = AchievementsService.roadMatchCounts(userId: userId)
 
-            visitCount = try await visitsTask.count
+            // A raw row count counts every check-in, not every ground --
+            // checking into the same ground for multiple matches is
+            // multiple rows but one ground.
+            visitCount = Set(try await visitsTask.map(\.groundId)).count
             matchCount = try await attendanceTask.count
 
             let userAchievements = try await userAchievementsTask

@@ -208,7 +208,7 @@ struct LeaderboardView: View {
         do {
             async let profilesTask: [UserProfile]        = Supa.client.from("user_profiles").select().execute().value
             async let attendanceTask: [AttendanceRecord] = Supa.client.from("user_match_attendance").select("user_id, match_id").execute().value
-            async let visitsTask: [UserIdOnly]           = Supa.client.from("user_visits").select("user_id").execute().value
+            async let visitsTask: [VisitGroundRef]       = Supa.client.from("user_visits").select("user_id, ground_id").execute().value
             async let matchTeamsTask: [MatchTeamRef]     = Supa.client.from("matches").select("id, home_county_team_id, away_county_team_id, ground_id").execute().value
             async let countyTeamsTask: [CountyTeamRef]   = Supa.client.from("county_teams").select("id, county_id, sport_code").execute().value
             async let countiesTask: [CountyProvinceRef]  = Supa.client.from("counties").select("id, name, province").execute().value
@@ -255,9 +255,12 @@ struct LeaderboardView: View {
                 }
             }
 
-            // Ground counts
-            var groundCounts: [UUID: Int] = [:]
-            for v in visits { groundCounts[v.userId, default: 0] += 1 }
+            // Ground counts — distinct grounds per user, not raw visit rows
+            // (checking into the same ground for multiple matches is
+            // multiple rows but one ground).
+            var groundIdsByUser: [UUID: Set<UUID>] = [:]
+            for v in visits { groundIdsByUser[v.userId, default: []].insert(v.groundId) }
+            let groundCounts: [UUID: Int] = groundIdsByUser.mapValues(\.count)
 
             // Home/road match counts per user, per (county, sport) — the
             // same basis county_home_match/county_away_match achievements
@@ -345,8 +348,9 @@ private struct AttendanceRecord: Decodable {
     let matchId: UUID
 }
 
-private struct UserIdOnly: Decodable {
+private struct VisitGroundRef: Decodable {
     let userId: UUID
+    let groundId: UUID
 }
 
 private struct MatchTeamRef: Decodable {

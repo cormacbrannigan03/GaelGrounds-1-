@@ -133,7 +133,7 @@ struct DashboardView: View {
         }
 
         guard let userId = auth.userId else { return }
-        async let groundsCount = countRows("user_visits", userId: userId)
+        async let groundsCount = distinctGroundsVisited(userId: userId)
         async let matchesCount = countRows("user_match_attendance", userId: userId)
         async let achievementsCount = countRows("user_achievements", userId: userId)
         groundsVisited = await groundsCount
@@ -152,6 +152,21 @@ struct DashboardView: View {
 
     private func countRows(_ table: String, userId: UUID) async -> Int {
         (try? await Supa.client.from(table).select(head: true, count: .exact).eq("user_id", value: userId).execute().count) ?? 0
+    }
+
+    // A raw row count on user_visits counts every check-in, not every
+    // ground -- checking into the same ground for 3 different matches is 3
+    // rows but 1 ground. Matches how ProfileView already counts its own
+    // "Grounds visited" stat.
+    private func distinctGroundsVisited(userId: UUID) async -> Int {
+        struct GroundIdOnly: Decodable { let groundId: UUID }
+        let rows: [GroundIdOnly] = (try? await Supa.client
+            .from("user_visits")
+            .select("ground_id")
+            .eq("user_id", value: userId)
+            .execute()
+            .value) ?? []
+        return Set(rows.map(\.groundId)).count
     }
 }
 
