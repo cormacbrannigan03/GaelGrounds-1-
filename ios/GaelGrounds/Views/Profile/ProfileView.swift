@@ -74,6 +74,9 @@ struct ProfileView: View {
     @State private var channel: RealtimeChannelV2?
     @State private var pinLimitMessage: String?
     @State private var bestMatchId: UUID?
+    @State private var showingDeleteAccountConfirmation = false
+    @State private var isDeletingAccount = false
+    @State private var deleteAccountError: String?
 
     static let maxPinnedAchievements = 4
 
@@ -335,6 +338,26 @@ struct ProfileView: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.top, 4)
+
+                Button(role: .destructive) {
+                    showingDeleteAccountConfirmation = true
+                } label: {
+                    if isDeletingAccount {
+                        ProgressView()
+                    } else {
+                        Text("Delete Account")
+                    }
+                }
+                .disabled(isDeletingAccount)
+                .font(.caption)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 4)
+                if let deleteAccountError {
+                    Text(deleteAccountError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
             }
             .padding()
         }
@@ -386,6 +409,18 @@ struct ProfileView: View {
         } message: {
             Text(pinLimitMessage ?? "")
         }
+        .confirmationDialog(
+            "Delete your account?",
+            isPresented: $showingDeleteAccountConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Account", role: .destructive) {
+                Task { await deleteAccount() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently deletes your account and all your data — check-ins, grounds visited, achievements and friends. This can't be undone.")
+        }
     }
 
     @ViewBuilder
@@ -430,6 +465,19 @@ struct ProfileView: View {
             supportedCounty.setCountyName(counties.first { $0.id == supportedCountyId }?.name)
         } catch {
             print("saveSupportedCounty failed: \(error)")
+        }
+    }
+
+    private func deleteAccount() async {
+        isDeletingAccount = true
+        deleteAccountError = nil
+        defer { isDeletingAccount = false }
+        do {
+            try await AccountService.deleteAccount()
+            await auth.signOut()
+        } catch {
+            print("deleteAccount failed: \(error)")
+            deleteAccountError = "Couldn't delete your account — try again."
         }
     }
 
