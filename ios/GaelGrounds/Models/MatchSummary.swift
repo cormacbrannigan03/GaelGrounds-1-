@@ -40,7 +40,7 @@ struct MatchSummary: Identifiable, Hashable {
     }
 
     // Returns the winning team name, or nil if no score or a draw.
-    // Parses GAA format "goals-points" where a goal = 3 points.
+    // Parses "goals-points" scoring format where a goal = 3 points.
     var winnerName: String? {
         guard hasScore,
               let homeStr = homeScore,

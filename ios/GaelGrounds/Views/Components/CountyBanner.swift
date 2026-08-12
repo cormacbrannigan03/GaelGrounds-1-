@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A small two-stripe banner representing a county's traditional GAA colours.
+/// A small two-stripe banner representing a county's traditional colours.
 /// Pass any height; width scales proportionally (flag ~2:3 ratio).
 struct CountyBanner: View {
     let countyName: String

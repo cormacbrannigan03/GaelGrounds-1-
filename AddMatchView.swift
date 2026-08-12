@@ -33,7 +33,7 @@ struct AddMatchView: View {
                 }
 
                 Section("Match details") {
-                    TextField("Competition (e.g. All-Ireland SFC)", text: $competition)
+                    TextField("Competition (e.g. Senior Football Championship)", text: $competition)
                     TextField("Round (e.g. Quarter-Final)", text: $round)
                     TextField("Venue", text: $venue)
                         .autocorrectionDisabled()
