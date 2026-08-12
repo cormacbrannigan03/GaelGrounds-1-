@@ -181,14 +181,7 @@ struct CheckInPanel: View {
         }
 
         do {
-            try await Supa.client
-                .from("user_match_attendance")
-                .insert(UserMatchAttendanceInsert(matchId: matchId, userId: userId))
-                .execute()
-            let evaluation = await AchievementsService.evaluate(
-                userId: userId,
-                checkedInMatchId: matchId
-            )
+            let evaluation = try await MatchService.checkIn(matchId: matchId, userId: userId)
             if !evaluation.unlocks.isEmpty || evaluation.progress != nil {
                 achievementPopup = AchievementUnlockBatch(
                     achievements: evaluation.unlocks,

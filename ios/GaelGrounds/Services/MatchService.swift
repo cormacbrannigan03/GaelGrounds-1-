@@ -45,6 +45,50 @@ enum MatchService {
             .value
     }
 
+    /// All matches scheduled for today (device-local calendar day) that have
+    /// a ground attached — used by ProximityCheckInService to find matches
+    /// near the user's current location.
+    static func fetchTodaysMatches() async throws -> [Match] {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: Date())
+        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else { return [] }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+
+        let matches: [Match] = try await Supa.client
+            .from("matches")
+            .select()
+            .gte("played_at", value: formatter.string(from: startOfDay))
+            .lt("played_at", value: formatter.string(from: endOfDay))
+            .execute()
+            .value
+        return matches.filter { $0.groundId != nil }
+    }
+
+    /// Which of the given matches this user has already checked in to.
+    static func attendedMatchIds(userId: UUID, matchIds: [UUID]) async throws -> Set<UUID> {
+        guard !matchIds.isEmpty else { return [] }
+        let rows: [UserMatchAttendance] = try await Supa.client
+            .from("user_match_attendance")
+            .select()
+            .eq("user_id", value: userId)
+            .in("match_id", values: matchIds)
+            .execute()
+            .value
+        return Set(rows.map(\.matchId))
+    }
+
+    /// Records a check-in and evaluates achievements -- the one place this
+    /// happens, shared by the manual check-in button (CheckInPanel) and the
+    /// proximity prompt (ProximityCheckInService).
+    static func checkIn(matchId: UUID, userId: UUID) async throws -> AchievementEvaluation {
+        try await Supa.client
+            .from("user_match_attendance")
+            .insert(UserMatchAttendanceInsert(matchId: matchId, userId: userId))
+            .execute()
+        return await AchievementsService.evaluate(userId: userId, checkedInMatchId: matchId)
+    }
+
     static func fetchMatches(forTeamId teamId: UUID, limit: Int = 20) async throws -> [Match] {
         async let homeGames: [Match] = Supa.client
             .from("matches").select()
@@ -133,7 +177,7 @@ enum MatchService {
         }
     }
 
-    private static func fetchGrounds(ids: [UUID]) async throws -> [Ground] {
+    static func fetchGrounds(ids: [UUID]) async throws -> [Ground] {
         guard !ids.isEmpty else { return [] }
         return try await withThrowingTaskGroup(of: [Ground].self) { group in
             for batch in ids.chunked(into: lookupBatchSize) {

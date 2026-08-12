@@ -63,6 +63,7 @@
 		FFFC4F3030276E58002DCD24 /* SupportedCountyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFFC4F2F30276E58002DCD24 /* SupportedCountyService.swift */; };
 		585CAD4AC3BF11AC0DE0656A /* SupportedCountyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F05E0F45D50548A0269D875 /* SupportedCountyStore.swift */; };
 		872D0613D6751184C78324A7 /* AccountService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE568E97EFA864BEA49A7B37 /* AccountService.swift */; };
+		E39146FB4B16B29DC00F53B9 /* ProximityCheckInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80E7D80D82CAFAD2432DACED /* ProximityCheckInService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -155,6 +156,7 @@
 		FFFC4F2F30276E58002DCD24 /* SupportedCountyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportedCountyService.swift; sourceTree = "<group>"; };
 		9F05E0F45D50548A0269D875 /* SupportedCountyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportedCountyStore.swift; sourceTree = "<group>"; };
 		FE568E97EFA864BEA49A7B37 /* AccountService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountService.swift; sourceTree = "<group>"; };
+		80E7D80D82CAFAD2432DACED /* ProximityCheckInService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProximityCheckInService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -293,6 +295,7 @@
 				FFFC4F2F30276E58002DCD24 /* SupportedCountyService.swift */,
 				9F05E0F45D50548A0269D875 /* SupportedCountyStore.swift */,
 				FE568E97EFA864BEA49A7B37 /* AccountService.swift */,
+				80E7D80D82CAFAD2432DACED /* ProximityCheckInService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -588,6 +591,7 @@
 				FFFC4F3030276E58002DCD24 /* SupportedCountyService.swift in Sources */,
 				585CAD4AC3BF11AC0DE0656A /* SupportedCountyStore.swift in Sources */,
 				872D0613D6751184C78324A7 /* AccountService.swift in Sources */,
+				E39146FB4B16B29DC00F53B9 /* ProximityCheckInService.swift in Sources */,
 				FF3CA037301A47A300DE33C0 /* ConfettiView.swift in Sources */,
 				FFFC4F0E30274D23002DCD24 /* AvatarService.swift in Sources */,
 				FF9438103012B85F00BCE40E /* FriendsView.swift in Sources */,
