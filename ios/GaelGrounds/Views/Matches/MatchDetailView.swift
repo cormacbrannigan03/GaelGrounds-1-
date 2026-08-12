@@ -10,6 +10,7 @@ struct MatchDetailView: View {
     @State private var isLoading = true
     @State private var confettiWinner: String?
     @State private var showingReport = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -28,7 +29,7 @@ struct MatchDetailView: View {
             }
             .countyBackground(winnerNameOnLoad ?? summary?.winnerName)
 
-            if let winner = confettiWinner {
+            if let winner = confettiWinner, !reduceMotion {
                 let (primary, secondary) = CountyPalette.colours(for: winner)
                 ConfettiOverlayView(colors: [primary, secondary])
             }
