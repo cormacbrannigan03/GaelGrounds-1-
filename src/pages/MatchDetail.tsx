@@ -7,7 +7,7 @@ import { formatMatchDate, isLive } from '../lib/format'
 type Match = {
   id: string
   competition: string | null
-  played_at: string
+  played_at: string | null
   home_score: string | null
   away_score: string | null
   ground_id: string | null
@@ -78,7 +78,8 @@ export default function MatchDetail() {
   if (!match) return <div className="page"><p>Match not found.</p></div>
 
   const hasScore = Boolean(match.home_score && match.away_score)
-  const live = isLive(match.played_at, hasScore)
+  const live = match.played_at ? isLive(match.played_at, hasScore) : false
+  const isPast = hasScore || (match.played_at ? !live && new Date(match.played_at).getTime() < Date.now() : false)
 
   return (
     <div className="page">
@@ -93,7 +94,7 @@ export default function MatchDetail() {
             {match.home_score} – {match.away_score}
           </p>
         )}
-        <p className="muted">{formatMatchDate(match.played_at)}</p>
+        {match.played_at && <p className="muted">{formatMatchDate(match.played_at)}</p>}
         {ground && (
           <p className="muted">
             📍 <Link to={`/grounds/${ground.id}`}>{ground.name}</Link>
@@ -101,7 +102,7 @@ export default function MatchDetail() {
         )}
       </div>
 
-      <CheckInPanel matchId={match.id} isPast={hasScore || (!live && new Date(match.played_at).getTime() < Date.now())} />
+      <CheckInPanel matchId={match.id} isPast={isPast} />
     </div>
   )
 }

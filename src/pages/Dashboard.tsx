@@ -17,12 +17,15 @@ export default function Dashboard() {
       const nowIso = new Date().toISOString()
       const twoHoursAgo = new Date(Date.now() - 2.5 * 60 * 60 * 1000).toISOString()
 
-      const { data: matches } = await supabase
+      const { data: matchRows } = await supabase
         .from('matches')
         .select('id, competition, played_at, home_score, away_score, ground_id, home_county_team_id, away_county_team_id')
         .gte('played_at', twoHoursAgo)
         .order('played_at', { ascending: true })
         .limit(6)
+      const matches = (matchRows ?? []).filter(
+        (m): m is typeof m & { played_at: string } => m.played_at !== null,
+      )
 
       const teamIds = [
         ...new Set((matches ?? []).flatMap((m) => [m.home_county_team_id, m.away_county_team_id].filter(Boolean))),
