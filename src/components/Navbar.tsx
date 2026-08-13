@@ -24,6 +24,12 @@ export default function Navbar() {
             <NavLink to="/counties" className={({ isActive }) => (isActive ? 'active' : '')}>
               Counties
             </NavLink>
+            <NavLink to="/leaderboard" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Leaderboard
+            </NavLink>
+            <NavLink to="/friends" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Friends
+            </NavLink>
             <NavLink to="/profile" className={({ isActive }) => (isActive ? 'active' : '')}>
               Profile
             </NavLink>

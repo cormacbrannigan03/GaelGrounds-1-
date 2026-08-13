@@ -10,6 +10,8 @@ import GroundDetail from './pages/GroundDetail'
 import Matches from './pages/Matches'
 import MatchDetail from './pages/MatchDetail'
 import Profile from './pages/Profile'
+import Friends from './pages/Friends'
+import Leaderboard from './pages/Leaderboard'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -34,6 +36,15 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/friends"
+            element={
+              <ProtectedRoute>
+                <Friends />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
