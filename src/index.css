@@ -531,6 +531,57 @@ main {
   gap: 0.15rem;
 }
 
+.history-list-item {
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.history-list-item a {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.star-toggle {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--gold, #d9a441);
+  cursor: pointer;
+  padding: 0.2rem;
+  flex-shrink: 0;
+}
+
+.achievement-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.achievement-card-top h3 {
+  margin: 0;
+}
+
+.best-game-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+
+.best-game-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gold, #d9a441);
+}
+
 .honours-group {
   margin-bottom: 1.5rem;
 }

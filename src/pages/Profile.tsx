@@ -5,8 +5,10 @@ import { useAuth } from '../context/AuthContext'
 import { formatShortDate, formatMatchDate } from '../lib/format'
 
 type VisitedGround = { groundId: string; name: string; visitCount: number; lastVisitedAt: string }
-type AttendedMatch = { id: string; competition: string | null; played_at: string; homeName: string; awayName: string }
-type Achievement = { id: string; title: string; description: string; icon: string | null; unlocked_at: string }
+type AttendedMatch = { id: string; matchId: string; competition: string | null; played_at: string; homeName: string; awayName: string }
+type Achievement = { id: string; title: string; description: string; icon: string | null; unlocked_at: string; pinned: boolean }
+
+const MAX_PINNED_ACHIEVEMENTS = 4
 
 export default function Profile() {
   const { user, signOut } = useAuth()
@@ -15,6 +17,8 @@ export default function Profile() {
   const [grounds, setGrounds] = useState<VisitedGround[]>([])
   const [matches, setMatches] = useState<AttendedMatch[]>([])
   const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [bestMatchId, setBestMatchId] = useState<string | null>(null)
+  const [pinLimitMessage, setPinLimitMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -26,7 +30,7 @@ export default function Profile() {
 
     async function load() {
       const [{ data: profile }, { data: visits }, { data: attendance }, { data: userAch }] = await Promise.all([
-        supabase.from('user_profiles').select('display_name').eq('id', user!.id).single(),
+        supabase.from('user_profiles').select('display_name, best_match_id').eq('id', user!.id).single(),
         supabase
           .from('user_visits')
           .select('id, ground_id, visited_at')
@@ -39,7 +43,7 @@ export default function Profile() {
           .order('created_at', { ascending: false }),
         supabase
           .from('user_achievements')
-          .select('id, unlocked_at, achievement_id')
+          .select('id, unlocked_at, achievement_id, pinned')
           .eq('user_id', user!.id)
           .order('unlocked_at', { ascending: false }),
       ])
@@ -50,6 +54,7 @@ export default function Profile() {
         setDisplayName(profile.display_name)
         setSavedName(profile.display_name)
       }
+      setBestMatchId(profile?.best_match_id ?? null)
 
       const groundIds = [...new Set((visits ?? []).map((v) => v.ground_id))]
       const { data: groundRows } = groundIds.length
@@ -107,6 +112,7 @@ export default function Profile() {
               const away = m?.away_county_team_id ? teamById.get(m.away_county_team_id) : null
               return {
                 id: a.id,
+                matchId: a.match_id,
                 competition: m?.competition ?? null,
                 played_at: m?.played_at ?? a.created_at,
                 homeName: home ? countyNameById.get(home.county_id) ?? 'TBC' : 'TBC',
@@ -134,6 +140,7 @@ export default function Profile() {
                 description: d?.description ?? '',
                 icon: d?.icon ?? null,
                 unlocked_at: a.unlocked_at,
+                pinned: a.pinned,
               }
             }),
           )
@@ -155,6 +162,30 @@ export default function Profile() {
     await supabase.from('user_profiles').update({ display_name: displayName.trim() }).eq('id', user.id)
     setSavedName(displayName.trim())
     setSaving(false)
+  }
+
+  async function togglePinned(achievement: Achievement) {
+    const newValue = !achievement.pinned
+    if (newValue && achievements.filter((a) => a.pinned).length >= MAX_PINNED_ACHIEVEMENTS) {
+      setPinLimitMessage(`You can only feature ${MAX_PINNED_ACHIEVEMENTS} achievements on your profile — unstar one first.`)
+      return
+    }
+    setPinLimitMessage(null)
+    setAchievements((prev) => prev.map((a) => (a.id === achievement.id ? { ...a, pinned: newValue } : a)))
+    const { error } = await supabase.from('user_achievements').update({ pinned: newValue }).eq('id', achievement.id)
+    if (error) {
+      setAchievements((prev) => prev.map((a) => (a.id === achievement.id ? { ...a, pinned: !newValue } : a)))
+    }
+  }
+
+  async function toggleBestGame(matchId: string) {
+    const newValue = bestMatchId === matchId ? null : matchId
+    setBestMatchId(newValue)
+    if (!user) return
+    const { error } = await supabase.from('user_profiles').update({ best_match_id: newValue }).eq('id', user.id)
+    if (error) {
+      setBestMatchId(bestMatchId)
+    }
   }
 
   async function deleteAccount() {
@@ -213,13 +244,36 @@ export default function Profile() {
         <p className="muted">Loading your history…</p>
       ) : (
         <>
+          {bestMatchId &&
+            (() => {
+              const best = matches.find((m) => m.matchId === bestMatchId)
+              return best ? (
+                <Link to={`/matches/${best.matchId}`} className="card best-game-card">
+                  <span className="best-game-label">⭐ Best Game Ever</span>
+                  <strong>
+                    {best.homeName} v {best.awayName}
+                  </strong>
+                </Link>
+              ) : null
+            })()}
+
           {achievements.length > 0 && (
             <section>
               <h2>Achievements</h2>
+              {pinLimitMessage && <p className="muted small error-text">{pinLimitMessage}</p>}
               <div className="card-grid">
                 {achievements.map((a) => (
                   <div key={a.id} className="card achievement-card">
-                    <h3>🏆 {a.title}</h3>
+                    <div className="achievement-card-top">
+                      <h3>🏆 {a.title}</h3>
+                      <button
+                        className="star-toggle"
+                        onClick={() => togglePinned(a)}
+                        aria-label={a.pinned ? 'Remove from profile favourites' : 'Add to profile favourites'}
+                      >
+                        {a.pinned ? '★' : '☆'}
+                      </button>
+                    </div>
                     <p className="muted small">{a.description}</p>
                     <p className="muted small">Unlocked {formatShortDate(a.unlocked_at)}</p>
                   </div>
@@ -237,13 +291,22 @@ export default function Profile() {
             ) : (
               <ul className="history-list">
                 {matches.map((m) => (
-                  <li key={m.id}>
-                    <strong>
-                      {m.homeName} v {m.awayName}
-                    </strong>
-                    <span className="muted small">
-                      {m.competition ?? 'Gaelic Games'} · {formatMatchDate(m.played_at)}
-                    </span>
+                  <li key={m.id} className="history-list-item">
+                    <Link to={`/matches/${m.matchId}`}>
+                      <strong>
+                        {m.homeName} v {m.awayName}
+                      </strong>
+                      <span className="muted small">
+                        {m.competition ?? 'Gaelic Games'} · {formatMatchDate(m.played_at)}
+                      </span>
+                    </Link>
+                    <button
+                      className="star-toggle"
+                      onClick={() => toggleBestGame(m.matchId)}
+                      aria-label={bestMatchId === m.matchId ? 'Remove as best game ever' : 'Mark as best game ever'}
+                    >
+                      {bestMatchId === m.matchId ? '★' : '☆'}
+                    </button>
                   </li>
                 ))}
               </ul>
