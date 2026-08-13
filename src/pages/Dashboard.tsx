@@ -91,14 +91,14 @@ export default function Dashboard() {
       if (!cancelled) setLiveAndUpcoming(cards)
 
       if (user) {
-        const [{ count: groundsCount }, { count: matchesCount }, { count: achievementsCount }] = await Promise.all([
-          supabase.from('user_visits').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+        const [{ data: groundVisitRows }, { count: matchesCount }, { count: achievementsCount }] = await Promise.all([
+          supabase.from('user_visits').select('ground_id').eq('user_id', user.id),
           supabase.from('user_match_attendance').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
           supabase.from('user_achievements').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
         ])
         if (!cancelled) {
           setStats({
-            grounds: groundsCount ?? 0,
+            grounds: new Set((groundVisitRows ?? []).map((v) => v.ground_id)).size,
             matches: matchesCount ?? 0,
             achievements: achievementsCount ?? 0,
           })

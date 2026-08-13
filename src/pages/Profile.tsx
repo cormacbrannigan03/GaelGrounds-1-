@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { formatShortDate, formatMatchDate } from '../lib/format'
 
-type VisitedGround = { id: string; name: string; visited_at: string }
+type VisitedGround = { groundId: string; name: string; visitCount: number; lastVisitedAt: string }
 type AttendedMatch = { id: string; competition: string | null; played_at: string; homeName: string; awayName: string }
 type Achievement = { id: string; title: string; description: string; icon: string | null; unlocked_at: string }
 
@@ -55,8 +55,25 @@ export default function Profile() {
         : { data: [] as any[] }
       const groundNameById = new Map((groundRows ?? []).map((g) => [g.id, g.name]))
       if (!cancelled) {
+        const visitsByGround = new Map<string, { count: number; lastVisitedAt: string }>()
+        for (const v of visits ?? []) {
+          const existing = visitsByGround.get(v.ground_id)
+          if (existing) {
+            existing.count += 1
+            if (v.visited_at > existing.lastVisitedAt) existing.lastVisitedAt = v.visited_at
+          } else {
+            visitsByGround.set(v.ground_id, { count: 1, lastVisitedAt: v.visited_at })
+          }
+        }
         setGrounds(
-          (visits ?? []).map((v) => ({ id: v.id, name: groundNameById.get(v.ground_id) ?? 'Unknown ground', visited_at: v.visited_at })),
+          [...visitsByGround.entries()]
+            .map(([groundId, { count, lastVisitedAt }]) => ({
+              groundId,
+              name: groundNameById.get(groundId) ?? 'Unknown ground',
+              visitCount: count,
+              lastVisitedAt,
+            }))
+            .sort((a, b) => b.lastVisitedAt.localeCompare(a.lastVisitedAt)),
         )
       }
 
@@ -222,9 +239,11 @@ export default function Profile() {
             ) : (
               <ul className="history-list">
                 {grounds.map((g) => (
-                  <li key={g.id}>
+                  <li key={g.groundId}>
                     <strong>{g.name}</strong>
-                    <span className="muted small">{formatShortDate(g.visited_at)}</span>
+                    <span className="muted small">
+                      {g.visitCount} {g.visitCount === 1 ? 'visit' : 'visits'}
+                    </span>
                   </li>
                 ))}
               </ul>
