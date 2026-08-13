@@ -17,6 +17,8 @@ export default function Profile() {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -155,6 +157,24 @@ export default function Profile() {
     setSaving(false)
   }
 
+  async function deleteAccount() {
+    const confirmed = window.confirm(
+      "This permanently deletes your account and all your data — check-ins, grounds visited, achievements and friends. This can't be undone. Delete your account?",
+    )
+    if (!confirmed) return
+
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const { error } = await supabase.functions.invoke('delete-account')
+      if (error) throw error
+      await signOut()
+    } catch {
+      setDeleteError("Couldn't delete your account — try again.")
+      setDeleting(false)
+    }
+  }
+
   if (!user) return null
 
   return (
@@ -255,6 +275,11 @@ export default function Profile() {
       <button className="btn btn-ghost" onClick={signOut}>
         Sign out
       </button>
+
+      <button className="btn btn-ghost delete-account-btn" onClick={deleteAccount} disabled={deleting}>
+        {deleting ? 'Deleting…' : 'Delete Account'}
+      </button>
+      {deleteError && <p className="muted small error-text">{deleteError}</p>}
     </div>
   )
 }

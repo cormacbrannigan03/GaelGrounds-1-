@@ -185,6 +185,14 @@ h2 {
   color: var(--muted);
 }
 
+.delete-account-btn {
+  color: #d64545;
+}
+
+.error-text {
+  color: #d64545;
+}
+
 .btn-lg {
   padding: 0.7rem 1.4rem;
   font-size: 0.95rem;
