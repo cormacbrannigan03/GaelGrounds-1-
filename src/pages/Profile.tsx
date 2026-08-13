@@ -240,6 +240,10 @@ export default function Profile() {
         </div>
       </section>
 
+      <Link to="/friends" className="card best-game-card friends-link">
+        <strong>👥 Friends</strong>
+      </Link>
+
       {loading ? (
         <p className="muted">Loading your history…</p>
       ) : (

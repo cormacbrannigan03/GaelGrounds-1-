@@ -582,6 +582,10 @@ main {
   color: var(--gold, #d9a441);
 }
 
+.friends-link {
+  margin-top: 1rem;
+}
+
 .btn-sm {
   padding: 0.35rem 0.7rem;
   font-size: 0.8rem;
