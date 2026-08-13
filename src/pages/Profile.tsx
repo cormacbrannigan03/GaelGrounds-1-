@@ -19,6 +19,9 @@ export default function Profile() {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [bestMatchId, setBestMatchId] = useState<string | null>(null)
   const [pinLimitMessage, setPinLimitMessage] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -30,7 +33,7 @@ export default function Profile() {
 
     async function load() {
       const [{ data: profile }, { data: visits }, { data: attendance }, { data: userAch }] = await Promise.all([
-        supabase.from('user_profiles').select('display_name, best_match_id').eq('id', user!.id).single(),
+        supabase.from('user_profiles').select('display_name, best_match_id, avatar_url').eq('id', user!.id).single(),
         supabase
           .from('user_visits')
           .select('id, ground_id, visited_at')
@@ -55,6 +58,7 @@ export default function Profile() {
         setSavedName(profile.display_name)
       }
       setBestMatchId(profile?.best_match_id ?? null)
+      setAvatarUrl(profile?.avatar_url ?? null)
 
       const groundIds = [...new Set((visits ?? []).map((v) => v.ground_id))]
       const { data: groundRows } = groundIds.length
@@ -164,6 +168,33 @@ export default function Profile() {
     setSaving(false)
   }
 
+  async function uploadAvatar(file: File) {
+    if (!user) return
+    setUploadingAvatar(true)
+    setAvatarError(null)
+    try {
+      const ext = file.type === 'image/png' ? 'png' : 'jpg'
+      const path = `${user.id}/${crypto.randomUUID()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { contentType: file.type })
+      if (uploadError) throw uploadError
+
+      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(path)
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ avatar_url: publicUrlData.publicUrl })
+        .eq('id', user.id)
+      if (updateError) throw updateError
+
+      setAvatarUrl(publicUrlData.publicUrl)
+    } catch {
+      setAvatarError("Couldn't upload that photo — try again.")
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
   async function togglePinned(achievement: Achievement) {
     const newValue = !achievement.pinned
     if (newValue && achievements.filter((a) => a.pinned).length >= MAX_PINNED_ACHIEVEMENTS) {
@@ -214,6 +245,27 @@ export default function Profile() {
         <h1>{savedName || 'Your profile'}</h1>
         <p className="muted">{user.email}</p>
       </div>
+
+      <label className="avatar-upload card">
+        {avatarUrl ? (
+          <img src={avatarUrl} alt="" className="avatar-preview" />
+        ) : (
+          <span className="avatar-placeholder">👤</span>
+        )}
+        <span>{uploadingAvatar ? 'Uploading…' : avatarUrl ? 'Change profile photo' : 'Add profile photo'}</span>
+        <input
+          type="file"
+          accept="image/jpeg,image/png"
+          hidden
+          disabled={uploadingAvatar}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) uploadAvatar(file)
+            e.target.value = ''
+          }}
+        />
+      </label>
+      {avatarError && <p className="muted small error-text">{avatarError}</p>}
 
       <section className="profile-name-editor">
         <label>
