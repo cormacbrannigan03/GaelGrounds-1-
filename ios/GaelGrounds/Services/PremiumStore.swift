@@ -15,6 +15,17 @@ import Supabase
 /// 2019-cutoff, and friend-request rules are still enforced server-side
 /// via Postgres RLS regardless, so this is the one deliberately-accepted
 /// gap, not the whole paywall.
+enum PremiumStoreError: LocalizedError {
+    case productUnavailable
+
+    var errorDescription: String? {
+        switch self {
+        case .productUnavailable:
+            return "Couldn't load the subscription right now. Please try again in a moment."
+        }
+    }
+}
+
 @MainActor
 final class PremiumStore: ObservableObject {
     static let monthlyProductId = "com.gaelgrounds.premium.monthly"
@@ -68,7 +79,9 @@ final class PremiumStore: ObservableObject {
         if monthlyProduct == nil {
             await loadProduct()
         }
-        guard let monthlyProduct else { return }
+        guard let monthlyProduct else {
+            throw PremiumStoreError.productUnavailable
+        }
         let result = try await monthlyProduct.purchase()
         switch result {
         case .success(let verification):
