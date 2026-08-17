@@ -56,6 +56,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    // Extended icon pack -- the bottom nav uses a few icons (EmojiEvents,
+    // SportsSoccer, Flag) outside the small curated set in material-icons-core.
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Supabase (Kotlin Multiplatform client) -- mirrors the same Postgrest/
     // Auth/Storage/Functions surface the iOS app uses via supabase-swift,
