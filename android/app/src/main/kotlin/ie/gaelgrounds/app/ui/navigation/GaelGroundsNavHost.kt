@@ -171,6 +171,8 @@ fun GaelGroundsNavHost(userEmail: String?, userId: String?, onSignOut: () -> Uni
                     userId = userId,
                     onSignOut = onSignOut,
                     onOpenFriends = { navController.navigate(Routes.FRIENDS) },
+                    onOpenMatch = { navController.navigate(Routes.matchDetail(it)) },
+                    onOpenGround = { navController.navigate(Routes.groundDetail(it)) },
                 )
             }
             composable(Routes.FRIENDS) {

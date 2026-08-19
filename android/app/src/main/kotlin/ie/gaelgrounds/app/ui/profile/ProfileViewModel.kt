@@ -5,15 +5,23 @@ import androidx.lifecycle.viewModelScope
 import ie.gaelgrounds.app.data.Supa
 import ie.gaelgrounds.app.data.model.AchievementDefinition
 import ie.gaelgrounds.app.data.model.County
+import ie.gaelgrounds.app.data.model.Ground
+import ie.gaelgrounds.app.data.model.Match
 import ie.gaelgrounds.app.data.model.SupportedCountyUpdate
 import ie.gaelgrounds.app.data.model.UserAchievement
 import ie.gaelgrounds.app.data.model.UserAchievementPinnedUpdate
 import ie.gaelgrounds.app.data.model.UserMatchAttendance
 import ie.gaelgrounds.app.data.model.UserProfile
+import ie.gaelgrounds.app.data.model.UserProfileAvatarUpdate
+import ie.gaelgrounds.app.data.model.UserProfileBestMatchUpdate
+import ie.gaelgrounds.app.data.model.UserProfileUpdate
 import ie.gaelgrounds.app.data.model.UserVisit
+import ie.gaelgrounds.app.data.service.AvatarService
+import ie.gaelgrounds.app.data.service.MatchService
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,21 +38,46 @@ data class AchievementRow(
     val pinned: Boolean,
 )
 
+data class AttendedMatchRow(
+    val attendanceId: String,
+    val matchId: String,
+    val competition: String?,
+    val playedAt: String,
+    val homeName: String,
+    val awayName: String,
+    val groundName: String?,
+)
+
+data class VisitedGroundRow(
+    val groundId: String,
+    val name: String,
+    val visitCount: Int,
+)
+
 data class ProfileUiState(
     val isLoading: Boolean = true,
     val profile: UserProfile? = null,
     val counties: List<County> = emptyList(),
-    val groundsVisited: Int = 0,
-    val matchesAttended: Int = 0,
+    val groundsVisited: List<VisitedGroundRow> = emptyList(),
+    val matchesAttended: List<AttendedMatchRow> = emptyList(),
     val achievements: List<AchievementRow> = emptyList(),
+    val bestMatchId: String? = null,
+    val displayName: String = "",
+    val isSavingName: Boolean = false,
+    val isUploadingAvatar: Boolean = false,
+    val avatarError: String? = null,
     val pinLimitMessage: String? = null,
     val isDeleting: Boolean = false,
     val deleteError: String? = null,
-)
+) {
+    val bestMatch: AttendedMatchRow?
+        get() = matchesAttended.firstOrNull { it.matchId == bestMatchId }
+}
 
 /**
- * Simplified port of ios/GaelGrounds/Views/Profile/ProfileView.swift --
- * Best Game Ever and avatar upload aren't ported yet, see android/README.md.
+ * Mirrors ios/GaelGrounds/Views/Profile/ProfileView.swift -- realtime
+ * auto-refresh and the locked-achievements browser aren't ported yet, see
+ * android/README.md.
  */
 class ProfileViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -60,16 +93,58 @@ class ProfileViewModel : ViewModel() {
                     single()
                 }.decodeSingle<UserProfile>()
 
-                val counties = Supa.client.from("counties").select().decodeList<County>()
+                val counties = Supa.client.from("counties").select {
+                    order("name", Order.ASCENDING)
+                }.decodeList<County>()
 
                 val visits = Supa.client.from("user_visits").select {
                     filter { eq("user_id", userId) }
+                    order("visited_at", Order.DESCENDING)
                 }.decodeList<UserVisit>()
-                val groundsVisited = visits.map { it.groundId }.toSet().size
+                val groundIds = visits.map { it.groundId }.distinct()
+                val groundRows = if (groundIds.isEmpty()) {
+                    emptyList()
+                } else {
+                    Supa.client.from("grounds").select {
+                        filter { isIn("id", groundIds) }
+                    }.decodeList<Ground>()
+                }
+                val groundNameById = groundRows.associate { it.id to it.name }
+                val groundsVisited = visits.groupBy { it.groundId }.map { (groundId, visitsHere) ->
+                    VisitedGroundRow(
+                        groundId = groundId,
+                        name = groundNameById[groundId] ?: "Unknown ground",
+                        visitCount = visitsHere.size,
+                    )
+                }.sortedByDescending { it.visitCount }
 
                 val attendance = Supa.client.from("user_match_attendance").select {
                     filter { eq("user_id", userId) }
+                    order("created_at", Order.DESCENDING)
                 }.decodeList<UserMatchAttendance>()
+                val matchIds = attendance.map { it.matchId }.distinct()
+                val matchesAttended = if (matchIds.isEmpty()) {
+                    emptyList()
+                } else {
+                    val matchRows = Supa.client.from("matches").select {
+                        filter { isIn("id", matchIds) }
+                    }.decodeList<Match>()
+                    val summaries = MatchService.resolveSummaries(matchRows)
+                    val summaryById = summaries.associateBy { it.id }
+                    attendance.mapNotNull { a ->
+                        val s = summaryById[a.matchId] ?: return@mapNotNull null
+                        val playedAt = s.playedAt ?: return@mapNotNull null
+                        AttendedMatchRow(
+                            attendanceId = a.id,
+                            matchId = a.matchId,
+                            competition = s.competition,
+                            playedAt = playedAt,
+                            homeName = s.homeName,
+                            awayName = s.awayName,
+                            groundName = s.groundName,
+                        )
+                    }
+                }
 
                 val defs = Supa.client.from("achievement_definitions").select().decodeList<AchievementDefinition>()
                 val unlocked = Supa.client.from("user_achievements").select {
@@ -85,13 +160,35 @@ class ProfileViewModel : ViewModel() {
                     profile = profile,
                     counties = counties,
                     groundsVisited = groundsVisited,
-                    matchesAttended = attendance.size,
+                    matchesAttended = matchesAttended,
                     achievements = achievements,
+                    bestMatchId = profile.bestMatchId,
+                    displayName = profile.displayName ?: "",
                     isLoading = false,
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false)
             }
+        }
+    }
+
+    fun setDisplayName(name: String) {
+        _uiState.value = _uiState.value.copy(displayName = name)
+    }
+
+    fun saveDisplayName(userId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSavingName = true)
+            try {
+                val trimmed = _uiState.value.displayName.trim()
+                Supa.client.from("user_profiles").update(UserProfileUpdate(displayName = trimmed)) {
+                    filter { eq("id", userId) }
+                }
+                _uiState.value = _uiState.value.copy(profile = _uiState.value.profile?.copy(displayName = trimmed))
+            } catch (e: Exception) {
+                // Swallow -- the field just doesn't persist on failure.
+            }
+            _uiState.value = _uiState.value.copy(isSavingName = false)
         }
     }
 
@@ -106,6 +203,37 @@ class ProfileViewModel : ViewModel() {
                 )
             } catch (e: Exception) {
                 // Swallow -- the picker just doesn't update on failure.
+            }
+        }
+    }
+
+    fun uploadAvatar(userId: String, jpegBytes: ByteArray) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isUploadingAvatar = true, avatarError = null)
+            try {
+                val url = AvatarService.upload(jpegBytes, userId)
+                Supa.client.from("user_profiles").update(UserProfileAvatarUpdate(avatarUrl = url)) {
+                    filter { eq("id", userId) }
+                }
+                _uiState.value = _uiState.value.copy(profile = _uiState.value.profile?.copy(avatarUrl = url))
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(avatarError = "Couldn't upload that photo -- try again.")
+            }
+            _uiState.value = _uiState.value.copy(isUploadingAvatar = false)
+        }
+    }
+
+    fun toggleBestGame(userId: String, matchId: String) {
+        val previous = _uiState.value.bestMatchId
+        val newValue = if (previous == matchId) null else matchId
+        _uiState.value = _uiState.value.copy(bestMatchId = newValue)
+        viewModelScope.launch {
+            try {
+                Supa.client.from("user_profiles").update(UserProfileBestMatchUpdate(bestMatchId = newValue)) {
+                    filter { eq("id", userId) }
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(bestMatchId = previous)
             }
         }
     }
@@ -131,7 +259,6 @@ class ProfileViewModel : ViewModel() {
                     filter { eq("id", achievement.userAchievementId) }
                 }
             } catch (e: Exception) {
-                // Revert on failure.
                 _uiState.value = _uiState.value.copy(
                     achievements = _uiState.value.achievements.map {
                         if (it.userAchievementId == achievement.userAchievementId) it.copy(pinned = achievement.pinned) else it
