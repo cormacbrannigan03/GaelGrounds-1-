@@ -76,5 +76,10 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.7.0")
 
+    // Proximity check-in: one-shot location fix to find matches near the
+    // user, mirroring CLLocationManager's role in
+    // ProximityCheckInService.swift.
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

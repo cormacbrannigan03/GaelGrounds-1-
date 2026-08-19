@@ -53,6 +53,24 @@ object MatchService {
         }.decodeList()
     }
 
+    /**
+     * All matches scheduled for today (device-local calendar day) that have
+     * a ground attached -- used by proximity check-in to find matches near
+     * the user's current location.
+     */
+    suspend fun fetchTodaysMatches(): List<Match> {
+        val zone = java.time.ZoneId.systemDefault()
+        val startOfDay = java.time.LocalDate.now(zone).atStartOfDay(zone).toInstant()
+        val endOfDay = startOfDay.plusSeconds(24 * 60 * 60)
+        val matches = Supa.client.from("matches").select {
+            filter {
+                gte("played_at", startOfDay.toString())
+                lt("played_at", endOfDay.toString())
+            }
+        }.decodeList<Match>()
+        return matches.filter { it.groundId != null }
+    }
+
     /** Which of the given matches this user has already checked in to. */
     suspend fun attendedMatchIds(userId: String, matchIds: List<String>): Set<String> {
         if (matchIds.isEmpty()) return emptySet()
