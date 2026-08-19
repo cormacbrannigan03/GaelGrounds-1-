@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ie.gaelgrounds.app.ui.components.MatchSummaryCard
+import ie.gaelgrounds.app.ui.theme.gaelCard
 
 @Composable
 fun DashboardScreen(userId: String?, onOpenMatch: (String) -> Unit, viewModel: DashboardViewModel = viewModel()) {
@@ -69,7 +70,7 @@ fun DashboardScreen(userId: String?, onOpenMatch: (String) -> Unit, viewModel: D
 
 @Composable
 private fun StatTile(value: Int, label: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier) {
+    Box(modifier = modifier.gaelCard()) {
         Column(
             modifier = Modifier.padding(12.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,

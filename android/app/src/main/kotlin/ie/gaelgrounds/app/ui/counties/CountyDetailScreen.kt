@@ -2,13 +2,13 @@ package ie.gaelgrounds.app.ui.counties
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import ie.gaelgrounds.app.ui.theme.gaelCard
 
 @Composable
 fun CountyDetailScreen(
@@ -54,7 +55,7 @@ fun CountyDetailScreen(
 
         item { Text("Intercounty teams", style = MaterialTheme.typography.titleMedium) }
         items(detail.teams) { team ->
-            Card(modifier = Modifier.fillMaxWidth().clickable { onOpenTeam(team.id) }) {
+            Box(modifier = Modifier.fillMaxWidth().gaelCard().clickable { onOpenTeam(team.id) }) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("${team.sportCode.icon} ${team.sportCode.label}", style = MaterialTheme.typography.titleSmall)
                     team.foundedYear?.let { Text("Founded $it", style = MaterialTheme.typography.labelSmall) }
@@ -65,7 +66,7 @@ fun CountyDetailScreen(
 
         item { Text("Home grounds", style = MaterialTheme.typography.titleMedium) }
         items(detail.grounds) { ground ->
-            Card(modifier = Modifier.fillMaxWidth().clickable { onOpenGround(ground.id) }) {
+            Box(modifier = Modifier.fillMaxWidth().gaelCard().clickable { onOpenGround(ground.id) }) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(ground.name, style = MaterialTheme.typography.titleSmall)
                     ground.capacity?.let { Text("Capacity: $it", style = MaterialTheme.typography.labelSmall) }

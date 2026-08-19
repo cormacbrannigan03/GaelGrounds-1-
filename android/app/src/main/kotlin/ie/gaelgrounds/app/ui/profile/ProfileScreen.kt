@@ -1,6 +1,7 @@
 package ie.gaelgrounds.app.ui.profile
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,7 +12,6 @@ import androidx.compose.foundation.lazy.item
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -38,6 +38,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import ie.gaelgrounds.app.ui.auth.AuthScreen
 import ie.gaelgrounds.app.ui.auth.AuthViewModel
 import ie.gaelgrounds.app.ui.theme.BrandGold
+import ie.gaelgrounds.app.ui.theme.gaelCard
 
 @Composable
 fun ProfileScreen(
@@ -104,7 +105,7 @@ fun ProfileScreen(
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier.fillMaxWidth().gaelCard()) {
                 Row(
                     modifier = Modifier.padding(14.dp).fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -121,7 +122,7 @@ fun ProfileScreen(
             item { Text("No achievements unlocked yet — check in somewhere to get started.", style = MaterialTheme.typography.bodyMedium) }
         } else {
             items(uiState.achievements) { achievement ->
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Box(modifier = Modifier.fillMaxWidth().gaelCard()) {
                     Row(
                         modifier = Modifier.padding(12.dp).fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -188,7 +189,7 @@ fun ProfileScreen(
 
 @Composable
 private fun StatTile(value: Int, label: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier) {
+    Box(modifier = modifier.gaelCard()) {
         Column(
             modifier = Modifier.padding(12.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
