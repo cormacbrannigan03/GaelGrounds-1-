@@ -1,5 +1,6 @@
 package ie.gaelgrounds.app.ui.leaderboard
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -20,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import ie.gaelgrounds.app.data.model.AchievementTier
 import ie.gaelgrounds.app.ui.theme.gaelCard
 
 private val tabLabels = mapOf(
@@ -29,6 +32,9 @@ private val tabLabels = mapOf(
     LeaderboardTab.MUNSTER to "Munster",
     LeaderboardTab.LEINSTER to "Leinster",
     LeaderboardTab.CONNACHT to "Connacht",
+    LeaderboardTab.BRONZE to "Most Bronze",
+    LeaderboardTab.SILVER to "Most Silver",
+    LeaderboardTab.GOLD to "Top Gold",
 )
 
 @Composable
@@ -38,7 +44,10 @@ fun LeaderboardScreen(userId: String?, viewModel: LeaderboardViewModel = viewMod
     LaunchedEffect(userId) { viewModel.load(userId) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+        ) {
             LeaderboardTab.entries.forEach { tab ->
                 FilterChip(
                     selected = uiState.activeTab == tab,
@@ -73,11 +82,20 @@ fun LeaderboardScreen(userId: String?, viewModel: LeaderboardViewModel = viewMod
                         2 -> "🥉"
                         else -> "${index + 1}"
                     }
+                    val tab = uiState.activeTab
                     val primaryCount = when {
-                        uiState.activeTab != LeaderboardTab.OVERALL && uiState.activeTab != LeaderboardTab.MY_COUNTY ->
-                            entry.provinceMatchCounts.values.firstOrNull() ?: 0
+                        tab == LeaderboardTab.BRONZE -> entry.tierCounts[AchievementTier.BRONZE] ?: 0
+                        tab == LeaderboardTab.SILVER -> entry.tierCounts[AchievementTier.SILVER] ?: 0
+                        tab == LeaderboardTab.GOLD -> entry.tierCounts[AchievementTier.GOLD] ?: 0
+                        tab == LeaderboardTab.ULSTER || tab == LeaderboardTab.MUNSTER || tab == LeaderboardTab.LEINSTER || tab == LeaderboardTab.CONNACHT ->
+                            entry.provinceMatchCounts.entries.firstOrNull { (province, _) -> tabProvince[tab] == province }?.value ?: 0
                         uiState.sortBy == SortKey.MATCHES -> entry.matchCount
                         else -> entry.groundCount
+                    }
+                    val primaryLabel = when (tab) {
+                        LeaderboardTab.BRONZE, LeaderboardTab.SILVER, LeaderboardTab.GOLD -> "achievements"
+                        LeaderboardTab.ULSTER, LeaderboardTab.MUNSTER, LeaderboardTab.LEINSTER, LeaderboardTab.CONNACHT -> "matches"
+                        else -> if (uiState.sortBy == SortKey.MATCHES) "matches" else "grounds"
                     }
                     Box(modifier = Modifier.fillMaxWidth().gaelCard()) {
                         Row(
@@ -91,7 +109,10 @@ fun LeaderboardScreen(userId: String?, viewModel: LeaderboardViewModel = viewMod
                                     Text("${entry.matchCount} matches · ${entry.groundCount} grounds", style = MaterialTheme.typography.labelSmall)
                                 }
                             }
-                            Text("$primaryCount", style = MaterialTheme.typography.titleMedium)
+                            Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
+                                Text("$primaryCount", style = MaterialTheme.typography.titleMedium)
+                                Text(primaryLabel, style = MaterialTheme.typography.labelSmall)
+                            }
                         }
                     }
                 }

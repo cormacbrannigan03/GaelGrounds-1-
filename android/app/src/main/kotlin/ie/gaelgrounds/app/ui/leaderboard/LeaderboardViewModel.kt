@@ -2,6 +2,7 @@ package ie.gaelgrounds.app.ui.leaderboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ie.gaelgrounds.app.data.model.AchievementTier
 import ie.gaelgrounds.app.data.model.Province
 import ie.gaelgrounds.app.data.service.LeaderboardService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,15 +10,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-enum class LeaderboardTab { OVERALL, MY_COUNTY, ULSTER, MUNSTER, LEINSTER, CONNACHT }
+enum class LeaderboardTab { OVERALL, MY_COUNTY, ULSTER, MUNSTER, LEINSTER, CONNACHT, BRONZE, SILVER, GOLD }
 enum class SortKey { MATCHES, GROUNDS }
 enum class Scope { EVERYONE, FRIENDS }
 
-private val tabProvince = mapOf(
+val tabProvince = mapOf(
     LeaderboardTab.ULSTER to Province.ULSTER,
     LeaderboardTab.MUNSTER to Province.MUNSTER,
     LeaderboardTab.LEINSTER to Province.LEINSTER,
     LeaderboardTab.CONNACHT to Province.CONNACHT,
+)
+
+private val tabTier = mapOf(
+    LeaderboardTab.BRONZE to AchievementTier.BRONZE,
+    LeaderboardTab.SILVER to AchievementTier.SILVER,
+    LeaderboardTab.GOLD to AchievementTier.GOLD,
 )
 
 data class LeaderboardUiState(
@@ -53,15 +60,17 @@ data class LeaderboardUiState(
                     .filter { (it.provinceMatchCounts[province] ?: 0) > 0 }
                     .sortedByDescending { it.provinceMatchCounts[province] ?: 0 }
             }
+            val tier = tabTier[activeTab]
+            if (tier != null) {
+                return scoped
+                    .filter { (it.tierCounts[tier] ?: 0) > 0 }
+                    .sortedByDescending { it.tierCounts[tier] ?: 0 }
+            }
             return sortedOverall(scoped)
         }
 }
 
-/**
- * Simplified port of ios/GaelGrounds/Views/Leaderboard/LeaderboardView.swift --
- * the achievement-tier tabs (Most Bronze / Most Silver / Top Gold) aren't
- * ported yet, see android/README.md.
- */
+/** Port of ios/GaelGrounds/Views/Leaderboard/LeaderboardView.swift. */
 class LeaderboardViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(LeaderboardUiState())
     val uiState: StateFlow<LeaderboardUiState> = _uiState.asStateFlow()

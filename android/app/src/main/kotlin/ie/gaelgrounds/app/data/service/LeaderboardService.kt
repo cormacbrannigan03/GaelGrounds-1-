@@ -1,7 +1,11 @@
 package ie.gaelgrounds.app.data.service
 
 import ie.gaelgrounds.app.data.Supa
+import ie.gaelgrounds.app.data.model.AchievementDefinition
+import ie.gaelgrounds.app.data.model.AchievementTier
 import ie.gaelgrounds.app.data.model.Province
+import ie.gaelgrounds.app.data.model.SportCode
+import ie.gaelgrounds.app.data.model.UserAchievement
 import ie.gaelgrounds.app.data.model.UserProfile
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
@@ -10,10 +14,9 @@ import kotlinx.serialization.Serializable
 
 /**
  * Ranks premium profiles by matches attended / grounds visited, overall,
- * per-province, and for the signed-in user's supported county. Mirrors the
- * `load()` function in ios/GaelGrounds/Views/Leaderboard/LeaderboardView.swift,
- * with the "Most Bronze / Most Silver / Top Gold" achievement-tier tabs not
- * yet ported -- see android/README.md.
+ * per-province, for the signed-in user's supported county, and by
+ * achievement tier (Most Bronze / Most Silver / Top Gold). Mirrors the
+ * `load()` function in ios/GaelGrounds/Views/Leaderboard/LeaderboardView.swift.
  */
 object LeaderboardService {
     data class Entry(
@@ -22,6 +25,7 @@ object LeaderboardService {
         val matchCount: Int,
         val groundCount: Int,
         val provinceMatchCounts: Map<Province, Int>,
+        val tierCounts: Map<AchievementTier, Int>,
         val supportedCountyId: String?,
     )
 
@@ -49,12 +53,14 @@ object LeaderboardService {
         val id: String,
         @SerialName("home_county_team_id") val homeCountyTeamId: String? = null,
         @SerialName("away_county_team_id") val awayCountyTeamId: String? = null,
+        @SerialName("ground_id") val groundId: String? = null,
     )
 
     @Serializable
     private data class CountyTeamRef(
         val id: String,
         @SerialName("county_id") val countyId: String,
+        @SerialName("sport_code") val sportCode: SportCode,
     )
 
     @Serializable
@@ -63,6 +69,20 @@ object LeaderboardService {
         val name: String,
         val province: Province,
     )
+
+    @Serializable
+    private data class GroundCountyRef(
+        val id: String,
+        @SerialName("county_id") val countyId: String,
+    )
+
+    @Serializable
+    private data class UserAchievementRef(
+        @SerialName("user_id") val userId: String,
+        @SerialName("achievement_id") val achievementId: String,
+    )
+
+    private data class TierKey(val userId: String, val countyId: String, val sportCode: SportCode)
 
     suspend fun fetch(currentUserId: String?): Result {
         val profiles = Supa.client.from("user_profiles").select().decodeList<UserProfile>()
@@ -73,16 +93,25 @@ object LeaderboardService {
             .select(columns = Columns.raw("user_id, ground_id"))
             .decodeList<VisitGroundRef>()
         val matchTeams = Supa.client.from("matches")
-            .select(columns = Columns.raw("id, home_county_team_id, away_county_team_id"))
+            .select(columns = Columns.raw("id, home_county_team_id, away_county_team_id, ground_id"))
             .decodeList<MatchTeamRef>()
         val countyTeams = Supa.client.from("county_teams")
-            .select(columns = Columns.raw("id, county_id"))
+            .select(columns = Columns.raw("id, county_id, sport_code"))
             .decodeList<CountyTeamRef>()
         val counties = Supa.client.from("counties")
             .select(columns = Columns.raw("id, name, province"))
             .decodeList<CountyProvinceRef>()
+        val grounds = Supa.client.from("grounds")
+            .select(columns = Columns.raw("id, county_id"))
+            .decodeList<GroundCountyRef>()
+        val userAchievements = Supa.client.from("user_achievements")
+            .select(columns = Columns.raw("user_id, achievement_id"))
+            .decodeList<UserAchievementRef>()
+        val achievementDefs = Supa.client.from("achievement_definitions").select().decodeList<AchievementDefinition>()
 
         val teamToCounty = countyTeams.associate { it.id to it.countyId }
+        val teamToSport = countyTeams.associate { it.id to it.sportCode }
+        val groundToCounty = grounds.associate { it.id to it.countyId }
         val countyToProvince = counties.associate { it.id to it.province }
         val countyNames = counties.associate { it.id to it.name }
         val currentProfile = profiles.firstOrNull { it.id == currentUserId }
@@ -119,6 +148,47 @@ object LeaderboardService {
         for (v in visits) groundIdsByUser.getOrPut(v.userId) { mutableSetOf() }.add(v.groundId)
         val groundCounts = groundIdsByUser.mapValues { it.value.size }
 
+        // Home/road match counts per user, per (county, sport) -- the same
+        // basis county_home_match/county_away_match achievements are tiered
+        // on in AchievementsService, computed here globally across every
+        // user instead of one at a time.
+        val matchById = matchTeams.associateBy { it.id }
+        val homeCountsByUser = mutableMapOf<TierKey, Int>()
+        val roadCountsByUser = mutableMapOf<TierKey, Int>()
+        for (a in attendance) {
+            val match = matchById[a.matchId] ?: continue
+            val groundId = match.groundId ?: continue
+            val groundCountyId = groundToCounty[groundId] ?: continue
+            val participatingTeamIds = listOfNotNull(match.homeCountyTeamId, match.awayCountyTeamId)
+            for (teamId in participatingTeamIds) {
+                val teamCountyId = teamToCounty[teamId] ?: continue
+                val sportCode = teamToSport[teamId] ?: continue
+                val key = TierKey(a.userId, teamCountyId, sportCode)
+                if (teamCountyId == groundCountyId) {
+                    homeCountsByUser[key] = (homeCountsByUser[key] ?: 0) + 1
+                } else {
+                    roadCountsByUser[key] = (roadCountsByUser[key] ?: 0) + 1
+                }
+            }
+        }
+
+        // Tally each user's unlocked county_home_match/county_away_match
+        // achievements into bronze/silver/gold buckets.
+        val defById = achievementDefs.associateBy { it.id }
+        val tierCountsByUser = mutableMapOf<String, MutableMap<AchievementTier, Int>>()
+        for (ua in userAchievements) {
+            val def = defById[ua.achievementId] ?: continue
+            if (def.ruleType != "county_home_match" && def.ruleType != "county_away_match") continue
+            val countyId = def.ruleParams.countyId ?: continue
+            val sportCode = def.ruleParams.sportCode ?: continue
+            val key = TierKey(ua.userId, countyId, sportCode)
+            val count = if (def.ruleType == "county_home_match") homeCountsByUser[key] ?: 0 else roadCountsByUser[key] ?: 0
+            val tier = AchievementTier.forHomeMatchCount(count)
+            if (tier == AchievementTier.STANDARD) continue
+            val userTiers = tierCountsByUser.getOrPut(ua.userId) { mutableMapOf() }
+            userTiers[tier] = (userTiers[tier] ?: 0) + 1
+        }
+
         val profileById = profiles.associateBy { it.id }
         val allIds = overallMatchCounts.keys + groundCounts.keys
 
@@ -134,6 +204,7 @@ object LeaderboardService {
                 matchCount = overallMatchCounts[uid] ?: 0,
                 groundCount = groundCounts[uid] ?: 0,
                 provinceMatchCounts = provMap,
+                tierCounts = tierCountsByUser[uid].orEmpty(),
                 supportedCountyId = profile.supportedCountyId,
             )
         }
