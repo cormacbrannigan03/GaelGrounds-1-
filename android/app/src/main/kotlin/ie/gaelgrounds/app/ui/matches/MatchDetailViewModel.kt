@@ -9,8 +9,10 @@ import ie.gaelgrounds.app.data.model.MatchSummary
 import ie.gaelgrounds.app.data.model.UserMatchAttendance
 import ie.gaelgrounds.app.data.model.UserProfile
 import ie.gaelgrounds.app.data.service.MatchService
+import ie.gaelgrounds.app.data.service.RealtimeWatcher
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.realtime.RealtimeChannel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,10 +30,14 @@ data class MatchDetailUiState(
     val lastEvaluation: AchievementEvaluation? = null,
 )
 
-/** Simplified port of ios/GaelGrounds/Views/Matches/MatchDetailView.swift + CheckInPanel.swift (no realtime, no premium gating yet). */
+/** Port of ios/GaelGrounds/Views/Matches/MatchDetailView.swift + CheckInPanel.swift (no premium gating yet). */
 class MatchDetailViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(MatchDetailUiState())
     val uiState: StateFlow<MatchDetailUiState> = _uiState.asStateFlow()
+
+    private var watchChannel: RealtimeChannel? = null
+    private var watchedMatchId: String? = null
+    private var watchedUserId: String? = null
 
     fun load(matchId: String, userId: String?) {
         viewModelScope.launch {
@@ -48,7 +54,28 @@ class MatchDetailViewModel : ViewModel() {
             }
             loadAttendees(matchId, userId)
             _uiState.value = _uiState.value.copy(isLoading = false)
+
+            if (watchedMatchId != matchId) {
+                RealtimeWatcher.stop(watchChannel)
+                watchedMatchId = matchId
+                watchedUserId = userId
+                watchChannel = RealtimeWatcher.watch(
+                    scope = viewModelScope,
+                    table = "user_match_attendance",
+                    filterColumn = "match_id",
+                    filterValue = matchId,
+                ) { loadInScope(matchId, userId) }
+            }
         }
+    }
+
+    private fun loadInScope(matchId: String, userId: String?) {
+        viewModelScope.launch { loadAttendees(matchId, userId) }
+    }
+
+    override fun onCleared() {
+        RealtimeWatcher.stop(watchChannel)
+        super.onCleared()
     }
 
     private suspend fun loadAttendees(matchId: String, userId: String?) {

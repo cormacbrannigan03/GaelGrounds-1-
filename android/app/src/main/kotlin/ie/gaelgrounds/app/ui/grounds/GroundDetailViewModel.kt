@@ -11,7 +11,9 @@ import ie.gaelgrounds.app.data.model.UserVisit
 import ie.gaelgrounds.app.data.model.UserVisitInsert
 import ie.gaelgrounds.app.data.service.AchievementsService
 import ie.gaelgrounds.app.data.service.MatchService
+import ie.gaelgrounds.app.data.service.RealtimeWatcher
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.realtime.RealtimeChannel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,10 +32,18 @@ data class GroundDetailUiState(
     val unlockedTitles: List<String>? = null,
 )
 
-/** Mirrors ios/GaelGrounds/Views/Grounds/GroundDetailView.swift + GroundCheckInPanel.swift (no photo upload, no realtime yet). */
+/** Mirrors ios/GaelGrounds/Views/Grounds/GroundDetailView.swift + GroundCheckInPanel.swift (no photo upload yet). */
 class GroundDetailViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(GroundDetailUiState())
     val uiState: StateFlow<GroundDetailUiState> = _uiState.asStateFlow()
+
+    private var watchChannel: RealtimeChannel? = null
+    private var watchedGroundId: String? = null
+
+    override fun onCleared() {
+        RealtimeWatcher.stop(watchChannel)
+        super.onCleared()
+    }
 
     fun load(groundId: String, userId: String?) {
         viewModelScope.launch {
@@ -80,6 +90,17 @@ class GroundDetailViewModel : ViewModel() {
             }
             loadVisitors(groundId, userId)
             _uiState.value = _uiState.value.copy(isLoading = false)
+
+            if (watchedGroundId != groundId) {
+                RealtimeWatcher.stop(watchChannel)
+                watchedGroundId = groundId
+                watchChannel = RealtimeWatcher.watch(
+                    scope = viewModelScope,
+                    table = "user_visits",
+                    filterColumn = "ground_id",
+                    filterValue = groundId,
+                ) { viewModelScope.launch { loadVisitors(groundId, userId) } }
+            }
         }
     }
 

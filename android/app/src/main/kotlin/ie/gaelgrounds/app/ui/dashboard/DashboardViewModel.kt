@@ -6,8 +6,10 @@ import ie.gaelgrounds.app.data.Supa
 import ie.gaelgrounds.app.data.model.MatchSummary
 import ie.gaelgrounds.app.data.model.UserVisit
 import ie.gaelgrounds.app.data.service.MatchService
+import ie.gaelgrounds.app.data.service.RealtimeWatcher
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.realtime.RealtimeChannel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,13 +25,21 @@ data class DashboardUiState(
     val achievementsUnlocked: Int = 0,
 )
 
-/** Mirrors ios/GaelGrounds/Views/Dashboard/DashboardView.swift (minus avatar upload and realtime). */
+/** Mirrors ios/GaelGrounds/Views/Dashboard/DashboardView.swift (minus avatar upload, which lives on Profile instead here). */
 class DashboardViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
+    private var watchChannel: RealtimeChannel? = null
+    private var hasStartedWatching = false
+
     @Serializable
     private data class GroundIdOnly(@SerialName("ground_id") val groundId: String)
+
+    override fun onCleared() {
+        RealtimeWatcher.stop(watchChannel)
+        super.onCleared()
+    }
 
     fun load(userId: String?) {
         viewModelScope.launch {
@@ -40,6 +50,13 @@ class DashboardViewModel : ViewModel() {
                 _uiState.value = _uiState.value.copy(upcoming = summaries)
             } catch (e: Exception) {
                 // Public fixtures failing to load isn't fatal to the rest of the dashboard.
+            }
+
+            if (!hasStartedWatching) {
+                hasStartedWatching = true
+                watchChannel = RealtimeWatcher.watch(scope = viewModelScope, table = "matches") {
+                    viewModelScope.launch { reloadUpcoming() }
+                }
             }
 
             if (userId != null) {
@@ -63,6 +80,16 @@ class DashboardViewModel : ViewModel() {
             }
 
             _uiState.value = _uiState.value.copy(isLoading = false)
+        }
+    }
+
+    private suspend fun reloadUpcoming() {
+        try {
+            val matches = MatchService.fetchUpcomingAndLive()
+            val summaries = MatchService.resolveSummaries(matches)
+            _uiState.value = _uiState.value.copy(upcoming = summaries)
+        } catch (e: Exception) {
+            // Leave upcoming as-is on failure.
         }
     }
 
