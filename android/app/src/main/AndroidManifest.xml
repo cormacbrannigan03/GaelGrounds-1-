@@ -23,6 +23,12 @@
             </intent-filter>
         </activity>
 
+        <!-- See MAPS_API_KEY in app/build.gradle.kts -- set it in
+             local.properties (gitignored) for the Grounds map to render. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${MAPS_API_KEY}" />
+
     </application>
 
 </manifest>

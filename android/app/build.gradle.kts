@@ -5,6 +5,18 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+// Loaded from local.properties (gitignored) so the real Maps API key is
+// never committed -- see android/README.md for the one-time setup step.
+// Falls back to an empty string, which the Maps SDK will simply reject at
+// runtime (the map won't render) rather than failing the build.
+val localProperties = java.util.Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { load(it) }
+    }
+}
+val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY", "")
+
 android {
     namespace = "ie.gaelgrounds.app"
     compileSdk = 35
@@ -15,6 +27,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
@@ -81,6 +94,12 @@ dependencies {
     // user, mirroring CLLocationManager's role in
     // ProximityCheckInService.swift.
     implementation("com.google.android.gms:play-services-location:21.3.0")
+
+    // Grounds map -- mirrors GroundsMapView.swift's MapKit view. Needs a
+    // Maps SDK for Android API key (see MAPS_API_KEY above) that isn't set
+    // up yet; the map screen won't render tiles until it is.
+    implementation("com.google.android.gms:play-services-maps:19.0.0")
+    implementation("com.google.maps.android:maps-compose:6.4.4")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

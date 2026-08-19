@@ -30,6 +30,7 @@ import ie.gaelgrounds.app.ui.counties.TeamDetailScreen
 import ie.gaelgrounds.app.ui.dashboard.DashboardScreen
 import ie.gaelgrounds.app.ui.friends.FriendsScreen
 import ie.gaelgrounds.app.ui.grounds.GroundDetailScreen
+import ie.gaelgrounds.app.ui.grounds.GroundsMapScreen
 import ie.gaelgrounds.app.ui.grounds.GroundsScreen
 import ie.gaelgrounds.app.ui.leaderboard.LeaderboardScreen
 import ie.gaelgrounds.app.ui.matches.MatchDetailScreen
@@ -65,6 +66,7 @@ object Routes {
     const val LEADERBOARD = "leaderboard"
     const val PROFILE = "profile"
     const val FRIENDS = "friends"
+    const val GROUNDS_MAP = "grounds_map"
     const val MATCH_DETAIL = "match/{matchId}"
     const val GROUND_DETAIL = "ground/{groundId}"
     const val COUNTY_DETAIL = "county/{countyId}"
@@ -131,7 +133,11 @@ fun GaelGroundsNavHost(userEmail: String?, userId: String?, onSignOut: () -> Uni
                 GroundsScreen(
                     userId = userId,
                     onOpenGround = { navController.navigate(Routes.groundDetail(it)) },
+                    onOpenMap = { navController.navigate(Routes.GROUNDS_MAP) },
                 )
+            }
+            composable(Routes.GROUNDS_MAP) {
+                GroundsMapScreen(userId = userId, onBack = { navController.popBackStack() })
             }
             composable(
                 Routes.GROUND_DETAIL,

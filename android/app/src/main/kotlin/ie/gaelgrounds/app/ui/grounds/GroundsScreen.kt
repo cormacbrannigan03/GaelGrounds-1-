@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,20 +26,29 @@ import ie.gaelgrounds.app.ui.theme.BrandGold
 import ie.gaelgrounds.app.ui.theme.gaelCard
 
 @Composable
-fun GroundsScreen(userId: String?, onOpenGround: (String) -> Unit, viewModel: GroundsViewModel = viewModel()) {
+fun GroundsScreen(
+    userId: String?,
+    onOpenGround: (String) -> Unit,
+    onOpenMap: () -> Unit = {},
+    viewModel: GroundsViewModel = viewModel(),
+) {
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(userId) { viewModel.load(userId) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            if (uiState.visitedCount > 0) {
-                "You've visited ${uiState.visitedCount} of ${uiState.grounds.size} grounds."
-            } else {
-                "Browse every intercounty ground and check in when you visit."
-            },
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                if (uiState.visitedCount > 0) {
+                    "You've visited ${uiState.visitedCount} of ${uiState.grounds.size} grounds."
+                } else {
+                    "Browse every intercounty ground and check in when you visit."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedButton(onClick = onOpenMap) { Text("Map") }
+        }
 
         OutlinedTextField(
             value = uiState.search,
