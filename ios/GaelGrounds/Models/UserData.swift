@@ -8,6 +8,13 @@ struct UserProfile: Codable, Identifiable, Hashable {
     var isPremium: Bool = false
     var premiumExpiresAt: Date?
     var bestMatchId: UUID?
+    // Explicit, opt-in consent to appear on the public Leaderboard (name +
+    // stats visible to every other signed-in user) -- defaults to false on
+    // every row, including existing premium users, per App Store guideline
+    // 5.1.2: premium status alone must never be treated as consent to
+    // publish someone's data. See LeaderboardView.swift's entries filter,
+    // which requires both isPremium and this before including someone.
+    var leaderboardOptIn: Bool = false
     let createdAt: Date?
 }
 
@@ -26,6 +33,10 @@ struct UserProfileAvatarUpdate: Encodable {
 
 struct UserProfileBestMatchUpdate: Encodable {
     let bestMatchId: UUID?
+}
+
+struct UserProfileLeaderboardOptInUpdate: Encodable {
+    let leaderboardOptIn: Bool
 }
 
 struct SupportedCountyUpdate: Encodable {
