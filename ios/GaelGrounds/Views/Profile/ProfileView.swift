@@ -74,6 +74,8 @@ struct ProfileView: View {
     @State private var channel: RealtimeChannelV2?
     @State private var pinLimitMessage: String?
     @State private var bestMatchId: UUID?
+    @State private var leaderboardOptIn = false
+    @State private var isSavingLeaderboardOptIn = false
     @State private var showingDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
     @State private var deleteAccountError: String?
@@ -204,6 +206,23 @@ struct ProfileView: View {
                     .gaelCard(cornerRadius: 14)
                 }
                 .buttonStyle(.plain)
+
+                if premium.isPremium {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle(isOn: Binding(
+                            get: { leaderboardOptIn },
+                            set: { newValue in Task { await setLeaderboardOptIn(newValue) } }
+                        )) {
+                            Text("Appear on the Leaderboard").font(.subheadline.bold())
+                        }
+                        .disabled(isSavingLeaderboardOptIn)
+                        Text("Your display name and match/ground stats will be visible to every other GaelGrounds user. Off by default — you choose to turn this on.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding()
+                    .gaelCard(cornerRadius: 14)
+                }
 
                 if isLoading {
                     ProgressView().frame(maxWidth: .infinity)
@@ -468,6 +487,28 @@ struct ProfileView: View {
         }
     }
 
+    /// The one explicit consent step before a premium user's name/stats can
+    /// appear on the public Leaderboard (App Store guideline 5.1.2).
+    /// Reverts the toggle on failure so the UI never claims a state that
+    /// didn't actually persist.
+    private func setLeaderboardOptIn(_ newValue: Bool) async {
+        guard let userId = auth.userId else { return }
+        let previous = leaderboardOptIn
+        leaderboardOptIn = newValue
+        isSavingLeaderboardOptIn = true
+        defer { isSavingLeaderboardOptIn = false }
+        do {
+            try await Supa.client
+                .from("user_profiles")
+                .update(UserProfileLeaderboardOptInUpdate(leaderboardOptIn: newValue))
+                .eq("id", value: userId)
+                .execute()
+        } catch {
+            leaderboardOptIn = previous
+            print("setLeaderboardOptIn failed: \(error)")
+        }
+    }
+
     private func deleteAccount() async {
         isDeletingAccount = true
         deleteAccountError = nil
@@ -596,6 +637,7 @@ struct ProfileView: View {
             supportedCountyId = profile.supportedCountyId
             savedSupportedCountyId = profile.supportedCountyId
             bestMatchId = profile.bestMatchId
+            leaderboardOptIn = profile.leaderboardOptIn
             if let name = profile.displayName {
                 displayName = name
                 savedName = name

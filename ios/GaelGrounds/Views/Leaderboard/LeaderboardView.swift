@@ -311,9 +311,12 @@ struct LeaderboardView: View {
             let allIds = Set(overallMatchCounts.keys).union(groundCounts.keys)
 
             // Free accounts can browse the leaderboard but never appear on
-            // it — only premium profiles are ranked.
+            // it — only premium profiles are ranked. Premium status alone
+            // is not consent to publish someone's name/stats though (App
+            // Store guideline 5.1.2) — they also have to have explicitly
+            // opted in via the toggle on their own profile.
             entries = allIds.compactMap { uid in
-                guard let profile = profileById[uid], profile.isPremium else { return nil }
+                guard let profile = profileById[uid], profile.isPremium, profile.leaderboardOptIn else { return nil }
                 let provMap = Dictionary(uniqueKeysWithValues: Province.allCases.map { ($0, provinceCounts[$0]?[uid] ?? 0) })
                 return LeaderboardEntry(
                     id: uid,
