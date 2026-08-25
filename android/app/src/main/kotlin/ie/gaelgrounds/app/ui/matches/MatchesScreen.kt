@@ -1,6 +1,7 @@
 package ie.gaelgrounds.app.ui.matches
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,11 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -37,6 +42,9 @@ import ie.gaelgrounds.app.data.model.SportCode
 import ie.gaelgrounds.app.data.model.UserPersonalMatch
 import ie.gaelgrounds.app.ui.components.MatchSummaryCard
 import ie.gaelgrounds.app.ui.theme.gaelCard
+import java.time.Month
+import java.time.format.TextStyle
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -122,12 +130,29 @@ private fun ResultsContent(
     viewModel: MatchesViewModel,
 ) {
     val hasPersonal = uiState.filteredPersonalMatches.isNotEmpty()
-    val hasOfficial = uiState.yearGroups.isNotEmpty()
+    val hasOfficial = uiState.yearGroups.isNotEmpty() || uiState.undatedResults.isNotEmpty()
 
     if (!hasPersonal && !hasOfficial) {
         Text("No results yet — check back once games have been played.", style = MaterialTheme.typography.bodyMedium)
         return
     }
+
+    // Which year/month accordions are open. Null = not yet initialized --
+    // defaults to the most recent year and, within it, its most recent
+    // month, mirroring MatchesView.swift's setDefaultExpansion().
+    var expandedYears by remember { mutableStateOf<Set<Int>?>(null) }
+    var expandedMonths by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(uiState.yearGroups) {
+        if (expandedYears == null && uiState.yearGroups.isNotEmpty()) {
+            val mostRecentYear = uiState.yearGroups.first()
+            expandedYears = setOf(mostRecentYear.year)
+            val mostRecentMonth = mostRecentYear.months.firstOrNull()?.month
+            if (mostRecentMonth != null) {
+                expandedMonths = setOf("${mostRecentYear.year}-$mostRecentMonth")
+            }
+        }
+    }
+    val openYears = expandedYears ?: emptySet()
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (hasPersonal) {
@@ -136,14 +161,70 @@ private fun ResultsContent(
                 PersonalMatchCard(match = match, onDelete = { userId?.let { viewModel.deletePersonalMatch(it, match.id) } })
             }
         }
-        uiState.yearGroups.forEach { (year, matches) ->
-            item { Text("$year (${matches.size})", style = MaterialTheme.typography.titleMedium) }
-            items(matches) { match ->
+        uiState.yearGroups.forEach { yearGroup ->
+            val totalCount = yearGroup.months.sumOf { it.matches.size }
+            val yearOpen = openYears.contains(yearGroup.year)
+            item(key = "year-${yearGroup.year}") {
+                SectionHeader(
+                    title = "${yearGroup.year}",
+                    count = totalCount,
+                    isExpanded = yearOpen,
+                    onClick = {
+                        expandedYears = if (yearOpen) openYears - yearGroup.year else openYears + yearGroup.year
+                    },
+                )
+            }
+            if (yearOpen) {
+                yearGroup.months.forEach { monthGroup ->
+                    val monthKey = "${yearGroup.year}-${monthGroup.month}"
+                    val monthOpen = expandedMonths.contains(monthKey)
+                    item(key = monthKey) {
+                        SectionHeader(
+                            title = monthName(monthGroup.month),
+                            count = monthGroup.matches.size,
+                            isExpanded = monthOpen,
+                            indented = true,
+                            onClick = {
+                                expandedMonths = if (monthOpen) expandedMonths - monthKey else expandedMonths + monthKey
+                            },
+                        )
+                    }
+                    if (monthOpen) {
+                        items(monthGroup.matches, key = { it.id }) { match ->
+                            MatchSummaryCard(match = match, onClick = { onOpenMatch(match.id) })
+                        }
+                    }
+                }
+            }
+        }
+        if (uiState.undatedResults.isNotEmpty()) {
+            item { Text("Results with no confirmed date (${uiState.undatedResults.size})", style = MaterialTheme.typography.titleMedium) }
+            items(uiState.undatedResults, key = { it.id }) { match ->
                 MatchSummaryCard(match = match, onClick = { onOpenMatch(match.id) })
             }
         }
     }
 }
+
+@Composable
+private fun SectionHeader(title: String, count: Int, isExpanded: Boolean, onClick: () -> Unit, indented: Boolean = false) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp, horizontal = if (indented) 12.dp else 0.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null)
+            Text(title, style = if (indented) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium)
+        }
+        Text("$count match${if (count == 1) "" else "es"}", style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+private fun monthName(month: Int): String =
+    if (month in 1..12) Month.of(month).getDisplayName(TextStyle.FULL, Locale.getDefault()) else "Unknown"
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

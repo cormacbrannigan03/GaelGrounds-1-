@@ -16,6 +16,9 @@ import java.time.ZoneId
 
 enum class MatchesTab { UPCOMING, FIXTURES, RESULTS }
 
+data class MonthGroup(val month: Int, val matches: List<MatchSummary>)
+data class YearGroup(val year: Int, val months: List<MonthGroup>)
+
 data class MatchesUiState(
     val isLoading: Boolean = true,
     val allMatches: List<MatchSummary> = emptyList(),
@@ -64,13 +67,29 @@ data class MatchesUiState(
     val resultsList: List<MatchSummary>
         get() = filtered.filter { it.isPast }.sortedByDescending { it.playedAt ?: "" }
 
-    val yearGroups: List<Pair<Int, List<MatchSummary>>>
+    val yearGroups: List<YearGroup>
         get() = resultsList
             .mapNotNull { m -> m.playedAt?.let { it to m } }
             .groupBy { (playedAt, _) -> yearOf(playedAt) }
-            .mapValues { (_, pairs) -> pairs.map { it.second } }
-            .toList()
-            .sortedByDescending { it.first }
+            .map { (year, pairs) ->
+                val months = pairs
+                    .groupBy { (playedAt, _) -> monthOf(playedAt) }
+                    .map { (month, monthPairs) ->
+                        MonthGroup(
+                            month = month,
+                            matches = monthPairs.map { it.second }.sortedByDescending { it.playedAt ?: "" },
+                        )
+                    }
+                    .sortedByDescending { it.month }
+                YearGroup(year = year, months = months)
+            }
+            .sortedByDescending { it.year }
+
+    /** Results with no confirmed date -- mirrors iOS's `undatedResults`, shown in their own section instead of silently dropped from `yearGroups`. */
+    val undatedResults: List<MatchSummary>
+        get() = resultsList
+            .filter { it.playedAt == null }
+            .sortedWith(compareBy({ it.competition ?: "" }, { it.homeName }, { it.awayName }))
 
     val filteredPersonalMatches: List<UserPersonalMatch>
         get() {
@@ -113,10 +132,16 @@ data class MatchesUiState(
         } catch (e: Exception) {
             0
         }
+
+        private fun monthOf(iso: String): Int = try {
+            Instant.parse(iso).atZone(ZoneId.systemDefault()).monthValue
+        } catch (e: Exception) {
+            0
+        }
     }
 }
 
-/** Port of ios/GaelGrounds/Views/Matches/MatchesView.swift -- month-level sub-grouping within a year isn't ported, just year-level, see android/README.md. */
+/** Port of ios/GaelGrounds/Views/Matches/MatchesView.swift's Results tab -- year groups sub-grouped by month, most-recent-first, matching `yearGroups` in the Swift view. */
 class MatchesViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(MatchesUiState())
     val uiState: StateFlow<MatchesUiState> = _uiState.asStateFlow()
