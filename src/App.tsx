@@ -12,6 +12,7 @@ import MatchDetail from './pages/MatchDetail'
 import Profile from './pages/Profile'
 import Friends from './pages/Friends'
 import Leaderboard from './pages/Leaderboard'
+import Premium from './pages/Premium'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
             }
           />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/premium" element={<Premium />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

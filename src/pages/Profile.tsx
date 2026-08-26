@@ -8,6 +8,22 @@ type VisitedGround = { groundId: string; name: string; visitCount: number; lastV
 type AttendedMatch = { id: string; matchId: string; competition: string | null; played_at: string; homeName: string; awayName: string }
 type Achievement = { id: string; title: string; description: string; icon: string | null; unlocked_at: string; pinned: boolean }
 
+function PremiumBadge({ isPremium, premiumExpiresAt }: { isPremium: boolean; premiumExpiresAt: string | null }) {
+  if (isPremium) {
+    return (
+      <Link to="/premium" className="card best-game-card">
+        <strong>⭐ Premium member</strong>
+        {premiumExpiresAt && <span className="muted small"> · renews {formatShortDate(premiumExpiresAt)}</span>}
+      </Link>
+    )
+  }
+  return (
+    <Link to="/premium" className="card best-game-card">
+      <strong>Go Premium — €1.99/month</strong>
+    </Link>
+  )
+}
+
 const MAX_PINNED_ACHIEVEMENTS = 4
 
 export default function Profile() {
@@ -18,6 +34,8 @@ export default function Profile() {
   const [matches, setMatches] = useState<AttendedMatch[]>([])
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [bestMatchId, setBestMatchId] = useState<string | null>(null)
+  const [isPremium, setIsPremium] = useState(false)
+  const [premiumExpiresAt, setPremiumExpiresAt] = useState<string | null>(null)
   const [pinLimitMessage, setPinLimitMessage] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -33,7 +51,11 @@ export default function Profile() {
 
     async function load() {
       const [{ data: profile }, { data: visits }, { data: attendance }, { data: userAch }] = await Promise.all([
-        supabase.from('user_profiles').select('display_name, best_match_id, avatar_url').eq('id', user!.id).single(),
+        supabase
+          .from('user_profiles')
+          .select('display_name, best_match_id, avatar_url, is_premium, premium_expires_at')
+          .eq('id', user!.id)
+          .single(),
         supabase
           .from('user_visits')
           .select('id, ground_id, visited_at')
@@ -59,6 +81,8 @@ export default function Profile() {
       }
       setBestMatchId(profile?.best_match_id ?? null)
       setAvatarUrl(profile?.avatar_url ?? null)
+      setIsPremium(profile?.is_premium ?? false)
+      setPremiumExpiresAt(profile?.premium_expires_at ?? null)
 
       const groundIds = [...new Set((visits ?? []).map((v) => v.ground_id))]
       const { data: groundRows } = groundIds.length
@@ -291,6 +315,8 @@ export default function Profile() {
           <span className="stat-label">Achievements</span>
         </div>
       </section>
+
+      <PremiumBadge isPremium={isPremium} premiumExpiresAt={premiumExpiresAt} />
 
       <Link to="/friends" className="card best-game-card friends-link">
         <strong>👥 Friends</strong>
