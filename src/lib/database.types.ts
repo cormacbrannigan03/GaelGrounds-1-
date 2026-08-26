@@ -930,7 +930,10 @@ export type Database = {
           display_name: string | null
           id: string
           is_premium: boolean
+          leaderboard_opt_in: boolean
           premium_expires_at: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           supported_county_id: string | null
         }
         Insert: {
@@ -940,7 +943,10 @@ export type Database = {
           display_name?: string | null
           id: string
           is_premium?: boolean
+          leaderboard_opt_in?: boolean
           premium_expires_at?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           supported_county_id?: string | null
         }
         Update: {
@@ -950,7 +956,10 @@ export type Database = {
           display_name?: string | null
           id?: string
           is_premium?: boolean
+          leaderboard_opt_in?: boolean
           premium_expires_at?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           supported_county_id?: string | null
         }
         Relationships: [

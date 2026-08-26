@@ -27,6 +27,9 @@ export default function Navbar() {
             <NavLink to="/leaderboard" className={({ isActive }) => (isActive ? 'active' : '')}>
               Leaderboard
             </NavLink>
+            <NavLink to="/premium" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Premium
+            </NavLink>
             <NavLink to="/friends" className={({ isActive }) => (isActive ? 'active' : '')}>
               Friends
             </NavLink>
