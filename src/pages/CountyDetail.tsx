@@ -87,13 +87,13 @@ export default function CountyDetail() {
         <h2>Intercounty teams</h2>
         <div className="card-grid">
           {teams.map((t) => (
-            <div key={t.id} className="card">
+            <Link key={t.id} to={`/counties/${id}/teams/${t.id}`} className="card">
               <h3>
                 {SPORT_ICONS[t.sport_code]} {SPORT_LABELS[t.sport_code]}
               </h3>
               {t.founded_year && <p className="muted small">Founded {t.founded_year}</p>}
               {t.current_manager && <p className="muted small">Manager: {t.current_manager}</p>}
-            </div>
+            </Link>
           ))}
         </div>
       </section>

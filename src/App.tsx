@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard'
 import AuthPage from './pages/AuthPage'
 import Counties from './pages/Counties'
 import CountyDetail from './pages/CountyDetail'
+import TeamDetail from './pages/TeamDetail'
 import Grounds from './pages/Grounds'
 import GroundDetail from './pages/GroundDetail'
 import Matches from './pages/Matches'
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/counties" element={<Counties />} />
           <Route path="/counties/:id" element={<CountyDetail />} />
+          <Route path="/counties/:countyId/teams/:teamId" element={<TeamDetail />} />
           <Route path="/grounds" element={<Grounds />} />
           <Route path="/grounds/:id" element={<GroundDetail />} />
           <Route path="/matches" element={<Matches />} />
