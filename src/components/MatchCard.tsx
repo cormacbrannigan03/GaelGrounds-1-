@@ -4,7 +4,7 @@ import { formatMatchDate, hexToRgbTriplet, isLive, isUpcoming, type CountyColour
 export type MatchCardData = {
   id: string
   competition: string | null
-  played_at: string
+  played_at: string | null
   home_score: string | null
   away_score: string | null
   homeName: string
@@ -30,8 +30,8 @@ function sideWash(colours: CountyColours | null | undefined, direction: 'right' 
 
 export default function MatchCard({ match }: { match: MatchCardData }) {
   const hasScore = Boolean(match.home_score && match.away_score)
-  const live = isLive(match.played_at, hasScore)
-  const upcoming = isUpcoming(match.played_at, hasScore)
+  const live = match.played_at ? isLive(match.played_at, hasScore) : false
+  const upcoming = match.played_at ? isUpcoming(match.played_at, hasScore) : false
 
   const washLayers = [sideWash(match.homeColours, 'right'), sideWash(match.awayColours, 'left')].filter(
     (layer): layer is string => layer !== null,
@@ -51,7 +51,7 @@ export default function MatchCard({ match }: { match: MatchCardData }) {
         <span className="team-name">{match.awayName}</span>
       </div>
       <div className="match-card-meta">
-        <span>{formatMatchDate(match.played_at)}</span>
+        <span>{match.played_at ? formatMatchDate(match.played_at) : 'Date to be confirmed'}</span>
         {match.groundName && <span>· {match.groundName}</span>}
         {typeof match.attendeeCount === 'number' && (
           <span className="attendee-pill">👥 {match.attendeeCount} checked in</span>
