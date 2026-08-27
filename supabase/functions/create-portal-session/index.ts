@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
   try {
     const stripe = createStripeClient();
-    const origin = req.headers.get("origin") ?? "https://gaelgrounds.app";
+    const origin = req.headers.get("origin") ?? "https://app.gaelgrounds.ie";
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
       return_url: `${origin}/profile`,

@@ -1,0 +1,61 @@
+name: Deploy web app to GitHub Pages
+
+# Only reruns when something under the React app actually changed --
+# this repo also holds the iOS project, the Android app's own repo
+# split out separately, and the Supabase backend, none of which should
+# trigger a rebuild of app.gaelgrounds.ie.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - "tsconfig*.json"
+      - ".github/workflows/deploy-app.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # GitHub Pages has no server-side rewrites, so a direct load or
+      # refresh of a client-side route (e.g. app.gaelgrounds.ie/premium)
+      # 404s by default. Serving the same built index.html as the 404
+      # page is the standard fix for a BrowserRouter SPA on Pages: the
+      # app boots normally from whatever path was requested, and React
+      # Router then reads window.location itself.
+      - run: cp dist/index.html dist/404.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
