@@ -13,6 +13,7 @@ import GroundDetail from './pages/GroundDetail'
 import Matches from './pages/Matches'
 import MatchDetail from './pages/MatchDetail'
 import Profile from './pages/Profile'
+import Achievements from './pages/Achievements'
 import Friends from './pages/Friends'
 import Leaderboard from './pages/Leaderboard'
 import Premium from './pages/Premium'
@@ -77,6 +78,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Friends />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/achievements"
+            element={
+              <ProtectedRoute>
+                <Achievements />
               </ProtectedRoute>
             }
           />
