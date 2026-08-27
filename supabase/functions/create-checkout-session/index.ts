@@ -89,6 +89,7 @@ Deno.serve(async (req) => {
     return json({ url: session.url });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    console.error("create-checkout-session failed:", message);
     return json({ error: message }, 500);
   }
 });
