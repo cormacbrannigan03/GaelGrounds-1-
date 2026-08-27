@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { supabase, withAuthTimeout, clearStaleSession } from '../lib/supabaseClient'
+import { supabase, withAuthTimeout } from '../lib/supabaseClient'
 
 export type SupportedCounty = {
   id: string
@@ -34,16 +34,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // forever -- every page gated on it (ProtectedRoute, and the
     // auth-dependent bits of every other page) would then be stuck
     // showing its own loading state indefinitely, with no error and no
-    // way out short of a page reload. On any failure, also clear local
-    // session storage so a poisoned token can't keep failing the same
-    // way on every future visit -- the next sign-in starts clean instead.
+    // way out short of a page reload.
+    //
+    // Deliberately does NOT clear local session storage on failure here.
+    // getSession() only hits the network at all when the stored access
+    // token has expired and needs a background refresh -- and switching
+    // networks (e.g. turning off WiFi to fall back to cellular) causes
+    // exactly the kind of brief connectivity gap that trips this timeout,
+    // even though the stored refresh token is still perfectly valid. An
+    // earlier version wiped storage here on any timeout, which actively
+    // logged a signed-in user out the moment their network blipped --
+    // far worse than the stuck-loading bug it was meant to fix. The
+    // underlying getSession() call isn't cancelled by the timeout, so it
+    // keeps running and, if the stored token really is valid, its result
+    // still lands via the onAuthStateChange subscription below once the
+    // network recovers.
     withAuthTimeout(supabase.auth.getSession())
       .then(({ data }) => {
         setSession(data.session)
         setLoading(false)
       })
       .catch(() => {
-        clearStaleSession()
         setLoading(false)
       })
 
