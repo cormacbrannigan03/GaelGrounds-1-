@@ -343,6 +343,12 @@ main {
   margin-bottom: 1.5rem;
 }
 
+.county-nickname {
+  font-style: italic;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
 .section-header {
   display: flex;
   align-items: baseline;

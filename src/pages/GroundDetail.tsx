@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import GroundCheckInPanel from '../components/GroundCheckInPanel'
+import { useCountyPageBackground } from '../hooks/useCountyPageBackground'
 
 type Ground = { id: string; name: string; capacity: number | null; county_id: string; latitude: number; longitude: number }
-type County = { id: string; name: string }
+type County = { id: string; name: string; primary_colour: string | null; secondary_colour: string | null }
 
 export default function GroundDetail() {
   const { id } = useParams<{ id: string }>()
@@ -27,7 +28,11 @@ export default function GroundDetail() {
           return
         }
         setGround(data)
-        const { data: countyData } = await supabase.from('counties').select('id, name').eq('id', data.county_id).single()
+        const { data: countyData } = await supabase
+          .from('counties')
+          .select('id, name, primary_colour, secondary_colour')
+          .eq('id', data.county_id)
+          .single()
         if (!cancelled) {
           setCounty(countyData)
           setLoading(false)
@@ -38,6 +43,8 @@ export default function GroundDetail() {
       cancelled = true
     }
   }, [id])
+
+  useCountyPageBackground(county?.primary_colour, county?.secondary_colour)
 
   if (loading) return <div className="page"><p className="muted">Loading…</p></div>
   if (!ground) return <div className="page"><p>Ground not found.</p></div>

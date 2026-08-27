@@ -3,8 +3,16 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import type { Enums } from '../lib/database.types'
 import { SPORT_LABELS, SPORT_ICONS } from '../lib/format'
+import { useCountyPageBackground } from '../hooks/useCountyPageBackground'
 
-type County = { id: string; name: string; province: Enums<'province'>; primary_colour: string | null }
+type County = {
+  id: string
+  name: string
+  province: Enums<'province'>
+  primary_colour: string | null
+  secondary_colour: string | null
+  nickname: string | null
+}
 type TeamRow = { id: string; sport_code: Enums<'sport_code'>; founded_year: number | null; current_manager: string | null }
 type GroundRow = { id: string; name: string; capacity: number | null }
 type HonourRow = {
@@ -29,7 +37,7 @@ export default function CountyDetail() {
 
     async function load() {
       const [{ data: countyData }, { data: teamData }, { data: groundData }] = await Promise.all([
-        supabase.from('counties').select('id, name, province, primary_colour').eq('id', id!).single(),
+        supabase.from('counties').select('id, name, province, primary_colour, secondary_colour, nickname').eq('id', id!).single(),
         supabase.from('county_teams').select('id, sport_code, founded_year, current_manager').eq('county_id', id!),
         supabase.from('grounds').select('id, name, capacity').eq('county_id', id!),
       ])
@@ -58,6 +66,8 @@ export default function CountyDetail() {
     }
   }, [id])
 
+  useCountyPageBackground(county?.primary_colour, county?.secondary_colour)
+
   if (loading) return <div className="page"><p className="muted">Loading…</p></div>
   if (!county) return <div className="page"><p>County not found.</p></div>
 
@@ -66,6 +76,7 @@ export default function CountyDetail() {
       <div className="page-header" style={{ borderColor: county.primary_colour ?? undefined }}>
         <h1>{county.name}</h1>
         <p className="muted">{county.province}</p>
+        {county.nickname && <p className="county-nickname">{county.nickname}</p>}
       </div>
 
       <section>
