@@ -640,6 +640,44 @@ main {
   text-transform: uppercase;
 }
 
+.ground-photos {
+  margin: 1rem 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.ground-photos-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+}
+
+.ground-photos-header h4 {
+  margin: 0 0 0.15rem;
+}
+
+.ground-photo-upload {
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ground-photos-strip {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.ground-photo-thumb {
+  width: 120px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
 .toast {
   background: linear-gradient(135deg, var(--gold), #f0c674);
   color: #2a1e00;
