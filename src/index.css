@@ -5,8 +5,11 @@
   --muted: #5b6b60;
   --border: #e2e6e2;
   --green: #0b3d2e;
+  --green-rgb: 11, 61, 46;
   --green-light: #14603f;
+  --green-light-rgb: 20, 96, 63;
   --gold: #d9a441;
+  --gold-rgb: 217, 164, 65;
   --red: #b3261e;
   --live: #d64545;
   --radius: 14px;
@@ -22,8 +25,11 @@
     --muted: #9db3a4;
     --border: #26362c;
     --green: #1b6b4c;
+    --green-rgb: 27, 107, 76;
     --green-light: #218a5f;
+    --green-light-rgb: 33, 138, 95;
     --gold: #e3b45a;
+    --gold-rgb: 227, 180, 90;
     color-scheme: dark;
   }
 }
@@ -40,10 +46,21 @@ body,
 
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--text);
   font-family: 'Segoe UI', ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* Matches ios/GaelGrounds/Utilities/Theme.swift's gaelGroundsBackground()
+     -- a faint green-to-gold diagonal wash over the base canvas colour,
+     used app-wide there but only ever a flat --bg here until now. */
+  background-color: var(--bg);
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--green-rgb), 0.24) 0%,
+    rgba(var(--green-rgb), 0) 34%,
+    rgba(var(--gold-rgb), 0) 72%,
+    rgba(var(--gold-rgb), 0.13) 100%
+  );
+  background-attachment: fixed;
 }
 
 a {
@@ -283,10 +300,14 @@ main {
 .card {
   display: block;
   background-color: var(--surface);
-  border: 1px solid var(--border);
+  /* Green-tinted border + shadow, matching gaelCard() in
+     ios/GaelGrounds/Utilities/Theme.swift (brandBorder = brandGreenLight
+     @ 16%, shadow = brandGreen @ 7%) -- previously a flat neutral
+     --border/--shadow, which read as generic rather than "GaelGrounds". */
+  border: 1px solid rgba(var(--green-light-rgb), 0.16);
   border-radius: var(--radius);
   padding: 1rem;
-  box-shadow: var(--shadow);
+  box-shadow: 0 3px 8px rgba(var(--green-rgb), 0.07);
   color: var(--text);
 }
 
@@ -812,6 +833,51 @@ label {
   background: var(--green);
   color: white;
   border-color: var(--green);
+}
+
+/* Results tab: year -> month collapsible groups, matching MatchesView.swift
+   and the Android port's yearGroups/monthGroups structure. */
+.results-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.results-year {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.results-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid rgba(var(--green-light-rgb), 0.16);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  box-shadow: 0 3px 8px rgba(var(--green-rgb), 0.07);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.results-month-header {
+  margin-left: 1.25rem;
+  font-size: 0.95rem;
+  padding: 0.6rem 0.9rem;
+  box-shadow: none;
+}
+
+.results-month {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 /* Profile */

@@ -6,7 +6,7 @@ import { isUpcoming } from '../lib/format'
 type MatchRow = {
   id: string
   competition: string | null
-  played_at: string
+  played_at: string | null
   home_score: string | null
   away_score: string | null
   ground_id: string | null
@@ -14,11 +14,23 @@ type MatchRow = {
   away_county_team_id: string | null
 }
 
+type Tab = 'upcoming' | 'fixtures' | 'results'
+
+type MonthGroup = { month: number; matches: MatchCardData[] }
+type YearGroup = { year: number; months: MonthGroup[] }
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
 export default function Matches() {
   const [matches, setMatches] = useState<MatchCardData[]>([])
-  const [filter, setFilter] = useState<'all' | 'upcoming' | 'results'>('all')
+  const [tab, setTab] = useState<Tab>('upcoming')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [expandedYears, setExpandedYears] = useState<Set<number> | null>(null)
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -94,25 +106,89 @@ export default function Matches() {
     }
   }, [])
 
-  const filtered = useMemo(() => {
-    let list = matches
-    if (filter === 'upcoming') list = list.filter((m) => isUpcoming(m.played_at, Boolean(m.home_score && m.away_score)))
-    else if (filter === 'results') list = list.filter((m) => Boolean(m.home_score && m.away_score))
-
+  const searchFiltered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (q) {
-      list = list.filter(
-        (m) =>
-          m.homeName.toLowerCase().includes(q) ||
-          m.awayName.toLowerCase().includes(q) ||
-          (m.competition ?? '').toLowerCase().includes(q) ||
-          (m.groundName ?? '').toLowerCase().includes(q) ||
-          new Date(m.played_at).getFullYear().toString() === q,
-      )
-    }
+    if (!q) return matches
+    return matches.filter(
+      (m) =>
+        m.homeName.toLowerCase().includes(q) ||
+        m.awayName.toLowerCase().includes(q) ||
+        (m.competition ?? '').toLowerCase().includes(q) ||
+        (m.groundName ?? '').toLowerCase().includes(q) ||
+        (m.played_at && new Date(m.played_at).getFullYear().toString() === q),
+    )
+  }, [matches, search])
 
-    return list
-  }, [matches, filter, search])
+  // Upcoming and Fixtures show the same list -- matching MatchesView.swift
+  // and the Android port, where both tabs are separate entry points onto
+  // identical content rather than two different filters.
+  const upcomingList = useMemo(
+    () =>
+      searchFiltered
+        .filter((m) => !Boolean(m.home_score && m.away_score) && m.played_at && isUpcoming(m.played_at, false))
+        .sort((a, b) => (a.played_at ?? '').localeCompare(b.played_at ?? '')),
+    [searchFiltered],
+  )
+
+  const resultsList = useMemo(
+    () => searchFiltered.filter((m) => Boolean(m.home_score && m.away_score)),
+    [searchFiltered],
+  )
+
+  const yearGroups = useMemo<YearGroup[]>(() => {
+    const byYear = new Map<number, Map<number, MatchCardData[]>>()
+    for (const m of resultsList) {
+      if (!m.played_at) continue
+      const d = new Date(m.played_at)
+      const year = d.getFullYear()
+      const month = d.getMonth() + 1
+      if (!byYear.has(year)) byYear.set(year, new Map())
+      const byMonth = byYear.get(year)!
+      if (!byMonth.has(month)) byMonth.set(month, [])
+      byMonth.get(month)!.push(m)
+    }
+    return [...byYear.entries()]
+      .map(([year, byMonth]) => ({
+        year,
+        months: [...byMonth.entries()]
+          .map(([month, ms]) => ({
+            month,
+            matches: [...ms].sort((a, b) => (b.played_at ?? '').localeCompare(a.played_at ?? '')),
+          }))
+          .sort((a, b) => b.month - a.month),
+      }))
+      .sort((a, b) => b.year - a.year)
+  }, [resultsList])
+
+  const undatedResults = useMemo(() => resultsList.filter((m) => !m.played_at), [resultsList])
+
+  useEffect(() => {
+    if (expandedYears === null && yearGroups.length > 0) {
+      const mostRecent = yearGroups[0]
+      setExpandedYears(new Set([mostRecent.year]))
+      if (mostRecent.months.length > 0) {
+        setExpandedMonths(new Set([`${mostRecent.year}-${mostRecent.months[0].month}`]))
+      }
+    }
+  }, [yearGroups, expandedYears])
+
+  const openYears = expandedYears ?? new Set<number>()
+
+  function toggleYear(year: number) {
+    const next = new Set(openYears)
+    if (next.has(year)) next.delete(year)
+    else next.add(year)
+    setExpandedYears(next)
+  }
+
+  function toggleMonth(key: string) {
+    const next = new Set(expandedMonths)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    setExpandedMonths(next)
+  }
+
+  const displayedList = tab === 'results' ? null : upcomingList
 
   return (
     <div className="page">
@@ -127,26 +203,88 @@ export default function Matches() {
         onChange={(e) => setSearch(e.target.value)}
       />
       <div className="filter-tabs">
-        <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>
-          All
-        </button>
-        <button className={filter === 'upcoming' ? 'active' : ''} onClick={() => setFilter('upcoming')}>
+        <button className={tab === 'upcoming' ? 'active' : ''} onClick={() => setTab('upcoming')}>
           Upcoming
         </button>
-        <button className={filter === 'results' ? 'active' : ''} onClick={() => setFilter('results')}>
+        <button className={tab === 'fixtures' ? 'active' : ''} onClick={() => setTab('fixtures')}>
+          Fixtures
+        </button>
+        <button className={tab === 'results' ? 'active' : ''} onClick={() => setTab('results')}>
           Results
         </button>
       </div>
 
       {loading ? (
         <p className="muted">Loading matches…</p>
-      ) : filtered.length === 0 ? (
-        <p className="muted">No matches to show.</p>
+      ) : tab !== 'results' ? (
+        displayedList && displayedList.length === 0 ? (
+          <p className="muted">No matches to show.</p>
+        ) : (
+          <div className="card-grid">
+            {displayedList!.map((m) => (
+              <MatchCard key={m.id} match={m} />
+            ))}
+          </div>
+        )
+      ) : yearGroups.length === 0 && undatedResults.length === 0 ? (
+        <p className="muted">No results yet — check back once games have been played.</p>
       ) : (
-        <div className="card-grid">
-          {filtered.map((m) => (
-            <MatchCard key={m.id} match={m} />
-          ))}
+        <div className="results-groups">
+          {yearGroups.map((yg) => {
+            const isOpen = openYears.has(yg.year)
+            const total = yg.months.reduce((sum, mo) => sum + mo.matches.length, 0)
+            return (
+              <div key={yg.year} className="results-year">
+                <button className="results-group-header" onClick={() => toggleYear(yg.year)}>
+                  <span>
+                    {isOpen ? '▾' : '▸'} {yg.year}
+                  </span>
+                  <span className="muted small">
+                    {total} match{total === 1 ? '' : 'es'}
+                  </span>
+                </button>
+                {isOpen &&
+                  yg.months.map((mo) => {
+                    const key = `${yg.year}-${mo.month}`
+                    const monthOpen = expandedMonths.has(key)
+                    return (
+                      <div key={key} className="results-month">
+                        <button className="results-group-header results-month-header" onClick={() => toggleMonth(key)}>
+                          <span>
+                            {monthOpen ? '▾' : '▸'} {MONTH_NAMES[mo.month - 1]}
+                          </span>
+                          <span className="muted small">
+                            {mo.matches.length} match{mo.matches.length === 1 ? '' : 'es'}
+                          </span>
+                        </button>
+                        {monthOpen && (
+                          <div className="card-grid">
+                            {mo.matches.map((m) => (
+                              <MatchCard key={m.id} match={m} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+              </div>
+            )
+          })}
+          {undatedResults.length > 0 && (
+            <div className="results-year">
+              <div className="results-group-header">
+                <span>No confirmed date</span>
+                <span className="muted small">
+                  {undatedResults.length} match{undatedResults.length === 1 ? '' : 'es'}
+                </span>
+              </div>
+              <div className="card-grid">
+                {undatedResults.map((m) => (
+                  <MatchCard key={m.id} match={m} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
