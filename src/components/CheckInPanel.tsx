@@ -95,6 +95,10 @@ export default function CheckInPanel({ matchId, isPast = false }: { matchId: str
     setBusy(true)
     await supabase.from('user_match_attendance').delete().eq('id', myAttendanceId)
     await loadAttendees()
+    // Undoing a check-in can drop a count-based achievement back below its
+    // threshold -- evaluate() revokes as well as grants, so this is the
+    // only way a stale achievement ever gets cleaned up.
+    await evaluate()
     setBusy(false)
   }
 

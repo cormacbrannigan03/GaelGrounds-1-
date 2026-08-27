@@ -4,10 +4,13 @@ import { supabase } from '../lib/supabaseClient'
 type RuleParams = { count?: number }
 
 /**
- * Evaluates achievement_definitions.rule_type against the signed-in user's
- * current stats and inserts any newly-earned rows into user_achievements.
- * Safe to call after every check-in — insert is idempotent via the
- * (user_id, achievement_id) lookup below, and RLS still enforces user_id = auth.uid().
+ * Reconciles achievement_definitions.rule_type against the signed-in user's
+ * current stats -- in both directions. Grants anything newly qualified, and
+ * just as importantly, revokes anything previously granted that no longer
+ * qualifies (e.g. undoing the one check-in that had put a match count over
+ * a threshold). Call this after every check-in AND every undo/checkout --
+ * unlike a grant-only evaluator, this one has to run on both, since only
+ * re-running it can catch something that stopped qualifying.
  */
 export function useAchievements(userId: string | undefined) {
   const evaluate = useCallback(async (): Promise<string[]> => {
@@ -15,14 +18,14 @@ export function useAchievements(userId: string | undefined) {
 
     const [{ data: defs }, { data: already }, { data: visits }, { data: attendance }] = await Promise.all([
       supabase.from('achievement_definitions').select('*'),
-      supabase.from('user_achievements').select('achievement_id').eq('user_id', userId),
+      supabase.from('user_achievements').select('id, achievement_id').eq('user_id', userId),
       supabase.from('user_visits').select('ground_id').eq('user_id', userId),
       supabase.from('user_match_attendance').select('id').eq('user_id', userId),
     ])
 
     if (!defs) return []
 
-    const unlockedIds = new Set((already ?? []).map((a) => a.achievement_id))
+    const unlockedRowByAchievementId = new Map((already ?? []).map((a) => [a.achievement_id, a.id]))
     const groundIds = [...new Set((visits ?? []).map((v) => v.ground_id))]
     const groundCount = groundIds.length
     const matchCount = (attendance ?? []).length
@@ -39,32 +42,43 @@ export function useAchievements(userId: string | undefined) {
 
     const newlyUnlocked: { achievement_id: string; user_id: string }[] = []
     const newTitles: string[] = []
+    const revokedRowIds: string[] = []
 
     for (const def of defs) {
-      if (unlockedIds.has(def.id)) continue
       const params = (def.rule_params ?? {}) as RuleParams
-      let earned = false
+      let qualifies = false
 
       switch (def.rule_type) {
         case 'ground_visit_count':
-          earned = groundCount >= (params.count ?? 1)
+          qualifies = groundCount >= (params.count ?? 1)
           break
         case 'match_attendance_count':
-          earned = matchCount >= (params.count ?? 1)
+          qualifies = matchCount >= (params.count ?? 1)
           break
         case 'all_provinces_visited':
-          earned = provinces.size >= 4
+          qualifies = provinces.size >= 4
           break
+        default:
+          // A rule type this hook doesn't know how to evaluate -- leave
+          // whatever's already there alone rather than guessing wrong and
+          // revoking something it shouldn't.
+          continue
       }
 
-      if (earned) {
+      const existingRowId = unlockedRowByAchievementId.get(def.id)
+      if (qualifies && !existingRowId) {
         newlyUnlocked.push({ achievement_id: def.id, user_id: userId })
         newTitles.push(def.title)
+      } else if (!qualifies && existingRowId) {
+        revokedRowIds.push(existingRowId)
       }
     }
 
     if (newlyUnlocked.length > 0) {
       await supabase.from('user_achievements').insert(newlyUnlocked)
+    }
+    if (revokedRowIds.length > 0) {
+      await supabase.from('user_achievements').delete().in('id', revokedRowIds)
     }
 
     return newTitles
