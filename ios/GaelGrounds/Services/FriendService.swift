@@ -92,12 +92,19 @@ enum FriendService {
             .execute()
     }
 
+    // friendships.status has a CHECK constraint allowing only "pending" and
+    // "accepted" -- there's no "declined" value, so declining deletes the
+    // row instead of writing a status the database would reject outright.
     static func respondToRequest(friendshipId: UUID, accept: Bool) async throws {
-        try await Supa.client
-            .from("friendships")
-            .update(FriendshipStatusUpdate(status: accept ? "accepted" : "declined"))
-            .eq("id", value: friendshipId)
-            .execute()
+        if accept {
+            try await Supa.client
+                .from("friendships")
+                .update(FriendshipStatusUpdate(status: "accepted"))
+                .eq("id", value: friendshipId)
+                .execute()
+        } else {
+            try await removeFriendship(id: friendshipId)
+        }
     }
 
     static func removeFriendship(id: UUID) async throws {

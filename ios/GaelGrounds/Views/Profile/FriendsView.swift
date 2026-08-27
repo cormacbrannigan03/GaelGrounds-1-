@@ -29,6 +29,12 @@ struct FriendsView: View {
                                 Text("Sent you a friend request").font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer()
+                            Button("Decline") {
+                                Task { await declineRequest(req.id) }
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .tint(.secondary)
                             Button("Accept") {
                                 Task { await acceptRequest(req.id) }
                             }
@@ -192,6 +198,24 @@ struct FriendsView: View {
             await load()
         } catch {
             print("acceptRequest failed: \(error)")
+        }
+    }
+
+    // friendships.status has a CHECK constraint allowing only "pending" and
+    // "accepted" -- there's no "declined" value, so this deletes the row
+    // instead (the RLS delete policy already allows either party to). The
+    // unique(requester_id, addressee_id) constraint means the same person
+    // can send a fresh request later, which reads better anyway.
+    private func declineRequest(_ friendshipId: UUID) async {
+        do {
+            try await Supa.client
+                .from("friendships")
+                .delete()
+                .eq("id", value: friendshipId)
+                .execute()
+            await load()
+        } catch {
+            print("declineRequest failed: \(error)")
         }
     }
 }
