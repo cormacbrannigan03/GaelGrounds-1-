@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useAuth } from './context/AuthContext'
+import { useBackground } from './context/BackgroundContext'
 import { hexToRgbTriplet } from './lib/format'
 import Dashboard from './pages/Dashboard'
 import AuthPage from './pages/AuthPage'
@@ -24,14 +25,18 @@ const DEFAULT_SECONDARY = '#d9a441'
 
 export default function App() {
   const { supportedCounty } = useAuth()
+  const { override } = useBackground()
 
   // Mirrors countyBackground(_:) in ios/GaelGrounds/Utilities/Theme.swift --
   // same four gradient stops, same diagonal direction. When no county is
   // set this intentionally matches the default green/gold wash already on
   // body (see index.css), just re-applied here so switching a supported
   // county on/off doesn't leave a visible seam between the two layers.
-  const primary = supportedCounty?.primaryColour ?? DEFAULT_PRIMARY
-  const secondary = supportedCounty?.secondaryColour ?? DEFAULT_SECONDARY
+  // `override` is set by useCountyPageBackground() on detail pages that,
+  // like CountyDetailView/GroundDetailView on iOS, tint the page with a
+  // specific county's own colours instead of the signed-in user's.
+  const primary = override?.primary ?? supportedCounty?.primaryColour ?? DEFAULT_PRIMARY
+  const secondary = override?.secondary ?? supportedCounty?.secondaryColour ?? DEFAULT_SECONDARY
   const countyBackground = {
     backgroundImage: `linear-gradient(135deg,
       rgba(${hexToRgbTriplet(primary)}, 0.94) 0%,
