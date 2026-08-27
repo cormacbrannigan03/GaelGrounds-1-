@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       await admin.from("user_profiles").update({ stripe_customer_id: customerId }).eq("id", user.id);
     }
 
-    const origin = req.headers.get("origin") ?? "https://gaelgrounds.app";
+    const origin = req.headers.get("origin") ?? "https://app.gaelgrounds.ie";
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
