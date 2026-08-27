@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import MatchCard, { type MatchCardData } from '../components/MatchCard'
-import { isUpcoming } from '../lib/format'
+import { isUpcoming, SPORT_ICONS, SPORT_LABELS } from '../lib/format'
+import type { Enums } from '../lib/database.types'
+
+type SportCode = Enums<'sport_code'>
 
 type MatchRow = {
   id: string
@@ -14,9 +17,11 @@ type MatchRow = {
   away_county_team_id: string | null
 }
 
+type MatchCardWithSport = MatchCardData & { sportCode: SportCode | null }
+
 type Tab = 'upcoming' | 'fixtures' | 'results'
 
-type MonthGroup = { month: number; matches: MatchCardData[] }
+type MonthGroup = { month: number; matches: MatchCardWithSport[] }
 type YearGroup = { year: number; months: MonthGroup[] }
 
 const MONTH_NAMES = [
@@ -24,8 +29,35 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
+const PAGE_SIZE = 1000
+
+// PostgREST (Supabase's data API) caps any single request at 1000 rows by
+// default -- an unbounded .select() silently truncates rather than erroring,
+// so a plain query only ever returned the most recent ~1000 matches
+// (ordered newest-first, so everything older than that just never arrived).
+// This fetches every page until one comes back short.
+async function fetchAllRows<T>(
+  table: string,
+  select: string,
+  configure?: (q: any) => any,
+): Promise<T[]> {
+  const rows: T[] = []
+  let from = 0
+  while (true) {
+    let query = supabase.from(table as any).select(select)
+    if (configure) query = configure(query)
+    const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
+    if (error || !data || data.length === 0) break
+    rows.push(...(data as T[]))
+    if (data.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return rows
+}
+
 export default function Matches() {
-  const [matches, setMatches] = useState<MatchCardData[]>([])
+  const [matches, setMatches] = useState<MatchCardWithSport[]>([])
+  const [selectedSport, setSelectedSport] = useState<SportCode>('gaelic_football')
   const [tab, setTab] = useState<Tab>('upcoming')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -36,14 +68,15 @@ export default function Matches() {
     let cancelled = false
 
     async function load() {
-      const { data: rows } = await supabase
-        .from('matches')
-        .select('id, competition, played_at, home_score, away_score, ground_id, home_county_team_id, away_county_team_id')
-        .order('played_at', { ascending: false })
-        .returns<MatchRow[]>()
+      const rows = await fetchAllRows<MatchRow>(
+        'matches',
+        'id, competition, played_at, home_score, away_score, ground_id, home_county_team_id, away_county_team_id',
+        (q) => q.order('played_at', { ascending: false }),
+      )
 
-      if (!rows || cancelled) {
-        if (!cancelled) setLoading(false)
+      if (cancelled) return
+      if (rows.length === 0) {
+        setLoading(false)
         return
       }
 
@@ -51,7 +84,7 @@ export default function Matches() {
       const groundIds = [...new Set(rows.map((m) => m.ground_id).filter(Boolean))] as string[]
 
       const [{ data: teams }, { data: grounds }] = await Promise.all([
-        teamIds.length ? supabase.from('county_teams').select('id, county_id').in('id', teamIds) : Promise.resolve({ data: [] as any[] }),
+        teamIds.length ? supabase.from('county_teams').select('id, county_id, sport_code').in('id', teamIds) : Promise.resolve({ data: [] as any[] }),
         groundIds.length ? supabase.from('grounds').select('id, name').in('id', groundIds) : Promise.resolve({ data: [] as any[] }),
       ])
 
@@ -64,11 +97,11 @@ export default function Matches() {
       const teamById = new Map((teams ?? []).map((t) => [t.id, t]))
       const groundNameById = new Map((grounds ?? []).map((g) => [g.id, g.name]))
 
-      const { data: att } = await supabase.from('user_match_attendance').select('match_id')
+      const attendance = await fetchAllRows<{ match_id: string }>('user_match_attendance', 'match_id')
       const attendanceByMatch = new Map<string, number>()
-      for (const a of att ?? []) attendanceByMatch.set(a.match_id, (attendanceByMatch.get(a.match_id) ?? 0) + 1)
+      for (const a of attendance) attendanceByMatch.set(a.match_id, (attendanceByMatch.get(a.match_id) ?? 0) + 1)
 
-      const cards: MatchCardData[] = rows.map((m) => {
+      const cards: MatchCardWithSport[] = rows.map((m) => {
         const home = m.home_county_team_id ? teamById.get(m.home_county_team_id) : null
         const away = m.away_county_team_id ? teamById.get(m.away_county_team_id) : null
         const homeCounty = home ? countyById.get(home.county_id) : null
@@ -91,6 +124,7 @@ export default function Matches() {
               : null,
           groundName: m.ground_id ? groundNameById.get(m.ground_id) ?? null : null,
           attendeeCount: attendanceByMatch.get(m.id) ?? 0,
+          sportCode: (home?.sport_code ?? away?.sport_code ?? null) as SportCode | null,
         }
       })
 
@@ -106,10 +140,15 @@ export default function Matches() {
     }
   }, [])
 
+  const sportFiltered = useMemo(
+    () => matches.filter((m) => m.sportCode === selectedSport),
+    [matches, selectedSport],
+  )
+
   const searchFiltered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return matches
-    return matches.filter(
+    if (!q) return sportFiltered
+    return sportFiltered.filter(
       (m) =>
         m.homeName.toLowerCase().includes(q) ||
         m.awayName.toLowerCase().includes(q) ||
@@ -117,7 +156,7 @@ export default function Matches() {
         (m.groundName ?? '').toLowerCase().includes(q) ||
         (m.played_at && new Date(m.played_at).getFullYear().toString() === q),
     )
-  }, [matches, search])
+  }, [sportFiltered, search])
 
   // Upcoming and Fixtures show the same list -- matching MatchesView.swift
   // and the Android port, where both tabs are separate entry points onto
@@ -136,7 +175,7 @@ export default function Matches() {
   )
 
   const yearGroups = useMemo<YearGroup[]>(() => {
-    const byYear = new Map<number, Map<number, MatchCardData[]>>()
+    const byYear = new Map<number, Map<number, MatchCardWithSport[]>>()
     for (const m of resultsList) {
       if (!m.played_at) continue
       const d = new Date(m.played_at)
@@ -162,15 +201,18 @@ export default function Matches() {
 
   const undatedResults = useMemo(() => resultsList.filter((m) => !m.played_at), [resultsList])
 
+  // Reset to the most recent year/month whenever the underlying result set
+  // changes shape (e.g. switching sport) rather than only on first load.
   useEffect(() => {
-    if (expandedYears === null && yearGroups.length > 0) {
-      const mostRecent = yearGroups[0]
-      setExpandedYears(new Set([mostRecent.year]))
-      if (mostRecent.months.length > 0) {
-        setExpandedMonths(new Set([`${mostRecent.year}-${mostRecent.months[0].month}`]))
-      }
+    if (yearGroups.length === 0) {
+      setExpandedYears(new Set())
+      setExpandedMonths(new Set())
+      return
     }
-  }, [yearGroups, expandedYears])
+    const mostRecent = yearGroups[0]
+    setExpandedYears(new Set([mostRecent.year]))
+    setExpandedMonths(mostRecent.months.length > 0 ? new Set([`${mostRecent.year}-${mostRecent.months[0].month}`]) : new Set())
+  }, [yearGroups])
 
   const openYears = expandedYears ?? new Set<number>()
 
@@ -189,6 +231,7 @@ export default function Matches() {
   }
 
   const displayedList = tab === 'results' ? null : upcomingList
+  const sportOptions: SportCode[] = ['gaelic_football', 'hurling']
 
   return (
     <div className="page">
@@ -196,6 +239,13 @@ export default function Matches() {
       <p className="muted">
         Missed checking in on the day? Find the match below and check in any time — even years later.
       </p>
+      <div className="filter-tabs">
+        {sportOptions.map((sport) => (
+          <button key={sport} className={selectedSport === sport ? 'active' : ''} onClick={() => setSelectedSport(sport)}>
+            {SPORT_ICONS[sport]} {SPORT_LABELS[sport]}
+          </button>
+        ))}
+      </div>
       <input
         className="search-input"
         placeholder="Search by team, competition, ground or year…"
