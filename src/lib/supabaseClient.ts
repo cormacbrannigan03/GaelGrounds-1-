@@ -20,7 +20,14 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
   },
 })
 
-const AUTH_TIMEOUT_MS = 8000
+// 8s was too tight in practice: a screen recording of a real failed
+// sign-in (weak 4G, one bar) showed Supabase successfully creating the
+// session server-side, but the response taking longer than 8s to reach
+// the browser -- so the timeout fired and showed an error for an attempt
+// that was actually succeeding underneath. 20s gives slow-but-working
+// connections room to finish; AuthPage additionally redirects as soon as
+// `session` arrives even if this timeout has already fired first.
+const AUTH_TIMEOUT_MS = 20000
 
 /**
  * Forces an auth call to fail after AUTH_TIMEOUT_MS instead of hanging

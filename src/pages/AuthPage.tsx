@@ -6,7 +6,7 @@ import { supabase, withAuthTimeout, clearStaleSession } from '../lib/supabaseCli
 type County = { id: string; name: string }
 
 export default function AuthPage() {
-  const { signInWithPassword, signUp } = useAuth()
+  const { signInWithPassword, signUp, session } = useAuth()
   const navigate = useNavigate()
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [email, setEmail] = useState('')
@@ -18,6 +18,17 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    // On a slow connection, signInWithPassword's own request can still be
+    // in flight in the background after withAuthTimeout has already given
+    // up on it and shown an error below -- Supabase's server-side session
+    // creation isn't cancelled by our client-side timeout. If/when that
+    // request eventually completes, onAuthStateChange (subscribed in
+    // AuthContext) updates `session` here, and without this the user would
+    // be left staring at a stale timeout error while actually signed in.
+    if (session) navigate('/')
+  }, [session, navigate])
 
   useEffect(() => {
     if (mode !== 'signup' || counties.length > 0) return
