@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabaseClient'
+import { supabase, withAuthTimeout, clearStaleSession } from '../lib/supabaseClient'
 
 export type SupportedCounty = {
   id: string
@@ -28,18 +28,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [supportedCounty, setSupportedCounty] = useState<SupportedCounty | null>(null)
 
   useEffect(() => {
-    // Without this catch, a rejected getSession() (a network hiccup, an
-    // unexpected exception) left `loading` stuck true forever -- every
-    // page gated on it (ProtectedRoute, and the auth-dependent bits of
-    // every other page) would then be stuck showing its own loading state
-    // indefinitely, with no error and no way out short of a page reload.
-    supabase.auth
-      .getSession()
+    // Without the timeout+catch here, a hung or rejected getSession() (a
+    // network hiccup, or a stale/corrupted refresh token stuck being
+    // silently retried in the background) left `loading` stuck true
+    // forever -- every page gated on it (ProtectedRoute, and the
+    // auth-dependent bits of every other page) would then be stuck
+    // showing its own loading state indefinitely, with no error and no
+    // way out short of a page reload. On any failure, also clear local
+    // session storage so a poisoned token can't keep failing the same
+    // way on every future visit -- the next sign-in starts clean instead.
+    withAuthTimeout(supabase.auth.getSession())
       .then(({ data }) => {
         setSession(data.session)
         setLoading(false)
       })
       .catch(() => {
+        clearStaleSession()
         setLoading(false)
       })
 
