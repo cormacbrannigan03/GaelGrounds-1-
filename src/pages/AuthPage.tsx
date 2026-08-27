@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { supabase } from '../lib/supabaseClient'
+import { supabase, withAuthTimeout, clearStaleSession } from '../lib/supabaseClient'
 
 type County = { id: string; name: string }
 
@@ -51,20 +51,28 @@ export default function AuthPage() {
 
     setBusy(true)
     // signInWithPassword/signUp normally resolve with { error } rather than
-    // throwing -- but a network hiccup or an unexpected exception can still
-    // reject the promise, and without a catch here that left busy stuck
-    // true forever (the button showing "Please wait..." with no way out
-    // short of reloading the page, since nothing after the un-awaited throw
-    // ever ran).
+    // throwing -- but a network hiccup, or a stale/corrupted session token
+    // stuck being silently retried in the background, can leave the call
+    // hanging or reject it unexpectedly. withAuthTimeout forces it to fail
+    // after 8s instead of leaving the button stuck on "Please wait..."
+    // forever with no way out short of reloading the page; either way,
+    // clearStaleSession() means a poisoned local token can't keep causing
+    // the exact same failure on every future attempt.
     let result: { error: string | null }
     try {
-      result =
+      result = await withAuthTimeout(
         mode === 'signin'
-          ? await signInWithPassword(email, password)
-          : await signUp(email, password, displayName, supportedCountyId)
-    } catch {
+          ? signInWithPassword(email, password)
+          : signUp(email, password, displayName, supportedCountyId),
+      )
+    } catch (err) {
       setBusy(false)
-      setError("Couldn't reach the server — check your connection and try again.")
+      clearStaleSession()
+      setError(
+        err instanceof Error && err.message === 'auth-timeout'
+          ? "That took too long, so we've reset your session — please try again."
+          : "Couldn't reach the server — check your connection and try again.",
+      )
       return
     }
     setBusy(false)
