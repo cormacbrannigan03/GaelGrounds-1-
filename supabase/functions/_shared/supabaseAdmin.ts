@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { corsHeaders } from "./cors.ts";
 
 // Service-role client, same convention as
 // supabase/functions/sync-matches/shared/supabaseAdmin.ts -- bypasses RLS
@@ -21,6 +22,9 @@ export function createAdminClient() {
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body, null, 2), {
     status,
-    headers: { "content-type": "application/json" },
+    // CORS headers are harmless on stripe-webhook's responses too (Stripe's
+    // server ignores them) so this stays one helper for every function
+    // rather than a CORS and a non-CORS variant.
+    headers: { "content-type": "application/json", ...corsHeaders },
   });
 }

@@ -15,8 +15,17 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { createAdminClient, json } from "../_shared/supabaseAdmin.ts";
 import { createStripeClient } from "../_shared/stripeClient.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  // The browser sends this before the real POST whenever a cross-origin
+  // request carries custom headers (Authorization, apikey, content-type,
+  // all of which supabase-js adds) -- without an explicit 2xx-with-CORS-
+  // headers response here, the browser blocks the actual request before
+  // it's ever sent, which is exactly what was happening: Subscribe looked
+  // like it did nothing because the preflight silently failed.
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 
   const authHeader = req.headers.get("Authorization");

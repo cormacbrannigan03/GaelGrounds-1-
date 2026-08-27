@@ -10,8 +10,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { createAdminClient, json } from "../_shared/supabaseAdmin.ts";
 import { createStripeClient } from "../_shared/stripeClient.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 
   const authHeader = req.headers.get("Authorization");
