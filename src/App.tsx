@@ -16,6 +16,7 @@ import MatchDetail from './pages/MatchDetail'
 import Profile from './pages/Profile'
 import Achievements from './pages/Achievements'
 import Friends from './pages/Friends'
+import FriendProfile from './pages/FriendProfile'
 import Leaderboard from './pages/Leaderboard'
 import Premium from './pages/Premium'
 import NotFound from './pages/NotFound'
@@ -80,6 +81,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Friends />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/friends/:id"
+            element={
+              <ProtectedRoute>
+                <FriendProfile />
               </ProtectedRoute>
             }
           />
