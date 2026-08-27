@@ -53,3 +53,33 @@ export function isUpcoming(playedAt: string, hasScore: boolean) {
   if (hasScore) return false
   return new Date(playedAt).getTime() > Date.now()
 }
+
+/** GAA "goals-points" score string (e.g. "1-14") -> total points, goal = 3. */
+function parseGaaScore(score: string): number {
+  const parts = score.split('-')
+  if (parts.length !== 2) return 0
+  const goals = parseInt(parts[0].trim(), 10)
+  const points = parseInt(parts[1].trim(), 10)
+  if (Number.isNaN(goals) || Number.isNaN(points)) return 0
+  return goals * 3 + points
+}
+
+/** Matches MatchSummary.swift's isFinal -- competition/round text mentions "final". */
+export function isFinalMatch(competition: string | null, round: string | null) {
+  return `${competition ?? ''} ${round ?? ''}`.toLowerCase().includes('final')
+}
+
+/** The winning team's name, or null if there's no score yet or it's a draw. */
+export function winnerName(
+  homeScore: string | null,
+  awayScore: string | null,
+  homeName: string,
+  awayName: string,
+): string | null {
+  if (!homeScore || !awayScore) return null
+  const home = parseGaaScore(homeScore)
+  const away = parseGaaScore(awayScore)
+  if (home > away) return homeName
+  if (away > home) return awayName
+  return null
+}
