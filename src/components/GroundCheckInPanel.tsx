@@ -21,17 +21,23 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [unlockedToast, setUnlockedToast] = useState<string[] | null>(null)
+  const [photoUrls, setPhotoUrls] = useState<string[]>([])
+  const [myPhotoUrls, setMyPhotoUrls] = useState<string[]>([])
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
 
   const loadVisits = useCallback(async () => {
     if (!user) {
       setVisits([])
       setMyVisitId(null)
+      setPhotoUrls([])
+      setMyPhotoUrls([])
       return
     }
 
     const { data: rows } = await supabase
       .from('user_visits')
-      .select('id, user_id, visited_at, notes')
+      .select('id, user_id, visited_at, notes, photo_urls')
       .eq('ground_id', groundId)
       .order('visited_at', { ascending: false })
       .limit(25)
@@ -49,6 +55,8 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
 
     setVisits(rows.map((r) => ({ ...r, display_name: nameById.get(r.user_id) ?? null })))
     setMyVisitId(rows.find((r) => r.user_id === user?.id)?.id ?? null)
+    setPhotoUrls(rows.flatMap((r) => r.photo_urls ?? []))
+    setMyPhotoUrls(rows.find((r) => r.user_id === user?.id)?.photo_urls ?? [])
   }, [groundId, user?.id])
 
   useEffect(() => {
@@ -105,6 +113,37 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
     setBusy(false)
   }
 
+  async function addPhoto(file: File) {
+    if (!user) return
+    setUploadingPhoto(true)
+    setPhotoError(null)
+    try {
+      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+      const path = `${user.id}/${groundId}/${crypto.randomUUID()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('ground-photos')
+        .upload(path, file, { contentType: file.type })
+      if (uploadError) throw uploadError
+
+      const { data: publicUrlData } = supabase.storage.from('ground-photos').getPublicUrl(path)
+      const url = publicUrlData.publicUrl
+
+      // Photos attach to the uploader's user_visits row for this ground --
+      // uploading one without having checked in yet creates that row (with
+      // no note), same as GroundPhotoService/addPhoto on iOS.
+      if (myVisitId) {
+        await supabase.from('user_visits').update({ photo_urls: [...myPhotoUrls, url] }).eq('id', myVisitId)
+      } else {
+        await supabase.from('user_visits').insert({ ground_id: groundId, user_id: user.id, notes: null, photo_urls: [url] })
+      }
+      await loadVisits()
+    } catch {
+      setPhotoError("Upload failed — please try again.")
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
   return (
     <div className="checkin-panel">
       <div className="checkin-header">
@@ -138,6 +177,42 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
           🏆 Achievement unlocked: {unlockedToast.join(', ')}
         </div>
       )}
+
+      <div className="ground-photos">
+        <div className="ground-photos-header">
+          <div>
+            <h4>Photos</h4>
+            <p className="muted small">Shared by fans who've been here</p>
+          </div>
+          {user && (
+            <label className="btn btn-outline btn-sm ground-photo-upload">
+              📷 Add photo
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                disabled={uploadingPhoto}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  e.target.value = ''
+                  if (file) addPhoto(file)
+                }}
+              />
+            </label>
+          )}
+        </div>
+        {uploadingPhoto && <p className="muted small">Uploading…</p>}
+        {photoError && <p className="muted small error-text">{photoError}</p>}
+        {photoUrls.length === 0 ? (
+          <p className="muted small">No photos yet — be the first to add one!</p>
+        ) : (
+          <div className="ground-photos-strip">
+            {photoUrls.map((url) => (
+              <img key={url} src={url} alt="" className="ground-photo-thumb" loading="lazy" />
+            ))}
+          </div>
+        )}
+      </div>
 
       {loading ? (
         <p className="muted">Loading visitors…</p>
