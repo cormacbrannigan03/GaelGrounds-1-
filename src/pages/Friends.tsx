@@ -192,7 +192,7 @@ export default function Friends() {
               <ul className="history-list">
                 {friends.map((f) => (
                   <li key={f.friendshipId} className="history-list-item">
-                    <span>{f.profile.display_name ?? 'A fan'}</span>
+                    <Link to={`/friends/${f.profile.id}`}>{f.profile.display_name ?? 'A fan'}</Link>
                     <button className="btn btn-ghost btn-sm" onClick={() => removeFriendship(f.friendshipId)}>
                       Remove
                     </button>
