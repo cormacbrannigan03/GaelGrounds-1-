@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
     return json({ url: portalSession.url });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    console.error("create-portal-session failed:", message);
     return json({ error: message }, 500);
   }
 });
