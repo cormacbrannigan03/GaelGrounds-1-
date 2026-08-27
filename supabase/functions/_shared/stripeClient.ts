@@ -17,6 +17,15 @@ export function createStripeClient(): Stripe {
   }
   return new Stripe(secretKey, {
     httpClient: Stripe.createFetchHttpClient(),
-    apiVersion: "2024-06-20",
+    // Matches the GaelGrounds Stripe account's actual API version -- when
+    // the webhook destination was created in the Stripe Dashboard,
+    // 2024-06-20 (this file's original pin) wasn't even a selectable
+    // option, meaning the account has moved well past it. Keeping this
+    // explicit (rather than omitting apiVersion, which would silently
+    // follow whatever the account's default happens to be at any given
+    // moment) so a future account-level default change can't silently
+    // change the shape of data this code parses without a deliberate edit
+    // here.
+    apiVersion: "2026-07-29.dahlia" as Stripe.LatestApiVersion,
   });
 }
