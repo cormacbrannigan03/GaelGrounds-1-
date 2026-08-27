@@ -7,6 +7,16 @@
     <title>GaelGrounds — Check in to every ground you visit</title>
     <meta name="description" content="Track the Gaelic football, hurling, camogie and ladies' football matches and grounds you've attended, across all 32 counties." />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏐</text></svg>" />
+    <!--
+      Pays the DNS + TCP + TLS handshake cost to Supabase as soon as the
+      page loads, instead of paying it right when the user taps Sign
+      in/Sign up -- that handshake is a fixed number of round trips that's
+      cheap on WiFi but can add real seconds on a high-latency cellular
+      path (carrier backhaul, Private Relay, etc), which is exactly what
+      pushed a real sign-in past the client-side auth timeout in testing.
+    -->
+    <link rel="preconnect" href="https://wksahsfkldxhusiftosj.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://wksahsfkldxhusiftosj.supabase.co" />
   </head>
   <body>
     <div id="root"></div>
