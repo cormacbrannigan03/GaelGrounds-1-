@@ -1037,6 +1037,43 @@ label {
   margin-bottom: 1rem;
 }
 
+/* Personal matches ("My Matches" / "Add a match") */
+.add-match-toggle {
+  margin: 0.5rem 0;
+}
+
+.add-match-form {
+  margin: 0.5rem 0 1rem;
+}
+
+.add-match-form h3 {
+  margin-top: 0;
+}
+
+.add-match-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.add-match-grid label {
+  margin-bottom: 0;
+}
+
+.personal-match-card .personal-match-delete {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.1rem 0.3rem;
+  color: var(--muted);
+}
+
+.personal-match-round {
+  margin: -0.3rem 0 0.4rem;
+}
+
 /* Report a match issue */
 .report-issue-toggle {
   margin-top: 0.5rem;
