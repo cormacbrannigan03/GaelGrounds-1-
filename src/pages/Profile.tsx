@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { formatShortDate, formatMatchDate } from '../lib/format'
+import { loadAchievementState, type AchievementState } from '../lib/achievements'
 
 type VisitedGround = { groundId: string; name: string; visitCount: number; lastVisitedAt: string }
 type AttendedMatch = { id: string; matchId: string; competition: string | null; played_at: string; homeName: string; awayName: string }
-type Achievement = { id: string; title: string; description: string; icon: string | null; unlocked_at: string; pinned: boolean }
 
 function PremiumBadge({ isPremium, premiumExpiresAt }: { isPremium: boolean; premiumExpiresAt: string | null }) {
   if (isPremium) {
@@ -24,8 +24,6 @@ function PremiumBadge({ isPremium, premiumExpiresAt }: { isPremium: boolean; pre
   )
 }
 
-const MAX_PINNED_ACHIEVEMENTS = 4
-
 type County = { id: string; name: string }
 
 export default function Profile() {
@@ -38,11 +36,10 @@ export default function Profile() {
   const [savingCounty, setSavingCounty] = useState(false)
   const [grounds, setGrounds] = useState<VisitedGround[]>([])
   const [matches, setMatches] = useState<AttendedMatch[]>([])
-  const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [achievementState, setAchievementState] = useState<AchievementState | null>(null)
   const [bestMatchId, setBestMatchId] = useState<string | null>(null)
   const [isPremium, setIsPremium] = useState(false)
   const [premiumExpiresAt, setPremiumExpiresAt] = useState<string | null>(null)
-  const [pinLimitMessage, setPinLimitMessage] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarError, setAvatarError] = useState<string | null>(null)
@@ -56,7 +53,7 @@ export default function Profile() {
     let cancelled = false
 
     async function load() {
-      const [{ data: profile }, { data: visits }, { data: attendance }, { data: userAch }, { data: countyRows }] = await Promise.all([
+      const [{ data: profile }, { data: visits }, { data: attendance }, { data: countyRows }, achievementState] = await Promise.all([
         supabase
           .from('user_profiles')
           .select('display_name, best_match_id, avatar_url, is_premium, premium_expires_at, supported_county_id')
@@ -72,13 +69,11 @@ export default function Profile() {
           .select('id, match_id, created_at')
           .eq('user_id', user!.id)
           .order('created_at', { ascending: false }),
-        supabase
-          .from('user_achievements')
-          .select('id, unlocked_at, achievement_id, pinned')
-          .eq('user_id', user!.id)
-          .order('unlocked_at', { ascending: false }),
         supabase.from('counties').select('id, name').order('name'),
+        loadAchievementState(user!.id),
       ])
+
+      if (!cancelled) setAchievementState(achievementState)
 
       if (cancelled) return
 
@@ -161,30 +156,6 @@ export default function Profile() {
         }
       }
 
-      const achievementIds = (userAch ?? []).map((a) => a.achievement_id)
-      if (achievementIds.length > 0) {
-        const { data: defs } = await supabase
-          .from('achievement_definitions')
-          .select('id, title, description, icon')
-          .in('id', achievementIds)
-        const defById = new Map((defs ?? []).map((d) => [d.id, d]))
-        if (!cancelled) {
-          setAchievements(
-            (userAch ?? []).map((a) => {
-              const d = defById.get(a.achievement_id)
-              return {
-                id: a.id,
-                title: d?.title ?? 'Achievement',
-                description: d?.description ?? '',
-                icon: d?.icon ?? null,
-                unlocked_at: a.unlocked_at,
-                pinned: a.pinned,
-              }
-            }),
-          )
-        }
-      }
-
       if (!cancelled) setLoading(false)
     }
 
@@ -240,19 +211,23 @@ export default function Profile() {
     }
   }
 
-  async function togglePinned(achievement: Achievement) {
-    const newValue = !achievement.pinned
-    if (newValue && achievements.filter((a) => a.pinned).length >= MAX_PINNED_ACHIEVEMENTS) {
-      setPinLimitMessage(`You can only feature ${MAX_PINNED_ACHIEVEMENTS} achievements on your profile — unstar one first.`)
-      return
-    }
-    setPinLimitMessage(null)
-    setAchievements((prev) => prev.map((a) => (a.id === achievement.id ? { ...a, pinned: newValue } : a)))
-    const { error } = await supabase.from('user_achievements').update({ pinned: newValue }).eq('id', achievement.id)
-    if (error) {
-      setAchievements((prev) => prev.map((a) => (a.id === achievement.id ? { ...a, pinned: !newValue } : a)))
-    }
-  }
+  const unlockedAchievements = useMemo(() => {
+    if (!achievementState) return []
+    return achievementState.defs
+      .filter((d) => achievementState.unlockedByDefId.has(d.id))
+      .map((d) => ({ def: d, row: achievementState.unlockedByDefId.get(d.id)! }))
+      .sort((a, b) => b.row.unlocked_at.localeCompare(a.row.unlocked_at))
+  }, [achievementState])
+
+  const lockedAchievementCount = achievementState ? achievementState.defs.length - unlockedAchievements.length : 0
+
+  // Up to 4 starred (pinned) achievements, falling back to the 4 most
+  // recently unlocked when nothing is pinned yet -- matches
+  // ProfileView.swift's homeScreenAchievements.
+  const homeScreenAchievements = useMemo(() => {
+    const pinned = unlockedAchievements.filter((a) => a.row.pinned)
+    return pinned.length > 0 ? pinned : unlockedAchievements.slice(0, 4)
+  }, [unlockedAchievements])
 
   async function toggleBestGame(matchId: string) {
     const newValue = bestMatchId === matchId ? null : matchId
@@ -353,7 +328,7 @@ export default function Profile() {
           <span className="stat-label">Matches attended</span>
         </div>
         <div className="stat-tile">
-          <span className="stat-value">{achievements.length}</span>
+          <span className="stat-value">{unlockedAchievements.length}</span>
           <span className="stat-label">Achievements</span>
         </div>
       </section>
@@ -381,29 +356,24 @@ export default function Profile() {
               ) : null
             })()}
 
-          {achievements.length > 0 && (
-            <section>
-              <h2>Achievements</h2>
-              {pinLimitMessage && <p className="muted small error-text">{pinLimitMessage}</p>}
+          {(unlockedAchievements.length > 0 || lockedAchievementCount > 0) && (
+            <Link to="/achievements" className="card achievements-preview-card">
+              <div className="achievements-preview-header">
+                <h2>Achievements</h2>
+                <span className="muted small">
+                  {unlockedAchievements.length} of {unlockedAchievements.length + lockedAchievementCount} →
+                </span>
+              </div>
               <div className="card-grid">
-                {achievements.map((a) => (
-                  <div key={a.id} className="card achievement-card">
-                    <div className="achievement-card-top">
-                      <h3>🏆 {a.title}</h3>
-                      <button
-                        className="star-toggle"
-                        onClick={() => togglePinned(a)}
-                        aria-label={a.pinned ? 'Remove from profile favourites' : 'Add to profile favourites'}
-                      >
-                        {a.pinned ? '★' : '☆'}
-                      </button>
-                    </div>
-                    <p className="muted small">{a.description}</p>
-                    <p className="muted small">Unlocked {formatShortDate(a.unlocked_at)}</p>
+                {homeScreenAchievements.map(({ def, row }) => (
+                  <div key={def.id} className="achievements-preview-item">
+                    <h3>🏆 {def.title}</h3>
+                    <p className="muted small">{def.description}</p>
+                    {row.pinned && <span className="achievements-preview-star">★</span>}
                   </div>
                 ))}
               </div>
-            </section>
+            </Link>
           )}
 
           <section>

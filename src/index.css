@@ -716,6 +716,81 @@ main {
   margin: 0;
 }
 
+.achievement-card.locked {
+  opacity: 0.7;
+}
+
+.achievement-card.locked h3 {
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+/* Profile's compact "starred" achievements preview -- the whole card links
+   into /achievements, matching ProfileView.swift's homeScreenAchievements
+   NavigationLink (a preview, not the full unlocked+locked list Profile used
+   to render inline). */
+.achievements-preview-card {
+  margin: 1.5rem 0;
+}
+
+.achievements-preview-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.achievements-preview-header h2 {
+  margin: 0;
+}
+
+.achievements-preview-item {
+  position: relative;
+  background: rgba(var(--green-light-rgb), 0.06);
+  border: 1px solid rgba(var(--green-light-rgb), 0.16);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+}
+
+.achievements-preview-item h3 {
+  margin: 0 0 0.2rem;
+  font-size: 0.95rem;
+}
+
+.achievements-preview-item p {
+  margin: 0;
+}
+
+.achievements-preview-star {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.6rem;
+  color: var(--gold);
+}
+
+/* Achievements page: locked sections + province sub-groups */
+.achievements-locked-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.locked-section-grid {
+  margin-top: 0.6rem;
+}
+
+.province-group-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 0.6rem;
+}
+
+.province-group h4 {
+  margin: 0 0 0.5rem;
+}
+
 .best-game-card {
   display: flex;
   flex-direction: column;
