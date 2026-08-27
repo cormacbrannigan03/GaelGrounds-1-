@@ -1,17 +1,36 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
+import { loadLeaderboardEntries, type LeaderboardEntry, type Tier } from '../lib/leaderboard'
 
-type Entry = { id: string; displayName: string; matchCount: number; groundCount: number }
 type SortKey = 'matches' | 'grounds'
 type Scope = 'everyone' | 'friends'
+type TabKey = 'overall' | 'myCounty' | 'Leinster' | 'Munster' | 'Connacht' | 'Ulster' | 'bronze' | 'silver' | 'gold'
+
+const PROVINCE_TABS: TabKey[] = ['Ulster', 'Munster', 'Leinster', 'Connacht']
+const TIER_TABS: { key: TabKey; tier: Tier; label: string }[] = [
+  { key: 'bronze', tier: 'bronze', label: 'Most Bronze' },
+  { key: 'silver', tier: 'silver', label: 'Most Silver' },
+  { key: 'gold', tier: 'gold', label: 'Top Gold' },
+]
+
+function sortedOverall(entries: LeaderboardEntry[], sortBy: SortKey) {
+  return [...entries].sort((a, b) =>
+    sortBy === 'matches'
+      ? b.matchCount - a.matchCount || b.groundCount - a.groundCount
+      : b.groundCount - a.groundCount || b.matchCount - a.matchCount,
+  )
+}
 
 export default function Leaderboard() {
-  const { user } = useAuth()
-  const [entries, setEntries] = useState<Entry[]>([])
+  const { user, supportedCounty } = useAuth()
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set())
+  const [isPremium, setIsPremium] = useState(false)
   const [sortBy, setSortBy] = useState<SortKey>('matches')
   const [scope, setScope] = useState<Scope>('everyone')
+  const [tab, setTab] = useState<TabKey>('overall')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -19,49 +38,25 @@ export default function Leaderboard() {
 
     async function load() {
       setLoading(true)
-      const [{ data: profiles }, { data: attendance }, { data: visits }] = await Promise.all([
-        supabase.from('user_profiles').select('id, display_name, is_premium'),
-        supabase.from('user_match_attendance').select('user_id'),
-        supabase.from('user_visits').select('user_id, ground_id'),
+      const [loadedEntries, ownProfile, friendshipRows] = await Promise.all([
+        loadLeaderboardEntries(),
+        user ? supabase.from('user_profiles').select('is_premium').eq('id', user.id).single() : Promise.resolve({ data: null }),
+        user
+          ? supabase
+              .from('friendships')
+              .select('requester_id, addressee_id, status')
+              .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+              .eq('status', 'accepted')
+          : Promise.resolve({ data: [] as { requester_id: string; addressee_id: string }[] }),
       ])
 
       if (cancelled) return
-
-      const matchCounts = new Map<string, number>()
-      for (const a of attendance ?? []) matchCounts.set(a.user_id, (matchCounts.get(a.user_id) ?? 0) + 1)
-
-      const groundIdsByUser = new Map<string, Set<string>>()
-      for (const v of visits ?? []) {
-        if (!groundIdsByUser.has(v.user_id)) groundIdsByUser.set(v.user_id, new Set())
-        groundIdsByUser.get(v.user_id)!.add(v.ground_id)
-      }
-
-      // Free accounts can browse the leaderboard but never appear on it --
-      // only premium profiles are ranked, matching the iOS app.
-      const ranked = (profiles ?? [])
-        .filter((p) => p.is_premium)
-        .map((p) => ({
-          id: p.id,
-          displayName: p.display_name ?? 'Anonymous',
-          matchCount: matchCounts.get(p.id) ?? 0,
-          groundCount: groundIdsByUser.get(p.id)?.size ?? 0,
-        }))
-
-      if (!cancelled) setEntries(ranked)
-
-      if (user) {
-        const { data: friendshipRows } = await supabase
-          .from('friendships')
-          .select('requester_id, addressee_id, status')
-          .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
-          .eq('status', 'accepted')
-        const ids = new Set(
-          (friendshipRows ?? []).map((r) => (r.requester_id === user.id ? r.addressee_id : r.requester_id)),
-        )
-        if (!cancelled) setFriendIds(ids)
-      }
-
-      if (!cancelled) setLoading(false)
+      setEntries(loadedEntries)
+      setIsPremium(ownProfile?.data?.is_premium ?? false)
+      setFriendIds(
+        new Set((friendshipRows.data ?? []).map((r) => (r.requester_id === user?.id ? r.addressee_id : r.requester_id))),
+      )
+      setLoading(false)
     }
 
     load()
@@ -70,14 +65,81 @@ export default function Leaderboard() {
     }
   }, [user])
 
-  const scoped = scope === 'friends' ? entries.filter((e) => e.id === user?.id || friendIds.has(e.id)) : entries
-  const displayed = [...scoped].sort((a, b) =>
-    sortBy === 'matches'
-      ? b.matchCount - a.matchCount || b.groundCount - a.groundCount
-      : b.groundCount - a.groundCount || b.matchCount - a.matchCount,
+  const scoped = useMemo(
+    () => (scope === 'friends' ? entries.filter((e) => e.id === user?.id || friendIds.has(e.id)) : entries),
+    [entries, scope, friendIds, user],
   )
 
+  const displayed = useMemo(() => {
+    if (tab === 'myCounty') {
+      if (!supportedCounty) return []
+      return sortedOverall(
+        scoped.filter((e) => e.supportedCountyId === supportedCounty.id),
+        sortBy,
+      )
+    }
+    if ((PROVINCE_TABS as string[]).includes(tab)) {
+      return [...scoped]
+        .filter((e) => (e.provinceMatchCounts[tab] ?? 0) > 0)
+        .sort((a, b) => (b.provinceMatchCounts[tab] ?? 0) - (a.provinceMatchCounts[tab] ?? 0))
+    }
+    const tierTab = TIER_TABS.find((t) => t.key === tab)
+    if (tierTab) {
+      return [...scoped]
+        .filter((e) => e.tierCounts[tierTab.tier] > 0)
+        .sort((a, b) => b.tierCounts[tierTab.tier] - a.tierCounts[tierTab.tier])
+    }
+    return sortedOverall(scoped, sortBy)
+  }, [scoped, tab, sortBy, supportedCounty])
+
   const rankLabel = (rank: number) => (rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}`)
+
+  function primaryCount(entry: LeaderboardEntry) {
+    const tierTab = TIER_TABS.find((t) => t.key === tab)
+    if (tierTab) return entry.tierCounts[tierTab.tier]
+    if ((PROVINCE_TABS as string[]).includes(tab)) return entry.provinceMatchCounts[tab] ?? 0
+    return sortBy === 'matches' ? entry.matchCount : entry.groundCount
+  }
+
+  function primaryLabel() {
+    const tierTab = TIER_TABS.find((t) => t.key === tab)
+    if (tierTab) return tierTab.tier
+    if ((PROVINCE_TABS as string[]).includes(tab)) return 'matches'
+    return sortBy === 'matches' ? 'matches' : 'grounds'
+  }
+
+  function secondaryText(entry: LeaderboardEntry) {
+    const tierTab = TIER_TABS.find((t) => t.key === tab)
+    if (tierTab) {
+      return TIER_TABS.filter((t) => t.tier !== tierTab.tier)
+        .map((t) => `${entry.tierCounts[t.tier]} ${t.tier}`)
+        .join(' · ')
+    }
+    if ((PROVINCE_TABS as string[]).includes(tab)) {
+      return `${entry.matchCount} total · ${entry.groundCount} grounds`
+    }
+    return sortBy === 'matches' ? `${entry.groundCount} grounds` : `${entry.matchCount} matches`
+  }
+
+  const emptyMessage = (() => {
+    if (scope === 'friends' && friendIds.size === 0) return 'Add some friends to see how you compare against them.'
+    if (tab === 'myCounty') {
+      return supportedCounty
+        ? `No ${supportedCounty.name} supporters have checked in yet.`
+        : 'Choose a supported county on your profile to unlock this leaderboard.'
+    }
+    if ((PROVINCE_TABS as string[]).includes(tab)) return `No ${tab} matches attended yet.`
+    const tierTab = TIER_TABS.find((t) => t.key === tab)
+    if (tierTab) return `No ${tierTab.tier} achievements unlocked yet.`
+    return 'No activity yet. Be the first to check in!'
+  })()
+
+  const TABS: { key: TabKey; label: string }[] = [
+    { key: 'overall', label: 'Overall' },
+    { key: 'myCounty', label: supportedCounty?.name ?? 'My County' },
+    ...PROVINCE_TABS.map((p) => ({ key: p, label: p })),
+    ...TIER_TABS.map((t) => ({ key: t.key, label: t.label })),
+  ]
 
   return (
     <div className="page">
@@ -85,7 +147,21 @@ export default function Leaderboard() {
         <h1>Leaderboard</h1>
       </div>
 
-      <p className="muted small">Only Premium members appear on the leaderboard.</p>
+      {user && !isPremium && (
+        <Link to="/premium" className="card leaderboard-premium-banner">
+          Go Premium to appear on the leaderboard →
+        </Link>
+      )}
+
+      <p className="muted small">Only Premium members who've opted in on their Profile appear on the leaderboard.</p>
+
+      <div className="leaderboard-tabs">
+        {TABS.map((t) => (
+          <button key={t.key} className={tab === t.key ? 'active' : ''} onClick={() => setTab(t.key)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
       <div className="segmented">
         <button className={scope === 'everyone' ? 'active' : ''} onClick={() => setScope('everyone')}>
@@ -96,30 +172,33 @@ export default function Leaderboard() {
         </button>
       </div>
 
-      <div className="segmented">
-        <button className={sortBy === 'matches' ? 'active' : ''} onClick={() => setSortBy('matches')}>
-          Matches
-        </button>
-        <button className={sortBy === 'grounds' ? 'active' : ''} onClick={() => setSortBy('grounds')}>
-          Grounds
-        </button>
-      </div>
+      {(tab === 'overall' || tab === 'myCounty') && (
+        <div className="segmented">
+          <button className={sortBy === 'matches' ? 'active' : ''} onClick={() => setSortBy('matches')}>
+            Matches
+          </button>
+          <button className={sortBy === 'grounds' ? 'active' : ''} onClick={() => setSortBy('grounds')}>
+            Grounds
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <p className="muted">Loading…</p>
       ) : displayed.length === 0 ? (
-        <p className="muted">
-          {scope === 'friends' ? 'Add some friends to see how you compare against them.' : 'No activity yet. Be the first to check in!'}
-        </p>
+        <p className="muted">{emptyMessage}</p>
       ) : (
         <ul className="leaderboard-list">
           {displayed.map((entry, i) => (
             <li key={entry.id} className={entry.id === user?.id ? 'leaderboard-row current-user' : 'leaderboard-row'}>
               <span className="leaderboard-rank">{rankLabel(i + 1)}</span>
-              <span className="leaderboard-name">{entry.displayName}</span>
+              <span className="leaderboard-name-block">
+                <span className="leaderboard-name">{entry.displayName}</span>
+                <span className="muted small">{secondaryText(entry)}</span>
+              </span>
               <span className="leaderboard-count">
-                <strong>{sortBy === 'matches' ? entry.matchCount : entry.groundCount}</strong>
-                <span className="muted small">{sortBy === 'matches' ? 'matches' : 'grounds'}</span>
+                <strong>{primaryCount(entry)}</strong>
+                <span className="muted small">{primaryLabel()}</span>
               </span>
             </li>
           ))}

@@ -96,7 +96,7 @@ export default function Friends() {
       setError(
         isPremium
           ? "Couldn't send that request — try again."
-          : 'Sending friend requests requires GaelGrounds Premium — upgrade in the iOS app to send requests.',
+          : 'Sending friend requests requires GaelGrounds Premium — visit the Premium page to upgrade.',
       )
       return
     }
