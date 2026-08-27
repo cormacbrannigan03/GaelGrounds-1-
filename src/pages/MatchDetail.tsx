@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import CheckInPanel from '../components/CheckInPanel'
 import ConfettiOverlay from '../components/ConfettiOverlay'
+import ReportMatchIssue from '../components/ReportMatchIssue'
 import { useCountyPageBackground } from '../hooks/useCountyPageBackground'
 import { formatMatchDate, isFinalMatch, isLive, winnerName } from '../lib/format'
 
@@ -135,6 +136,7 @@ export default function MatchDetail() {
             📍 <Link to={`/grounds/${ground.id}`}>{ground.name}</Link>
           </p>
         )}
+        <ReportMatchIssue matchId={match.id} />
       </div>
 
       <CheckInPanel matchId={match.id} isPast={isPast} />
