@@ -99,6 +99,9 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
     setBusy(true)
     await supabase.from('user_visits').delete().eq('id', myVisitId)
     await loadVisits()
+    // Same reasoning as CheckInPanel.tsx's handleCheckOut -- evaluate()
+    // revokes as well as grants, so undo has to call it too.
+    await evaluate()
     setBusy(false)
   }
 
