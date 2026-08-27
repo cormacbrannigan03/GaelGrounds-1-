@@ -38,7 +38,11 @@ export default function CountyDetail() {
     async function load() {
       const [{ data: countyData }, { data: teamData }, { data: groundData }] = await Promise.all([
         supabase.from('counties').select('id, name, province, primary_colour, secondary_colour, nickname').eq('id', id!).single(),
-        supabase.from('county_teams').select('id, sport_code, founded_year, current_manager').eq('county_id', id!),
+        supabase
+          .from('county_teams')
+          .select('id, sport_code, founded_year, current_manager')
+          .eq('county_id', id!)
+          .in('sport_code', ['gaelic_football', 'hurling']),
         supabase.from('grounds').select('id, name, capacity').eq('county_id', id!),
       ])
 
