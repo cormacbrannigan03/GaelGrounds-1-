@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
+import { useAuth } from './context/AuthContext'
+import { hexToRgbTriplet } from './lib/format'
 import Dashboard from './pages/Dashboard'
 import AuthPage from './pages/AuthPage'
 import Counties from './pages/Counties'
@@ -15,9 +17,37 @@ import Leaderboard from './pages/Leaderboard'
 import Premium from './pages/Premium'
 import NotFound from './pages/NotFound'
 
+// Matches Theme.swift's brandGreen/brandGold -- the same default the
+// body's CSS gradient already falls back to when no county is set.
+const DEFAULT_PRIMARY = '#0b3d2e'
+const DEFAULT_SECONDARY = '#d9a441'
+
 export default function App() {
+  const { supportedCounty } = useAuth()
+
+  // Mirrors countyBackground(_:) in ios/GaelGrounds/Utilities/Theme.swift --
+  // same four gradient stops, same diagonal direction. When no county is
+  // set this intentionally matches the default green/gold wash already on
+  // body (see index.css), just re-applied here so switching a supported
+  // county on/off doesn't leave a visible seam between the two layers.
+  const primary = supportedCounty?.primaryColour ?? DEFAULT_PRIMARY
+  const secondary = supportedCounty?.secondaryColour ?? DEFAULT_SECONDARY
+  const countyBackground = {
+    backgroundImage: `linear-gradient(135deg,
+      rgba(${hexToRgbTriplet(primary)}, 0.94) 0%,
+      rgba(${hexToRgbTriplet(primary)}, 0.78) 28%,
+      rgba(${hexToRgbTriplet(secondary)}, 0.72) 72%,
+      rgba(${hexToRgbTriplet(secondary)}, 0.92) 100%)`,
+  }
+
   return (
     <>
+      {/* Full-bleed backdrop behind everything -- <main> itself is a
+          constrained, centered content column (max-width: 1080px), so the
+          gradient has to live on its own full-viewport layer instead of on
+          main directly, or it'd render as a boxed block rather than a
+          page-wide wash. */}
+      <div className="app-background" style={countyBackground} aria-hidden="true" />
       <Navbar />
       <main>
         <Routes>

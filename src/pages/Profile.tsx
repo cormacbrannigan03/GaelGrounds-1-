@@ -26,10 +26,16 @@ function PremiumBadge({ isPremium, premiumExpiresAt }: { isPremium: boolean; pre
 
 const MAX_PINNED_ACHIEVEMENTS = 4
 
+type County = { id: string; name: string }
+
 export default function Profile() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, refreshSupportedCounty } = useAuth()
   const [displayName, setDisplayName] = useState('')
   const [savedName, setSavedName] = useState('')
+  const [counties, setCounties] = useState<County[]>([])
+  const [supportedCountyId, setSupportedCountyId] = useState('')
+  const [savedSupportedCountyId, setSavedSupportedCountyId] = useState('')
+  const [savingCounty, setSavingCounty] = useState(false)
   const [grounds, setGrounds] = useState<VisitedGround[]>([])
   const [matches, setMatches] = useState<AttendedMatch[]>([])
   const [achievements, setAchievements] = useState<Achievement[]>([])
@@ -50,10 +56,10 @@ export default function Profile() {
     let cancelled = false
 
     async function load() {
-      const [{ data: profile }, { data: visits }, { data: attendance }, { data: userAch }] = await Promise.all([
+      const [{ data: profile }, { data: visits }, { data: attendance }, { data: userAch }, { data: countyRows }] = await Promise.all([
         supabase
           .from('user_profiles')
-          .select('display_name, best_match_id, avatar_url, is_premium, premium_expires_at')
+          .select('display_name, best_match_id, avatar_url, is_premium, premium_expires_at, supported_county_id')
           .eq('id', user!.id)
           .single(),
         supabase
@@ -71,6 +77,7 @@ export default function Profile() {
           .select('id, unlocked_at, achievement_id, pinned')
           .eq('user_id', user!.id)
           .order('unlocked_at', { ascending: false }),
+        supabase.from('counties').select('id, name').order('name'),
       ])
 
       if (cancelled) return
@@ -83,6 +90,9 @@ export default function Profile() {
       setAvatarUrl(profile?.avatar_url ?? null)
       setIsPremium(profile?.is_premium ?? false)
       setPremiumExpiresAt(profile?.premium_expires_at ?? null)
+      setCounties(countyRows ?? [])
+      setSupportedCountyId(profile?.supported_county_id ?? '')
+      setSavedSupportedCountyId(profile?.supported_county_id ?? '')
 
       const groundIds = [...new Set((visits ?? []).map((v) => v.ground_id))]
       const { data: groundRows } = groundIds.length
@@ -192,6 +202,17 @@ export default function Profile() {
     setSaving(false)
   }
 
+  async function saveSupportedCounty() {
+    if (!user || !supportedCountyId) return
+    setSavingCounty(true)
+    const { error } = await supabase.from('user_profiles').update({ supported_county_id: supportedCountyId }).eq('id', user.id)
+    if (!error) {
+      setSavedSupportedCountyId(supportedCountyId)
+      await refreshSupportedCounty()
+    }
+    setSavingCounty(false)
+  }
+
   async function uploadAvatar(file: File) {
     if (!user) return
     setUploadingAvatar(true)
@@ -298,6 +319,27 @@ export default function Profile() {
         </label>
         <button className="btn btn-outline" disabled={saving || displayName.trim() === savedName} onClick={saveDisplayName}>
           {saving ? 'Saving…' : 'Save'}
+        </button>
+      </section>
+
+      <section className="profile-name-editor">
+        <label>
+          Supported county
+          <select value={supportedCountyId} onChange={(e) => setSupportedCountyId(e.target.value)}>
+            <option value="">Select your county</option>
+            {counties.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          className="btn btn-outline"
+          disabled={savingCounty || !supportedCountyId || supportedCountyId === savedSupportedCountyId}
+          onClick={saveSupportedCounty}
+        >
+          {savingCounty ? 'Saving…' : 'Save'}
         </button>
       </section>
 

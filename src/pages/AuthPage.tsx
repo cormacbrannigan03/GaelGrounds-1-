@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabaseClient'
+
+type County = { id: string; name: string }
 
 export default function AuthPage() {
   const { signInWithPassword, signUp } = useAuth()
@@ -9,19 +12,48 @@ export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [counties, setCounties] = useState<County[]>([])
+  const [supportedCountyId, setSupportedCountyId] = useState('')
+  const [confirmedAge16, setConfirmedAge16] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (mode !== 'signup' || counties.length > 0) return
+    supabase
+      .from('counties')
+      .select('id, name')
+      .order('name')
+      .then(({ data }) => setCounties(data ?? []))
+  }, [mode, counties.length])
+
+  const canSubmit =
+    email.length > 0 &&
+    password.length >= 6 &&
+    (mode === 'signin' || (supportedCountyId !== '' && confirmedAge16))
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setInfo(null)
+
+    if (mode === 'signup') {
+      if (!supportedCountyId) {
+        setError('Please select the county you support.')
+        return
+      }
+      if (!confirmedAge16) {
+        setError('You must confirm you are 16 or older to create an account.')
+        return
+      }
+    }
+
     setBusy(true)
-
     const result =
-      mode === 'signin' ? await signInWithPassword(email, password) : await signUp(email, password, displayName)
-
+      mode === 'signin'
+        ? await signInWithPassword(email, password)
+        : await signUp(email, password, displayName, supportedCountyId)
     setBusy(false)
 
     if (result.error) {
@@ -54,16 +86,31 @@ export default function AuthPage() {
 
         <form onSubmit={handleSubmit}>
           {mode === 'signup' && (
-            <label>
-              Display name
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="e.g. Sean O'Brien"
-              />
-            </label>
+            <>
+              <label>
+                Display name
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="e.g. Sean O'Brien"
+                />
+              </label>
+
+              <label>
+                Supported county
+                <select value={supportedCountyId} onChange={(e) => setSupportedCountyId(e.target.value)} required>
+                  <option value="">Select your county</option>
+                  {counties.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
           )}
+
           <label>
             Email
             <input
@@ -86,10 +133,20 @@ export default function AuthPage() {
             />
           </label>
 
+          {mode === 'signup' && (
+            // GDPR Article 6/8: Ireland sets the digital age of consent at
+            // 16, the maximum allowed under the regulation. Self-attestation,
+            // not ID verification -- matches AuthView.swift's Toggle exactly.
+            <label className="checkbox-label">
+              <input type="checkbox" checked={confirmedAge16} onChange={(e) => setConfirmedAge16(e.target.checked)} />
+              <span className="small">I confirm I am 16 years of age or older.</span>
+            </label>
+          )}
+
           {error && <p className="form-error">{error}</p>}
           {info && <p className="form-info">{info}</p>}
 
-          <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy}>
+          <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy || !canSubmit}>
             {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
           </button>
         </form>
