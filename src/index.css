@@ -914,6 +914,50 @@ main {
   font-weight: 600;
 }
 
+.leaderboard-name-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.leaderboard-name-block .leaderboard-name {
+  flex: none;
+}
+
+.leaderboard-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.leaderboard-tabs button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.leaderboard-tabs button.active {
+  background: var(--green-light);
+  border-color: var(--green-light);
+  color: white;
+}
+
+.leaderboard-premium-banner {
+  display: block;
+  background: rgba(var(--gold-rgb), 0.15);
+  color: var(--text);
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
 .leaderboard-count {
   display: flex;
   flex-direction: column;
@@ -965,6 +1009,15 @@ select {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+}
+
+.leaderboard-opt-in {
+  margin: 1rem 0;
+  cursor: pointer;
+}
+
+.leaderboard-opt-in p {
+  margin: 0.25rem 0 0;
 }
 
 .search-input {

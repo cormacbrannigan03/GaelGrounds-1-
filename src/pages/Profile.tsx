@@ -40,6 +40,8 @@ export default function Profile() {
   const [bestMatchId, setBestMatchId] = useState<string | null>(null)
   const [isPremium, setIsPremium] = useState(false)
   const [premiumExpiresAt, setPremiumExpiresAt] = useState<string | null>(null)
+  const [leaderboardOptIn, setLeaderboardOptIn] = useState(false)
+  const [savingLeaderboardOptIn, setSavingLeaderboardOptIn] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarError, setAvatarError] = useState<string | null>(null)
@@ -56,7 +58,7 @@ export default function Profile() {
       const [{ data: profile }, { data: visits }, { data: attendance }, { data: countyRows }, achievementState] = await Promise.all([
         supabase
           .from('user_profiles')
-          .select('display_name, best_match_id, avatar_url, is_premium, premium_expires_at, supported_county_id')
+          .select('display_name, best_match_id, avatar_url, is_premium, premium_expires_at, supported_county_id, leaderboard_opt_in')
           .eq('id', user!.id)
           .single(),
         supabase
@@ -85,6 +87,7 @@ export default function Profile() {
       setAvatarUrl(profile?.avatar_url ?? null)
       setIsPremium(profile?.is_premium ?? false)
       setPremiumExpiresAt(profile?.premium_expires_at ?? null)
+      setLeaderboardOptIn(profile?.leaderboard_opt_in ?? false)
       setCounties(countyRows ?? [])
       setSupportedCountyId(profile?.supported_county_id ?? '')
       setSavedSupportedCountyId(profile?.supported_county_id ?? '')
@@ -229,6 +232,19 @@ export default function Profile() {
     return pinned.length > 0 ? pinned : unlockedAchievements.slice(0, 4)
   }, [unlockedAchievements])
 
+  // App Store guideline 5.1.2: premium status alone isn't consent to publish
+  // someone's name/stats -- Leaderboard.tsx only ever shows profiles with
+  // this explicitly set, off by default. Matches ProfileView.swift.
+  async function setLeaderboardOptInValue(newValue: boolean) {
+    if (!user) return
+    const previous = leaderboardOptIn
+    setLeaderboardOptIn(newValue)
+    setSavingLeaderboardOptIn(true)
+    const { error } = await supabase.from('user_profiles').update({ leaderboard_opt_in: newValue }).eq('id', user.id)
+    if (error) setLeaderboardOptIn(previous)
+    setSavingLeaderboardOptIn(false)
+  }
+
   async function toggleBestGame(matchId: string) {
     const newValue = bestMatchId === matchId ? null : matchId
     setBestMatchId(newValue)
@@ -335,6 +351,24 @@ export default function Profile() {
 
       <PremiumBadge isPremium={isPremium} premiumExpiresAt={premiumExpiresAt} />
 
+      {isPremium && (
+        <label className="card checkbox-label leaderboard-opt-in">
+          <input
+            type="checkbox"
+            checked={leaderboardOptIn}
+            disabled={savingLeaderboardOptIn}
+            onChange={(e) => setLeaderboardOptInValue(e.target.checked)}
+          />
+          <div>
+            <strong>Appear on the Leaderboard</strong>
+            <p className="muted small">
+              Your display name and match/ground stats will be visible to every other GaelGrounds user. Off by
+              default — you choose to turn this on.
+            </p>
+          </div>
+        </label>
+      )}
+
       <Link to="/friends" className="card best-game-card friends-link">
         <strong>👥 Friends</strong>
       </Link>
@@ -416,11 +450,13 @@ export default function Profile() {
             ) : (
               <ul className="history-list">
                 {grounds.map((g) => (
-                  <li key={g.groundId}>
-                    <strong>{g.name}</strong>
-                    <span className="muted small">
-                      {g.visitCount} {g.visitCount === 1 ? 'visit' : 'visits'}
-                    </span>
+                  <li key={g.groundId} className="history-list-item">
+                    <Link to={`/grounds/${g.groundId}`}>
+                      <strong>{g.name}</strong>
+                      <span className="muted small">
+                        {g.visitCount} {g.visitCount === 1 ? 'visit' : 'visits'}
+                      </span>
+                    </Link>
                   </li>
                 ))}
               </ul>
