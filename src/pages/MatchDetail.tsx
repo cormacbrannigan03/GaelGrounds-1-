@@ -139,7 +139,7 @@ export default function MatchDetail() {
         <ReportMatchIssue matchId={match.id} />
       </div>
 
-      <CheckInPanel matchId={match.id} isPast={isPast} />
+      <CheckInPanel matchId={match.id} isPast={isPast} matchPlayedAt={match.played_at} />
     </div>
   )
 }

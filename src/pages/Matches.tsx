@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { useAuth } from '../context/AuthContext'
 import MatchCard, { type MatchCardData } from '../components/MatchCard'
+import PersonalMatchCard, { type PersonalMatch } from '../components/PersonalMatchCard'
+import AddMatchForm from '../components/AddMatchForm'
 import { isUpcoming, SPORT_ICONS, SPORT_LABELS } from '../lib/format'
+import { canLogAnotherMatch } from '../lib/matchLimits'
 import type { Enums } from '../lib/database.types'
 
 type SportCode = Enums<'sport_code'>
@@ -56,7 +61,13 @@ async function fetchAllRows<T>(
 }
 
 export default function Matches() {
+  const { user } = useAuth()
   const [matches, setMatches] = useState<MatchCardWithSport[]>([])
+  const [personalMatches, setPersonalMatches] = useState<PersonalMatch[]>([])
+  const [showingAddMatch, setShowingAddMatch] = useState(false)
+  const [addMatchBlocked, setAddMatchBlocked] = useState(false)
+  const [checkingAddMatch, setCheckingAddMatch] = useState(false)
+  const [myMatchesExpanded, setMyMatchesExpanded] = useState(true)
   const [selectedSport, setSelectedSport] = useState<SportCode>('gaelic_football')
   const [tab, setTab] = useState<Tab>('upcoming')
   const [search, setSearch] = useState('')
@@ -140,6 +151,43 @@ export default function Matches() {
     }
   }, [])
 
+  const loadPersonalMatches = async () => {
+    if (!user) {
+      setPersonalMatches([])
+      return
+    }
+    const { data } = await supabase
+      .from('user_personal_matches')
+      .select('id, home_team, away_team, competition, round, venue, played_at, home_score, away_score')
+      .eq('user_id', user.id)
+      .order('played_at', { ascending: false })
+    setPersonalMatches(data ?? [])
+  }
+
+  useEffect(() => {
+    loadPersonalMatches()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
+  async function tapAddMatch() {
+    if (!user) return
+    setCheckingAddMatch(true)
+    const { data: profile } = await supabase.from('user_profiles').select('is_premium').eq('id', user.id).single()
+    const allowed = await canLogAnotherMatch(user.id, profile?.is_premium ?? false)
+    setCheckingAddMatch(false)
+    if (allowed) {
+      setAddMatchBlocked(false)
+      setShowingAddMatch(true)
+    } else {
+      setAddMatchBlocked(true)
+    }
+  }
+
+  async function deletePersonalMatch(id: string) {
+    await supabase.from('user_personal_matches').delete().eq('id', id)
+    await loadPersonalMatches()
+  }
+
   const sportFiltered = useMemo(
     () => matches.filter((m) => m.sportCode === selectedSport),
     [matches, selectedSport],
@@ -157,6 +205,19 @@ export default function Matches() {
         (m.played_at && new Date(m.played_at).getFullYear().toString() === q),
     )
   }, [sportFiltered, search])
+
+  const filteredPersonalMatches = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return personalMatches
+    return personalMatches.filter(
+      (m) =>
+        m.home_team.toLowerCase().includes(q) ||
+        m.away_team.toLowerCase().includes(q) ||
+        (m.competition ?? '').toLowerCase().includes(q) ||
+        (m.venue ?? '').toLowerCase().includes(q) ||
+        new Date(m.played_at).getFullYear().toString() === q,
+    )
+  }, [personalMatches, search])
 
   // Upcoming and Fixtures show the same list -- matching MatchesView.swift
   // and the Android port, where both tabs are separate entry points onto
@@ -264,6 +325,26 @@ export default function Matches() {
         </button>
       </div>
 
+      {user && tab === 'results' && !showingAddMatch && (
+        <button className="btn btn-outline btn-sm add-match-toggle" onClick={tapAddMatch} disabled={checkingAddMatch}>
+          {checkingAddMatch ? 'Checking…' : '+ Add a match'}
+        </button>
+      )}
+      {addMatchBlocked && (
+        <p className="muted small">
+          You've reached the free plan's 10-match limit — <Link to="/premium">upgrade to Premium</Link> to log more.
+        </p>
+      )}
+      {showingAddMatch && (
+        <AddMatchForm
+          onAdded={() => {
+            setShowingAddMatch(false)
+            loadPersonalMatches()
+          }}
+          onCancel={() => setShowingAddMatch(false)}
+        />
+      )}
+
       {loading ? (
         <p className="muted">Loading matches…</p>
       ) : tab !== 'results' ? (
@@ -276,10 +357,29 @@ export default function Matches() {
             ))}
           </div>
         )
-      ) : yearGroups.length === 0 && undatedResults.length === 0 ? (
+      ) : yearGroups.length === 0 && undatedResults.length === 0 && filteredPersonalMatches.length === 0 ? (
         <p className="muted">No results yet — check back once games have been played.</p>
       ) : (
         <div className="results-groups">
+          {filteredPersonalMatches.length > 0 && (
+            <div className="results-year">
+              <button className="results-group-header" onClick={() => setMyMatchesExpanded((v) => !v)}>
+                <span>
+                  {myMatchesExpanded ? '▾' : '▸'} My Matches
+                </span>
+                <span className="muted small">
+                  {filteredPersonalMatches.length} match{filteredPersonalMatches.length === 1 ? '' : 'es'}
+                </span>
+              </button>
+              {myMatchesExpanded && (
+                <div className="card-grid">
+                  {filteredPersonalMatches.map((m) => (
+                    <PersonalMatchCard key={m.id} match={m} onDelete={() => deletePersonalMatch(m.id)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {yearGroups.map((yg) => {
             const isOpen = openYears.has(yg.year)
             const total = yg.months.reduce((sum, mo) => sum + mo.matches.length, 0)
