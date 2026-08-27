@@ -347,6 +347,15 @@ main {
   z-index: -1;
 }
 
+.confetti-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 30;
+}
+
 .page {
   padding-top: 1.5rem;
 }
