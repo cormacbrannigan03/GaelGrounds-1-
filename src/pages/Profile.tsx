@@ -278,105 +278,115 @@ export default function Profile() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>{savedName || 'Your profile'}</h1>
+        <h1>{loading ? 'Your profile' : savedName || 'Your profile'}</h1>
         <p className="muted">{user.email}</p>
       </div>
 
-      <label className="avatar-upload card">
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="avatar-preview" />
-        ) : (
-          <span className="avatar-placeholder">👤</span>
-        )}
-        <span>{uploadingAvatar ? 'Uploading…' : avatarUrl ? 'Change profile photo' : 'Add profile photo'}</span>
-        <input
-          type="file"
-          accept="image/jpeg,image/png"
-          hidden
-          disabled={uploadingAvatar}
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) uploadAvatar(file)
-            e.target.value = ''
-          }}
-        />
-      </label>
-      {avatarError && <p className="muted small error-text">{avatarError}</p>}
-
-      <section className="profile-name-editor">
-        <label>
-          Display name
-          <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" />
-        </label>
-        <button className="btn btn-outline" disabled={saving || displayName.trim() === savedName} onClick={saveDisplayName}>
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-      </section>
-
-      <section className="profile-name-editor">
-        <label>
-          Supported county
-          <select value={supportedCountyId} onChange={(e) => setSupportedCountyId(e.target.value)}>
-            <option value="">Select your county</option>
-            {counties.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          className="btn btn-outline"
-          disabled={savingCounty || !supportedCountyId || supportedCountyId === savedSupportedCountyId}
-          onClick={saveSupportedCounty}
-        >
-          {savingCounty ? 'Saving…' : 'Save'}
-        </button>
-      </section>
-
-      <section className="stats-row">
-        <div className="stat-tile">
-          <span className="stat-value">{grounds.length}</span>
-          <span className="stat-label">Grounds visited</span>
-        </div>
-        <div className="stat-tile">
-          <span className="stat-value">{matches.length}</span>
-          <span className="stat-label">Matches attended</span>
-        </div>
-        <div className="stat-tile">
-          <span className="stat-value">{unlockedAchievements.length}</span>
-          <span className="stat-label">Achievements</span>
-        </div>
-      </section>
-
-      <PremiumBadge isPremium={isPremium} premiumExpiresAt={premiumExpiresAt} />
-
-      {isPremium && (
-        <label className="card checkbox-label leaderboard-opt-in">
-          <input
-            type="checkbox"
-            checked={leaderboardOptIn}
-            disabled={savingLeaderboardOptIn}
-            onChange={(e) => setLeaderboardOptInValue(e.target.checked)}
-          />
-          <div>
-            <strong>Appear on the Leaderboard</strong>
-            <p className="muted small">
-              Your display name and match/ground stats will be visible to every other GaelGrounds user. Off by
-              default — you choose to turn this on.
-            </p>
-          </div>
-        </label>
-      )}
-
-      <Link to="/friends" className="card best-game-card friends-link">
-        <strong>👥 Friends</strong>
-      </Link>
-
       {loading ? (
-        <p className="muted">Loading your history…</p>
+        // Every field below (name, county, and especially the 0/0/0 stats
+        // tiles) used to render straight from its blank/zero useState
+        // default while this data was still loading -- indistinguishable
+        // from an account that's actually lost its data. That's harmless
+        // on a fast connection where it flashes for a moment, but on a
+        // slow one (or right after a fresh page load some networks
+        // trigger, e.g. Safari reloading a backgrounded tab) it can sit
+        // there for many seconds looking exactly like data loss. Showing
+        // a plain loading state instead means real profile data is never
+        // silently replaced by fabricated zeroes on screen.
+        <p className="muted">Loading your profile…</p>
       ) : (
         <>
+          <label className="avatar-upload card">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="avatar-preview" />
+            ) : (
+              <span className="avatar-placeholder">👤</span>
+            )}
+            <span>{uploadingAvatar ? 'Uploading…' : avatarUrl ? 'Change profile photo' : 'Add profile photo'}</span>
+            <input
+              type="file"
+              accept="image/jpeg,image/png"
+              hidden
+              disabled={uploadingAvatar}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) uploadAvatar(file)
+                e.target.value = ''
+              }}
+            />
+          </label>
+          {avatarError && <p className="muted small error-text">{avatarError}</p>}
+
+          <section className="profile-name-editor">
+            <label>
+              Display name
+              <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" />
+            </label>
+            <button className="btn btn-outline" disabled={saving || displayName.trim() === savedName} onClick={saveDisplayName}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </section>
+
+          <section className="profile-name-editor">
+            <label>
+              Supported county
+              <select value={supportedCountyId} onChange={(e) => setSupportedCountyId(e.target.value)}>
+                <option value="">Select your county</option>
+                {counties.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="btn btn-outline"
+              disabled={savingCounty || !supportedCountyId || supportedCountyId === savedSupportedCountyId}
+              onClick={saveSupportedCounty}
+            >
+              {savingCounty ? 'Saving…' : 'Save'}
+            </button>
+          </section>
+
+          <section className="stats-row">
+            <div className="stat-tile">
+              <span className="stat-value">{grounds.length}</span>
+              <span className="stat-label">Grounds visited</span>
+            </div>
+            <div className="stat-tile">
+              <span className="stat-value">{matches.length}</span>
+              <span className="stat-label">Matches attended</span>
+            </div>
+            <div className="stat-tile">
+              <span className="stat-value">{unlockedAchievements.length}</span>
+              <span className="stat-label">Achievements</span>
+            </div>
+          </section>
+
+          <PremiumBadge isPremium={isPremium} premiumExpiresAt={premiumExpiresAt} />
+
+          {isPremium && (
+            <label className="card checkbox-label leaderboard-opt-in">
+              <input
+                type="checkbox"
+                checked={leaderboardOptIn}
+                disabled={savingLeaderboardOptIn}
+                onChange={(e) => setLeaderboardOptInValue(e.target.checked)}
+              />
+              <div>
+                <strong>Appear on the Leaderboard</strong>
+                <p className="muted small">
+                  Your display name and match/ground stats will be visible to every other GaelGrounds user. Off by
+                  default — you choose to turn this on.
+                </p>
+              </div>
+            </label>
+          )}
+
+          <Link to="/friends" className="card best-game-card friends-link">
+            <strong>👥 Friends</strong>
+          </Link>
+
           {bestMatchId &&
             (() => {
               const best = matches.find((m) => m.matchId === bestMatchId)
