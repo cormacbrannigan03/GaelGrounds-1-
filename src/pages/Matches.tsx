@@ -36,6 +36,31 @@ const MONTH_NAMES = [
 
 const PAGE_SIZE = 1000
 
+// National Football League / National Hurling League both have "Division N"
+// tagged for the regular season, but promotion-relegation playoff and final
+// rounds -- which don't belong to a single division -- are tagged with just
+// the bare league name. Filtering by the bare name is meant to mean "the
+// whole league," so it needs to also catch every division's matches, not
+// just the handful of undivided playoff rows.
+const UMBRELLA_COMPETITIONS = new Set(['National Football League', 'National Hurling League'])
+
+function matchesSelection(selection: string, values: (string | null | undefined)[]) {
+  if (!selection) return true
+  return values.some((v) => v === selection)
+}
+
+function matchesCompetition(selection: string, competitions: (string | null | undefined)[]) {
+  if (!selection) return true
+  if (UMBRELLA_COMPETITIONS.has(selection)) {
+    return competitions.some((c) => c?.startsWith(selection))
+  }
+  return competitions.some((c) => c === selection)
+}
+
+function uniqueSorted(values: (string | null | undefined)[]): string[] {
+  return [...new Set(values.filter((v): v is string => Boolean(v)))].sort()
+}
+
 // PostgREST (Supabase's data API) caps any single request at 1000 rows by
 // default -- an unbounded .select() silently truncates rather than erroring,
 // so a plain query only ever returned the most recent ~1000 matches
@@ -68,6 +93,10 @@ export default function Matches() {
   const [addMatchBlocked, setAddMatchBlocked] = useState(false)
   const [checkingAddMatch, setCheckingAddMatch] = useState(false)
   const [myMatchesExpanded, setMyMatchesExpanded] = useState(true)
+  const [showingFilters, setShowingFilters] = useState(false)
+  const [selectedCounty, setSelectedCountyFilter] = useState('')
+  const [selectedCompetition, setSelectedCompetitionFilter] = useState('')
+  const [selectedVenue, setSelectedVenueFilter] = useState('')
   const [selectedSport, setSelectedSport] = useState<SportCode>('gaelic_football')
   const [tab, setTab] = useState<Tab>('upcoming')
   const [search, setSearch] = useState('')
@@ -206,7 +235,7 @@ export default function Matches() {
     )
   }, [sportFiltered, search])
 
-  const filteredPersonalMatches = useMemo(() => {
+  const personalSearchFiltered = useMemo(() => {
     const q = search.trim().toLowerCase()
     if (!q) return personalMatches
     return personalMatches.filter(
@@ -219,20 +248,61 @@ export default function Matches() {
     )
   }, [personalMatches, search])
 
+  const countyOptions = useMemo(
+    () =>
+      uniqueSorted([
+        ...sportFiltered.flatMap((m) => [m.homeName, m.awayName]),
+        ...personalMatches.flatMap((m) => [m.home_team, m.away_team]),
+      ]),
+    [sportFiltered, personalMatches],
+  )
+  const competitionOptions = useMemo(
+    () => uniqueSorted([...sportFiltered.map((m) => m.competition), ...personalMatches.map((m) => m.competition)]),
+    [sportFiltered, personalMatches],
+  )
+  const venueOptions = useMemo(
+    () => uniqueSorted([...sportFiltered.map((m) => m.groundName), ...personalMatches.map((m) => m.venue)]),
+    [sportFiltered, personalMatches],
+  )
+  const activeFilterCount = [selectedCounty, selectedCompetition, selectedVenue].filter(Boolean).length
+  const hasQueryOrFilters = search.trim() !== '' || activeFilterCount > 0
+
+  const filteredMatches = useMemo(
+    () =>
+      searchFiltered.filter(
+        (m) =>
+          matchesSelection(selectedCounty, [m.homeName, m.awayName]) &&
+          matchesCompetition(selectedCompetition, [m.competition]) &&
+          matchesSelection(selectedVenue, [m.groundName]),
+      ),
+    [searchFiltered, selectedCounty, selectedCompetition, selectedVenue],
+  )
+
+  const filteredPersonalMatches = useMemo(
+    () =>
+      personalSearchFiltered.filter(
+        (m) =>
+          matchesSelection(selectedCounty, [m.home_team, m.away_team]) &&
+          matchesCompetition(selectedCompetition, [m.competition]) &&
+          matchesSelection(selectedVenue, [m.venue]),
+      ),
+    [personalSearchFiltered, selectedCounty, selectedCompetition, selectedVenue],
+  )
+
   // Upcoming and Fixtures show the same list -- matching MatchesView.swift
   // and the Android port, where both tabs are separate entry points onto
   // identical content rather than two different filters.
   const upcomingList = useMemo(
     () =>
-      searchFiltered
+      filteredMatches
         .filter((m) => !Boolean(m.home_score && m.away_score) && m.played_at && isUpcoming(m.played_at, false))
         .sort((a, b) => (a.played_at ?? '').localeCompare(b.played_at ?? '')),
-    [searchFiltered],
+    [filteredMatches],
   )
 
   const resultsList = useMemo(
-    () => searchFiltered.filter((m) => Boolean(m.home_score && m.away_score)),
-    [searchFiltered],
+    () => filteredMatches.filter((m) => Boolean(m.home_score && m.away_score)),
+    [filteredMatches],
   )
 
   const yearGroups = useMemo<YearGroup[]>(() => {
@@ -307,12 +377,70 @@ export default function Matches() {
           </button>
         ))}
       </div>
-      <input
-        className="search-input"
-        placeholder="Search by team, competition, ground or year…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div className="matches-search-row">
+        <input
+          className="search-input"
+          placeholder="Search by team, competition, ground or year…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button
+          className={activeFilterCount > 0 ? 'btn btn-outline btn-sm active' : 'btn btn-outline btn-sm'}
+          onClick={() => setShowingFilters((v) => !v)}
+        >
+          🔎 Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+        </button>
+      </div>
+
+      {showingFilters && (
+        <div className="card match-filters">
+          <label>
+            County
+            <select value={selectedCounty} onChange={(e) => setSelectedCountyFilter(e.target.value)}>
+              <option value="">Any county</option>
+              {countyOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Competition
+            <select value={selectedCompetition} onChange={(e) => setSelectedCompetitionFilter(e.target.value)}>
+              <option value="">Any competition</option>
+              {competitionOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Venue
+            <select value={selectedVenue} onChange={(e) => setSelectedVenueFilter(e.target.value)}>
+              <option value="">Any venue</option>
+              {venueOptions.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="btn btn-ghost btn-sm"
+            disabled={activeFilterCount === 0}
+            onClick={() => {
+              setSelectedCountyFilter('')
+              setSelectedCompetitionFilter('')
+              setSelectedVenueFilter('')
+            }}
+          >
+            Reset filters
+          </button>
+        </div>
+      )}
+
       <div className="filter-tabs">
         <button className={tab === 'upcoming' ? 'active' : ''} onClick={() => setTab('upcoming')}>
           Upcoming
@@ -349,7 +477,7 @@ export default function Matches() {
         <p className="muted">Loading matches…</p>
       ) : tab !== 'results' ? (
         displayedList && displayedList.length === 0 ? (
-          <p className="muted">No matches to show.</p>
+          <p className="muted">{hasQueryOrFilters ? 'No matches found.' : 'No upcoming fixtures.'}</p>
         ) : (
           <div className="card-grid">
             {displayedList!.map((m) => (
@@ -358,7 +486,9 @@ export default function Matches() {
           </div>
         )
       ) : yearGroups.length === 0 && undatedResults.length === 0 && filteredPersonalMatches.length === 0 ? (
-        <p className="muted">No results yet — check back once games have been played.</p>
+        <p className="muted">
+          {hasQueryOrFilters ? 'No matches found. Try a different search or filter.' : 'No results yet — check back once games have been played.'}
+        </p>
       ) : (
         <div className="results-groups">
           {filteredPersonalMatches.length > 0 && (
