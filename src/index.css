@@ -1027,6 +1027,35 @@ textarea {
   max-width: 420px;
 }
 
+.matches-search-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.matches-search-row .search-input {
+  flex: 1;
+  margin: 1rem 0;
+}
+
+.matches-search-row .btn.active {
+  background: var(--green-light);
+  border-color: var(--green-light);
+  color: white;
+}
+
+.match-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.match-filters label {
+  margin-bottom: 0;
+}
+
 label {
   display: flex;
   flex-direction: column;
