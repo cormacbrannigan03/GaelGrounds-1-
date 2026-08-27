@@ -104,7 +104,17 @@ export default function Friends() {
   }
 
   async function respond(friendshipId: string, accept: boolean) {
-    await supabase.from('friendships').update({ status: accept ? 'accepted' : 'declined' }).eq('id', friendshipId)
+    // The friendships.status CHECK constraint only allows 'pending' and
+    // 'accepted' -- there's no 'declined' value, so updating to it fails
+    // the constraint and silently does nothing. Declining just deletes the
+    // row instead (the RLS delete policy already allows either party to);
+    // the unique(requester_id, addressee_id) constraint means the same
+    // person can send a fresh request later, which reads better anyway.
+    if (accept) {
+      await supabase.from('friendships').update({ status: 'accepted' }).eq('id', friendshipId)
+    } else {
+      await supabase.from('friendships').delete().eq('id', friendshipId)
+    }
     await load()
   }
 
