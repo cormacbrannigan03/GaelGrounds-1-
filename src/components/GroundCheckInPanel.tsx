@@ -82,6 +82,10 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
     const { error } = await supabase
       .from('user_visits')
       .insert({ ground_id: groundId, user_id: user.id, notes: notes.trim() || null })
+    // Refresh directly rather than waiting on the realtime echo -- see
+    // CheckInPanel.tsx's handleCheckIn for why (button could otherwise get
+    // stuck showing the pre-check-in state on a slow/missed realtime event).
+    await loadVisits()
     if (!error) {
       setNotes('')
       const newlyUnlocked = await evaluate()
@@ -94,6 +98,7 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
     if (!myVisitId) return
     setBusy(true)
     await supabase.from('user_visits').delete().eq('id', myVisitId)
+    await loadVisits()
     setBusy(false)
   }
 
@@ -106,7 +111,7 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
         </div>
       </div>
 
-      {user && !myVisitId && (
+      {user && !loading && !myVisitId && (
         <div className="checkin-form">
           <input
             type="text"
@@ -119,7 +124,7 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
           </button>
         </div>
       )}
-      {user && myVisitId && (
+      {user && !loading && myVisitId && (
         <button className="btn btn-outline" disabled={busy} onClick={handleUndo}>
           ✓ Checked in — tap to undo
         </button>

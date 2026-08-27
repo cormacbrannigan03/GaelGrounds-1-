@@ -78,6 +78,11 @@ export default function CheckInPanel({ matchId, isPast = false }: { matchId: str
     if (!user) return
     setBusy(true)
     const { error } = await supabase.from('user_match_attendance').insert({ match_id: matchId, user_id: user.id })
+    // Don't wait on the realtime echo to reflect this -- refresh directly,
+    // both on success and on a 409 (a stray double-click, or state that was
+    // already stale before this click landed; either way the honest fix is
+    // to reload the real row rather than leave the button looking broken).
+    await loadAttendees()
     if (!error) {
       const newlyUnlocked = await evaluate()
       if (newlyUnlocked.length > 0) setUnlockedToast(newlyUnlocked)
@@ -89,6 +94,7 @@ export default function CheckInPanel({ matchId, isPast = false }: { matchId: str
     if (!myAttendanceId) return
     setBusy(true)
     await supabase.from('user_match_attendance').delete().eq('id', myAttendanceId)
+    await loadAttendees()
     setBusy(false)
   }
 
@@ -100,6 +106,7 @@ export default function CheckInPanel({ matchId, isPast = false }: { matchId: str
           <p className="muted">{isPast ? 'Check in any time, even after the final whistle' : 'Updates live as fans check in'}</p>
         </div>
         {user &&
+          !loading &&
           (myAttendanceId ? (
             <button className="btn btn-outline" disabled={busy} onClick={handleCheckOut}>
               ✓ {isPast ? 'Logged as attended' : 'Checked in'} — tap to undo
