@@ -17,11 +17,13 @@ export function createStripeClient(): Stripe {
   }
   return new Stripe(secretKey, {
     httpClient: Stripe.createFetchHttpClient(),
-    // No apiVersion pin: "2026-07-29.dahlia" (copied from a Stripe
-    // Dashboard dropdown label, not confirmed as the exact literal value
-    // the API's Stripe-Version header expects) is the prime suspect for a
-    // 500 seen on the first real checkout attempt -- omitting apiVersion
-    // makes stripe-node@17 fall back to its own tested, guaranteed-valid
-    // pinned default instead of a hand-typed guess.
+    // Confirmed necessary, not just cautious: stripe-node@17's own bundled
+    // default (2025-02-24.acacia, used when apiVersion is omitted) throws
+    // "Managed Payments is not supported on API version ... acacia" against
+    // this account -- Stripe requires 2025-03-31.basil or later for it. The
+    // account's actual current dashboard version, 2026-07-29.dahlia, is
+    // well past that floor, so pinning here isn't a guess this time, it's
+    // what a real checkout attempt against this account requires.
+    apiVersion: "2026-07-29.dahlia" as Stripe.LatestApiVersion,
   });
 }
