@@ -50,10 +50,23 @@ export default function AuthPage() {
     }
 
     setBusy(true)
-    const result =
-      mode === 'signin'
-        ? await signInWithPassword(email, password)
-        : await signUp(email, password, displayName, supportedCountyId)
+    // signInWithPassword/signUp normally resolve with { error } rather than
+    // throwing -- but a network hiccup or an unexpected exception can still
+    // reject the promise, and without a catch here that left busy stuck
+    // true forever (the button showing "Please wait..." with no way out
+    // short of reloading the page, since nothing after the un-awaited throw
+    // ever ran).
+    let result: { error: string | null }
+    try {
+      result =
+        mode === 'signin'
+          ? await signInWithPassword(email, password)
+          : await signUp(email, password, displayName, supportedCountyId)
+    } catch {
+      setBusy(false)
+      setError("Couldn't reach the server — check your connection and try again.")
+      return
+    }
     setBusy(false)
 
     if (result.error) {

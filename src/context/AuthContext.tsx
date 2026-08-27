@@ -28,10 +28,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [supportedCounty, setSupportedCounty] = useState<SupportedCounty | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setLoading(false)
-    })
+    // Without this catch, a rejected getSession() (a network hiccup, an
+    // unexpected exception) left `loading` stuck true forever -- every
+    // page gated on it (ProtectedRoute, and the auth-dependent bits of
+    // every other page) would then be stuck showing its own loading state
+    // indefinitely, with no error and no way out short of a page reload.
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session)
+        setLoading(false)
+      })
+      .catch(() => {
+        setLoading(false)
+      })
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession)
