@@ -4,6 +4,8 @@ import type { Enums } from './database.types'
 
 export type Province = Enums<'province'>
 export type Tier = 'bronze' | 'silver' | 'gold'
+export type SportCode = Enums<'sport_code'>
+export type SportFilter = SportCode | 'combined'
 
 export type LeaderboardEntry = {
   id: string
@@ -13,12 +15,13 @@ export type LeaderboardEntry = {
   provinceMatchCounts: Record<string, number>
   tierCounts: Record<Tier, number>
   supportedCountyId: string | null
-  // Matches attended (home or away, either sport) involving this entry's
-  // OWN supported county specifically -- distinct from matchCount, which is
-  // every match they've ever attended regardless of county. The "My
-  // County" tab filters the leaderboard down to a county's supporters, but
-  // without this it was still ranking/displaying them by their overall
-  // match count, not by how engaged they actually are with that county.
+  // Matches attended (home or away, either sport unless a sport filter is
+  // applied) involving this entry's OWN supported county specifically --
+  // distinct from matchCount, which is every match they've ever attended
+  // regardless of county. The "My County" tab filters the leaderboard down
+  // to a county's supporters, but without this it was still ranking/
+  // displaying them by their overall match count, not by how engaged they
+  // actually are with that county.
   supportedCountyMatchCount: number
 }
 
@@ -32,31 +35,48 @@ export function tierForHomeMatchCount(count: number): Tier | 'standard' {
 
 const teamKey = (countyId: string, sportCode: string) => `${countyId}:${sportCode}`
 
-/**
- * Computes every signed-in-visible leaderboard entry in one pass, mirroring
- * LeaderboardView.swift's load(): overall + per-province match counts,
- * distinct ground counts, and county_home_match/county_away_match tier
- * tallies (bronze/silver/gold) for the "Most Bronze"/"Most Silver"/"Top
- * Gold" tabs. Only profiles with is_premium AND leaderboard_opt_in are
- * included -- premium alone isn't consent to publish someone's name/stats.
- */
-export async function loadLeaderboardEntries(): Promise<LeaderboardEntry[]> {
-  type ProfileRow = {
-    id: string
-    display_name: string | null
-    is_premium: boolean
-    leaderboard_opt_in: boolean
-    supported_county_id: string | null
-  }
-  type AttendanceRow = { user_id: string; match_id: string }
-  type VisitRow = { user_id: string; ground_id: string }
-  type MatchRow = { id: string; home_county_team_id: string | null; away_county_team_id: string | null; ground_id: string | null }
-  type CountyTeamRow = { id: string; county_id: string; sport_code: string }
-  type CountyRow = { id: string; name: string; province: string }
-  type GroundRow = { id: string; county_id: string }
-  type UserAchievementRow = { user_id: string; achievement_id: string }
-  type AchievementDefRow = { id: string; rule_type: string; rule_params: unknown }
+type ProfileRow = {
+  id: string
+  display_name: string | null
+  is_premium: boolean
+  leaderboard_opt_in: boolean
+  supported_county_id: string | null
+}
+type AttendanceRow = { user_id: string; match_id: string }
+type VisitRow = { user_id: string; ground_id: string }
+type MatchRow = { id: string; home_county_team_id: string | null; away_county_team_id: string | null; ground_id: string | null }
+type CountyTeamRow = { id: string; county_id: string; sport_code: string }
+type CountyRow = { id: string; name: string; province: string }
+type GroundRow = { id: string; county_id: string }
+type UserAchievementRow = { user_id: string; achievement_id: string }
+type AchievementDefRow = { id: string; rule_type: string; rule_params: unknown }
 
+export type LeaderboardRawData = {
+  profileById: Map<string, ProfileRow>
+  attendance: AttendanceRow[]
+  visits: VisitRow[]
+  matchById: Map<string, MatchRow>
+  teamToCounty: Map<string, string>
+  teamSport: Map<string, string>
+  countyToProvince: Map<string, string>
+  groundCounty: Map<string, string>
+  matchProvinces: Map<string, Set<string>>
+  // A match's own sport, resolved from either team the same way
+  // Matches.tsx resolves a MatchCard's sportCode -- a match has no
+  // sport_code column of its own, only its participating teams do.
+  matchSport: Map<string, string>
+  userAchievements: UserAchievementRow[]
+  defById: Map<string, AchievementDefRow>
+}
+
+/**
+ * Fetches every table loadLeaderboardEntries needs, once. Kept separate
+ * from the aggregation step so switching the sport filter (combined/
+ * football/hurling) on the Leaderboard page can recompute entries
+ * instantly from already-fetched data instead of re-querying Supabase on
+ * every tap.
+ */
+export async function fetchLeaderboardRawData(): Promise<LeaderboardRawData> {
   // `matches`, `attendance`, `visits`, and `userAchievements` all grow
   // without bound as the app is used (matches with every fixture import,
   // the others with every check-in) -- a plain .select() silently truncates
@@ -87,20 +107,60 @@ export async function loadLeaderboardEntries(): Promise<LeaderboardEntry[]> {
   const matchById = new Map((matches ?? []).map((m) => [m.id, m]))
 
   const matchProvinces = new Map<string, Set<string>>()
+  const matchSport = new Map<string, string>()
   for (const m of matches ?? []) {
     const provs = new Set<string>()
+    let sport: string | undefined
     for (const teamId of [m.home_county_team_id, m.away_county_team_id]) {
       if (!teamId) continue
       const countyId = teamToCounty.get(teamId)
       const province = countyId ? countyToProvince.get(countyId) : undefined
       if (province) provs.add(province)
+      sport = sport ?? teamSport.get(teamId)
     }
     matchProvinces.set(m.id, provs)
+    if (sport) matchSport.set(m.id, sport)
   }
+
+  return {
+    profileById: new Map((profiles ?? []).map((p) => [p.id, p])),
+    attendance,
+    visits,
+    matchById,
+    teamToCounty,
+    teamSport,
+    countyToProvince,
+    groundCounty,
+    matchProvinces,
+    matchSport,
+    userAchievements,
+    defById: new Map((achievementDefs ?? []).map((d) => [d.id, d])),
+  }
+}
+
+/**
+ * Computes every signed-in-visible leaderboard entry in one pass, mirroring
+ * LeaderboardView.swift's load(): overall + per-province match counts,
+ * distinct ground counts, and county_home_match/county_away_match tier
+ * tallies (bronze/silver/gold) for the "Most Bronze"/"Most Silver"/"Top
+ * Gold" tabs. Only profiles with is_premium AND leaderboard_opt_in are
+ * included -- premium alone isn't consent to publish someone's name/stats.
+ *
+ * `sportFilter` restricts every match-based count (matchCount,
+ * provinceMatchCounts, supportedCountyMatchCount, tierCounts) to that one
+ * sport; 'combined' (the default) counts both. groundCount is always
+ * combined regardless -- a ground visit has no reliable link back to which
+ * match/sport it was for, so there's nothing sport-specific to filter it by.
+ */
+export function buildLeaderboardEntries(raw: LeaderboardRawData, sportFilter: SportFilter = 'combined'): LeaderboardEntry[] {
+  const { profileById, matchById, teamToCounty, groundCounty, matchProvinces, matchSport, defById } = raw
+
+  const attendance =
+    sportFilter === 'combined' ? raw.attendance : raw.attendance.filter((a) => matchSport.get(a.match_id) === sportFilter)
 
   const overallMatchCounts = new Map<string, number>()
   const provinceCounts = new Map<string, Map<string, number>>()
-  for (const a of attendance ?? []) {
+  for (const a of attendance) {
     overallMatchCounts.set(a.user_id, (overallMatchCounts.get(a.user_id) ?? 0) + 1)
     for (const province of matchProvinces.get(a.match_id) ?? []) {
       const byUser = provinceCounts.get(province) ?? new Map<string, number>()
@@ -110,7 +170,7 @@ export async function loadLeaderboardEntries(): Promise<LeaderboardEntry[]> {
   }
 
   const groundIdsByUser = new Map<string, Set<string>>()
-  for (const v of visits ?? []) {
+  for (const v of raw.visits) {
     const set = groundIdsByUser.get(v.user_id) ?? new Set<string>()
     set.add(v.ground_id)
     groundIdsByUser.set(v.user_id, set)
@@ -120,7 +180,7 @@ export async function loadLeaderboardEntries(): Promise<LeaderboardEntry[]> {
   // county_home_match/county_away_match achievements are tiered on.
   const homeCounts = new Map<string, number>()
   const roadCounts = new Map<string, number>()
-  for (const a of attendance ?? []) {
+  for (const a of attendance) {
     const match = matchById.get(a.match_id)
     const groundId = match?.ground_id
     const groundCountyId = groundId ? groundCounty.get(groundId) : undefined
@@ -128,7 +188,7 @@ export async function loadLeaderboardEntries(): Promise<LeaderboardEntry[]> {
     for (const teamId of [match.home_county_team_id, match.away_county_team_id]) {
       if (!teamId) continue
       const countyId = teamToCounty.get(teamId)
-      const sportCode = teamSport.get(teamId)
+      const sportCode = raw.teamSport.get(teamId)
       if (!countyId || !sportCode) continue
       const key = `${a.user_id}:${teamKey(countyId, sportCode)}`
       if (countyId === groundCountyId) {
@@ -139,15 +199,15 @@ export async function loadLeaderboardEntries(): Promise<LeaderboardEntry[]> {
     }
   }
 
-  const defById = new Map((achievementDefs ?? []).map((d) => [d.id, d]))
   const tierCountsByUser = new Map<string, Record<Tier, number>>()
-  for (const ua of userAchievements ?? []) {
+  for (const ua of raw.userAchievements) {
     const def = defById.get(ua.achievement_id)
     if (!def || (def.rule_type !== 'county_home_match' && def.rule_type !== 'county_away_match')) continue
     const params = (def.rule_params ?? {}) as Record<string, unknown>
     const countyId = params.county_id as string | undefined
     const sportCode = params.sport_code as string | undefined
     if (!countyId || !sportCode) continue
+    if (sportFilter !== 'combined' && sportCode !== sportFilter) continue
     const key = `${ua.user_id}:${teamKey(countyId, sportCode)}`
     const count = def.rule_type === 'county_home_match' ? (homeCounts.get(key) ?? 0) : (roadCounts.get(key) ?? 0)
     const tier = tierForHomeMatchCount(count)
@@ -157,7 +217,6 @@ export async function loadLeaderboardEntries(): Promise<LeaderboardEntry[]> {
     tierCountsByUser.set(ua.user_id, bucket)
   }
 
-  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]))
   const allIds = new Set([...overallMatchCounts.keys(), ...groundIdsByUser.keys()])
 
   // For each attended match, credit it to the attendee's supported-county
@@ -165,7 +224,7 @@ export async function loadLeaderboardEntries(): Promise<LeaderboardEntry[]> {
   // computed per-user (not globally per county) since every user has their
   // own supported county to check against.
   const supportedCountyMatchCounts = new Map<string, number>()
-  for (const a of attendance ?? []) {
+  for (const a of attendance) {
     const supportedCountyId = profileById.get(a.user_id)?.supported_county_id
     if (!supportedCountyId) continue
     const match = matchById.get(a.match_id)
@@ -199,4 +258,10 @@ export async function loadLeaderboardEntries(): Promise<LeaderboardEntry[]> {
   }
 
   return entries
+}
+
+/** Convenience wrapper for callers that don't need to hold onto the raw data (e.g. Achievements.tsx, if ever used elsewhere). */
+export async function loadLeaderboardEntries(sportFilter: SportFilter = 'combined'): Promise<LeaderboardEntry[]> {
+  const raw = await fetchLeaderboardRawData()
+  return buildLeaderboardEntries(raw, sportFilter)
 }
