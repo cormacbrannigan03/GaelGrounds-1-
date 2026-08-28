@@ -7,6 +7,7 @@ import PersonalMatchCard, { type PersonalMatch } from '../components/PersonalMat
 import AddMatchForm from '../components/AddMatchForm'
 import { isUpcoming, SPORT_ICONS, SPORT_LABELS } from '../lib/format'
 import { canLogAnotherMatch } from '../lib/matchLimits'
+import { fetchAllRows } from '../lib/fetchAllRows'
 import type { Enums } from '../lib/database.types'
 
 type SportCode = Enums<'sport_code'>
@@ -34,8 +35,6 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
-const PAGE_SIZE = 1000
-
 // National Football League / National Hurling League both have "Division N"
 // tagged for the regular season, but promotion-relegation playoff and final
 // rounds -- which don't belong to a single division -- are tagged with just
@@ -59,48 +58,6 @@ function matchesCompetition(selection: string, competitions: (string | null | un
 
 function uniqueSorted(values: (string | null | undefined)[]): string[] {
   return [...new Set(values.filter((v): v is string => Boolean(v)))].sort()
-}
-
-// PostgREST (Supabase's data API) caps any single request at 1000 rows by
-// default -- an unbounded .select() silently truncates rather than erroring,
-// so a plain query only ever returned the most recent ~1000 matches
-// (ordered newest-first, so everything older than that just never arrived).
-// This fetches every page needed to cover the full table.
-//
-// With 8,000+ rows in `matches`, that's up to 9 pages -- fetching them one
-// at a time, each awaiting the last before starting the next, means paying
-// 9 full network round trips back-to-back before the page can render
-// anything, which is exactly what made Results feel "extremely long" to
-// load on a slower connection. A cheap `head: true` count tells us the page
-// count upfront, so every page can be requested in parallel instead: total
-// wall-clock time then depends on the slowest single round trip rather than
-// the sum of all of them.
-async function fetchAllRows<T>(
-  table: string,
-  select: string,
-  configure?: (q: any) => any,
-): Promise<T[]> {
-  let countQuery = supabase.from(table as any).select(select, { count: 'exact', head: true })
-  if (configure) countQuery = configure(countQuery)
-  const { count } = await countQuery
-  const total = count ?? 0
-  if (total === 0) return []
-
-  const pageCount = Math.ceil(total / PAGE_SIZE)
-  const pages = await Promise.all(
-    Array.from({ length: pageCount }, (_, i) => {
-      let query = supabase.from(table as any).select(select)
-      if (configure) query = configure(query)
-      const from = i * PAGE_SIZE
-      return query.range(from, from + PAGE_SIZE - 1)
-    }),
-  )
-
-  const rows: T[] = []
-  for (const { data } of pages) {
-    if (data) rows.push(...(data as T[]))
-  }
-  return rows
 }
 
 export default function Matches() {

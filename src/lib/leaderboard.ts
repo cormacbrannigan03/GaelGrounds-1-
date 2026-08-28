@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { fetchAllRows } from './fetchAllRows'
 import type { Enums } from './database.types'
 
 export type Province = Enums<'province'>
@@ -40,27 +41,44 @@ const teamKey = (countyId: string, sportCode: string) => `${countyId}:${sportCod
  * included -- premium alone isn't consent to publish someone's name/stats.
  */
 export async function loadLeaderboardEntries(): Promise<LeaderboardEntry[]> {
-  const [
-    { data: profiles },
-    { data: attendance },
-    { data: visits },
-    { data: matches },
-    { data: countyTeams },
-    { data: counties },
-    { data: grounds },
-    { data: userAchievements },
-    { data: achievementDefs },
-  ] = await Promise.all([
-    supabase.from('user_profiles').select('id, display_name, is_premium, leaderboard_opt_in, supported_county_id'),
-    supabase.from('user_match_attendance').select('user_id, match_id'),
-    supabase.from('user_visits').select('user_id, ground_id'),
-    supabase.from('matches').select('id, home_county_team_id, away_county_team_id, ground_id'),
-    supabase.from('county_teams').select('id, county_id, sport_code'),
-    supabase.from('counties').select('id, name, province'),
-    supabase.from('grounds').select('id, county_id'),
-    supabase.from('user_achievements').select('user_id, achievement_id'),
-    supabase.from('achievement_definitions').select('id, rule_type, rule_params'),
-  ])
+  type ProfileRow = {
+    id: string
+    display_name: string | null
+    is_premium: boolean
+    leaderboard_opt_in: boolean
+    supported_county_id: string | null
+  }
+  type AttendanceRow = { user_id: string; match_id: string }
+  type VisitRow = { user_id: string; ground_id: string }
+  type MatchRow = { id: string; home_county_team_id: string | null; away_county_team_id: string | null; ground_id: string | null }
+  type CountyTeamRow = { id: string; county_id: string; sport_code: string }
+  type CountyRow = { id: string; name: string; province: string }
+  type GroundRow = { id: string; county_id: string }
+  type UserAchievementRow = { user_id: string; achievement_id: string }
+  type AchievementDefRow = { id: string; rule_type: string; rule_params: unknown }
+
+  // `matches`, `attendance`, `visits`, and `userAchievements` all grow
+  // without bound as the app is used (matches with every fixture import,
+  // the others with every check-in) -- a plain .select() silently truncates
+  // at PostgREST's default 1000-row cap once any of them cross that, which
+  // is exactly what happened here: `matches` passed 8,000 rows and recent
+  // fixtures started dropping out of every leaderboard calculation that
+  // touches match data, not just the "My County" count that surfaced it.
+  // county_teams/counties/grounds/achievement_definitions are small,
+  // slow-growing reference tables (a few hundred rows at most) with no
+  // realistic path to 1000, so a plain select stays fine for those.
+  const [profiles, attendance, visits, matches, countyTeams, counties, grounds, userAchievements, achievementDefs] =
+    await Promise.all([
+      fetchAllRows<ProfileRow>('user_profiles', 'id, display_name, is_premium, leaderboard_opt_in, supported_county_id'),
+      fetchAllRows<AttendanceRow>('user_match_attendance', 'user_id, match_id'),
+      fetchAllRows<VisitRow>('user_visits', 'user_id, ground_id'),
+      fetchAllRows<MatchRow>('matches', 'id, home_county_team_id, away_county_team_id, ground_id'),
+      supabase.from('county_teams').select('id, county_id, sport_code').then((r) => r.data as CountyTeamRow[] | null),
+      supabase.from('counties').select('id, name, province').then((r) => r.data as CountyRow[] | null),
+      supabase.from('grounds').select('id, county_id').then((r) => r.data as GroundRow[] | null),
+      fetchAllRows<UserAchievementRow>('user_achievements', 'user_id, achievement_id'),
+      supabase.from('achievement_definitions').select('id, rule_type, rule_params').then((r) => r.data as AchievementDefRow[] | null),
+    ])
 
   const teamToCounty = new Map((countyTeams ?? []).map((t) => [t.id, t.county_id]))
   const teamSport = new Map((countyTeams ?? []).map((t) => [t.id, t.sport_code]))
