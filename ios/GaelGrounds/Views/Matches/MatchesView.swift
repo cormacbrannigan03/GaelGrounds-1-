@@ -9,7 +9,9 @@ struct MatchesView: View {
 
     @State private var matches: [MatchSummary] = []
     @State private var personalMatches: [UserPersonalMatch] = []
-    @State private var selectedSport: SportCode = .gaelicFootball
+    // nil = combined (both football and hurling) -- the default, matching
+    // the website's Matches page.
+    @State private var selectedSport: SportCode?
     @State private var tab: Tab = .upcoming
     @State private var search = ""
     @State private var isLoading = true
@@ -25,7 +27,8 @@ struct MatchesView: View {
     // MARK: - Filtered helpers
 
     private var sportFiltered: [MatchSummary] {
-        matches.filter { $0.sportCode == selectedSport }
+        guard let selectedSport else { return matches }
+        return matches.filter { $0.sportCode == selectedSport }
     }
 
     private var searchFiltered: [MatchSummary] {
@@ -166,8 +169,9 @@ struct MatchesView: View {
                     }
 
                     Picker("Sport", selection: $selectedSport) {
-                        Text("Football").tag(SportCode.gaelicFootball)
-                        Text("Hurling").tag(SportCode.hurling)
+                        Text("Combined").tag(SportCode?.none)
+                        Text("Football").tag(SportCode?.some(.gaelicFootball))
+                        Text("Hurling").tag(SportCode?.some(.hurling))
                     }
                     .pickerStyle(.segmented)
 

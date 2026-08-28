@@ -72,7 +72,7 @@ export default function Matches() {
   const [selectedCounty, setSelectedCountyFilter] = useState('')
   const [selectedCompetition, setSelectedCompetitionFilter] = useState('')
   const [selectedVenue, setSelectedVenueFilter] = useState('')
-  const [selectedSport, setSelectedSport] = useState<SportCode>('gaelic_football')
+  const [selectedSport, setSelectedSport] = useState<SportCode | 'combined'>('combined')
   const [tab, setTab] = useState<Tab>('upcoming')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -193,7 +193,7 @@ export default function Matches() {
   }
 
   const sportFiltered = useMemo(
-    () => matches.filter((m) => m.sportCode === selectedSport),
+    () => (selectedSport === 'combined' ? matches : matches.filter((m) => m.sportCode === selectedSport)),
     [matches, selectedSport],
   )
 
@@ -337,7 +337,7 @@ export default function Matches() {
   }
 
   const displayedList = tab === 'results' ? null : upcomingList
-  const sportOptions: SportCode[] = ['gaelic_football', 'hurling']
+  const sportOptions: (SportCode | 'combined')[] = ['combined', 'gaelic_football', 'hurling']
 
   return (
     <div className="page">
@@ -348,7 +348,7 @@ export default function Matches() {
       <div className="filter-tabs">
         {sportOptions.map((sport) => (
           <button key={sport} className={selectedSport === sport ? 'active' : ''} onClick={() => setSelectedSport(sport)}>
-            {SPORT_ICONS[sport]} {SPORT_LABELS[sport]}
+            {sport === 'combined' ? '🏐🏑 Combined' : `${SPORT_ICONS[sport]} ${SPORT_LABELS[sport]}`}
           </button>
         ))}
       </div>
