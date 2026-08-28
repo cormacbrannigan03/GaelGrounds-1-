@@ -105,9 +105,19 @@ async function activatePremium(
   const customerId = typeof opts.customerId === "string" ? opts.customerId : opts.customerId?.id ?? null;
   const isActive = ACTIVE_STATUSES.includes(subscription.status);
 
+  // Current Stripe API versions moved current_period_end/current_period_start
+  // off the Subscription object itself and onto each subscription item (to
+  // support multiple differently-billed items per subscription). Reading
+  // subscription.current_period_end directly is undefined on this account's
+  // API version, which produced `new Date(NaN).toISOString()` -- "Invalid
+  // time value" -- and a 500 on every real webhook call, confirmed against
+  // this project's actual first live subscription. Falls back to the
+  // top-level field in case an older API version/response shape is ever seen.
+  const currentPeriodEnd = subscription.items.data[0]?.current_period_end ?? subscription.current_period_end;
+
   const update = {
     is_premium: isActive,
-    premium_expires_at: new Date(subscription.current_period_end * 1000).toISOString(),
+    premium_expires_at: new Date(currentPeriodEnd * 1000).toISOString(),
     stripe_subscription_id: subscription.id,
     ...(customerId ? { stripe_customer_id: customerId } : {}),
   };
