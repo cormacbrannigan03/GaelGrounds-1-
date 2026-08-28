@@ -126,12 +126,20 @@ export default function CheckInPanel({
     if (!error) {
       const newlyUnlocked = await evaluate()
       if (newlyUnlocked.length > 0) setUnlockedToast(newlyUnlocked)
-    } else {
-      // Most likely the free-tier RLS policy rejecting this insert --
-      // the client-side `blocked` check above should normally catch this
-      // first, but RLS is the real enforcement and can still reject a
-      // request the client thought was fine (e.g. stale premium status).
+    } else if (blocked) {
+      // The client-side gate above already flagged this as free-tier-
+      // blocked before the click landed, so RLS rejecting it too is
+      // expected and this message is actually true for them.
       setCheckInError("Couldn't check in — this may be past the free plan's limit. Upgrade to Premium for unlimited check-ins.")
+    } else {
+      // The client-side gate thought this was fine (not free-tier-limited),
+      // so blaming Premium/the free plan here would be actively wrong --
+      // confirmed by a real case where a Premium account hit this exact
+      // branch because of an unrelated database error (a ground-visit
+      // bookkeeping trigger hitting an unexpected unique-constraint
+      // collision, unrelated to their plan at all). A generic message is
+      // the honest one when the real cause isn't the free-tier limit.
+      setCheckInError("Couldn't check in — please try again.")
     }
     setBusy(false)
   }
