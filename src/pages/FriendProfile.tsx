@@ -32,14 +32,18 @@ export default function FriendProfile() {
   const { user } = useAuth()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [county, setCounty] = useState<County | null>(null)
+  const [loading, setLoading] = useState(true)
+
   const [visitCount, setVisitCount] = useState(0)
   const [matchCount, setMatchCount] = useState(0)
   const [totalAchievementCount, setTotalAchievementCount] = useState(0)
   const [favouriteAchievements, setFavouriteAchievements] = useState<AchievementRow[]>([])
   const [bestGame, setBestGame] = useState<BestGame | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  const [friendStatus, setFriendStatus] = useState<FriendStatus>('none')
+  // null = still checking -- keeps the friend-action row (and the
+  // stats/achievements gate below) from flashing the wrong state before we
+  // know the real relationship.
+  const [friendStatus, setFriendStatus] = useState<FriendStatus | null>(null)
   const [friendshipId, setFriendshipId] = useState<string | null>(null)
   const [isPremium, setIsPremium] = useState(false)
   const [friendError, setFriendError] = useState<string | null>(null)
@@ -126,27 +130,22 @@ export default function FriendProfile() {
     setFriendBusy(false)
   }
 
+  // Name, supported county and background are always visible -- only the
+  // activity below (matches, grounds, achievements, best game) is gated on
+  // friendship, so this is kept independent of friendStatus.
   useEffect(() => {
     if (!id) return
     let cancelled = false
 
     async function load() {
-      const [{ data: fetchedProfile }, { data: visits }, { data: attendance }, { data: userAchievements }] = await Promise.all([
-        supabase.from('user_profiles').select('id, display_name, best_match_id, supported_county_id').eq('id', id!).single(),
-        supabase.from('user_visits').select('ground_id').eq('user_id', id!),
-        supabase.from('user_match_attendance').select('id').eq('user_id', id!),
-        supabase
-          .from('user_achievements')
-          .select('id, achievement_id, unlocked_at, pinned')
-          .eq('user_id', id!)
-          .order('unlocked_at', { ascending: false }),
-      ])
+      const { data: fetchedProfile } = await supabase
+        .from('user_profiles')
+        .select('id, display_name, best_match_id, supported_county_id')
+        .eq('id', id!)
+        .single()
 
       if (cancelled) return
       setProfile(fetchedProfile)
-      setVisitCount(new Set((visits ?? []).map((v) => v.ground_id)).size)
-      setMatchCount((attendance ?? []).length)
-      setTotalAchievementCount((userAchievements ?? []).length)
 
       if (fetchedProfile?.supported_county_id) {
         const { data: countyRow } = await supabase
@@ -158,6 +157,47 @@ export default function FriendProfile() {
       } else if (!cancelled) {
         setCounty(null)
       }
+
+      if (!cancelled) setLoading(false)
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  // Matches attended, grounds visited, achievements and best game are only
+  // fetched (and shown) once the friend request has actually been accepted
+  // -- someone who's only sent/received a request, or a stranger, sees just
+  // the name/county/friend-action row above.
+  useEffect(() => {
+    if (!id || friendStatus !== 'friends') {
+      setVisitCount(0)
+      setMatchCount(0)
+      setTotalAchievementCount(0)
+      setFavouriteAchievements([])
+      setBestGame(null)
+      return
+    }
+    let cancelled = false
+
+    async function loadStats() {
+      const [{ data: fetchedProfile }, { data: visits }, { data: attendance }, { data: userAchievements }] = await Promise.all([
+        supabase.from('user_profiles').select('best_match_id').eq('id', id!).single(),
+        supabase.from('user_visits').select('ground_id').eq('user_id', id!),
+        supabase.from('user_match_attendance').select('id').eq('user_id', id!),
+        supabase
+          .from('user_achievements')
+          .select('id, achievement_id, unlocked_at, pinned')
+          .eq('user_id', id!)
+          .order('unlocked_at', { ascending: false }),
+      ])
+
+      if (cancelled) return
+      setVisitCount(new Set((visits ?? []).map((v) => v.ground_id)).size)
+      setMatchCount((attendance ?? []).length)
+      setTotalAchievementCount((userAchievements ?? []).length)
 
       const achievementIds = (userAchievements ?? []).map((a) => a.achievement_id)
       if (achievementIds.length > 0) {
@@ -219,19 +259,19 @@ export default function FriendProfile() {
       } else if (!cancelled) {
         setBestGame(null)
       }
-
-      if (!cancelled) setLoading(false)
     }
 
-    load()
+    loadStats()
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, friendStatus])
 
   if (loading) return <div className="page"><p className="muted">Loading…</p></div>
   if (!profile) return <div className="page"><p>Profile not found.</p></div>
   if (id && user && id === user.id) return <Navigate to="/profile" replace />
+
+  const isFriend = friendStatus === 'friends'
 
   return (
     <div className="page">
@@ -260,9 +300,7 @@ export default function FriendProfile() {
             + Add friend
           </button>
         )}
-        {friendStatus === 'sent' && (
-          <span className="muted small">Friend request sent</span>
-        )}
+        {friendStatus === 'sent' && <span className="muted small">Friend request sent</span>}
         {friendStatus === 'received' && (
           <>
             <button className="btn btn-primary btn-sm" disabled={friendBusy} onClick={() => respond(true)}>
@@ -276,53 +314,60 @@ export default function FriendProfile() {
       </div>
       {friendError && <p className="muted small error-text">{friendError}</p>}
 
-      <section className="stats-row">
-        <div className="stat-tile">
-          <span className="stat-value">{visitCount}</span>
-          <span className="stat-label">Grounds visited</span>
-        </div>
-        <div className="stat-tile">
-          <span className="stat-value">{matchCount}</span>
-          <span className="stat-label">Matches attended</span>
-        </div>
-        <div className="stat-tile">
-          <span className="stat-value">{totalAchievementCount}</span>
-          <span className="stat-label">Achievements</span>
-        </div>
-      </section>
+      {isFriend ? (
+        <>
+          <section className="stats-row">
+            <div className="stat-tile">
+              <span className="stat-value">{visitCount}</span>
+              <span className="stat-label">Grounds visited</span>
+            </div>
+            <div className="stat-tile">
+              <span className="stat-value">{matchCount}</span>
+              <span className="stat-label">Matches attended</span>
+            </div>
+            <div className="stat-tile">
+              <span className="stat-value">{totalAchievementCount}</span>
+              <span className="stat-label">Achievements</span>
+            </div>
+          </section>
 
-      <section>
-        <h2>⭐ Best Game Ever</h2>
-        {bestGame ? (
-          <Link to={`/matches/${bestGame.matchId}`} className="card best-game-card">
-            <span className="best-game-label">{bestGame.competition ?? 'Gaelic Games'}</span>
-            <strong>
-              {bestGame.homeName} {bestGame.homeScore && bestGame.awayScore ? `${bestGame.homeScore} – ${bestGame.awayScore}` : 'v'}{' '}
-              {bestGame.awayName}
-            </strong>
-            <span className="muted small">
-              {bestGame.playedAt ? formatMatchDate(bestGame.playedAt) : 'Date unavailable'}
-              {bestGame.groundName && ` · ${bestGame.groundName}`}
-            </span>
-          </Link>
-        ) : (
-          <p className="muted">Hasn't picked a best game yet.</p>
-        )}
-      </section>
+          <section>
+            <h2>⭐ Best Game Ever</h2>
+            {bestGame ? (
+              <Link to={`/matches/${bestGame.matchId}`} className="card best-game-card">
+                <span className="best-game-label">{bestGame.competition ?? 'Gaelic Games'}</span>
+                <strong>
+                  {bestGame.homeName}{' '}
+                  {bestGame.homeScore && bestGame.awayScore ? `${bestGame.homeScore} – ${bestGame.awayScore}` : 'v'}{' '}
+                  {bestGame.awayName}
+                </strong>
+                <span className="muted small">
+                  {bestGame.playedAt ? formatMatchDate(bestGame.playedAt) : 'Date unavailable'}
+                  {bestGame.groundName && ` · ${bestGame.groundName}`}
+                </span>
+              </Link>
+            ) : (
+              <p className="muted">Hasn't picked a best game yet.</p>
+            )}
+          </section>
 
-      {favouriteAchievements.length > 0 && (
-        <section>
-          <h2>Favourite achievements</h2>
-          <div className="card-grid">
-            {favouriteAchievements.map((a) => (
-              <div key={a.id} className="card achievement-card">
-                <h3>🏆 {a.title}</h3>
-                <p className="muted small">{a.description}</p>
-                <p className="muted small">Unlocked {formatShortDate(a.unlockedAt)}</p>
+          {favouriteAchievements.length > 0 && (
+            <section>
+              <h2>Favourite achievements</h2>
+              <div className="card-grid">
+                {favouriteAchievements.map((a) => (
+                  <div key={a.id} className="card achievement-card">
+                    <h3>🏆 {a.title}</h3>
+                    <p className="muted small">{a.description}</p>
+                    <p className="muted small">Unlocked {formatShortDate(a.unlockedAt)}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
+            </section>
+          )}
+        </>
+      ) : (
+        <p className="muted">Add {profile.display_name ?? 'this fan'} as a friend to see their matches, grounds and achievements.</p>
       )}
 
       <Link to="/friends" className="link">
