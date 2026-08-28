@@ -17,13 +17,6 @@ export default function AuthPage() {
   const [confirmedAge16, setConfirmedAge16] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  // Set right after a successful sign-up, or after a sign-in attempt comes
-  // back with error.code === 'email_not_confirmed' -- either way, the same
-  // "check your inbox" panel below replaces the plain form so there's one
-  // clear next step instead of a form the account can't actually sign into
-  // yet, with a resend option in case the confirmation email never arrived.
-  const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState<string | null>(null)
-  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
   useEffect(() => {
     // On a slow connection, signInWithPassword's own request can still be
@@ -94,9 +87,12 @@ export default function AuthPage() {
     setBusy(false)
 
     if (result.error) {
+      // Distinct from a wrong password (error.code === 'invalid_credentials')
+      // -- Supabase tells these apart, so route to the same confirmation
+      // page a fresh sign-up lands on rather than showing a generic error
+      // that reads like the password was wrong.
       if (mode === 'signin' && 'code' in result && result.code === 'email_not_confirmed') {
-        setPendingConfirmationEmail(email)
-        setResendStatus('idle')
+        navigate(`/auth/confirm-email?email=${encodeURIComponent(email)}`)
         return
       }
       setError(result.error)
@@ -104,22 +100,10 @@ export default function AuthPage() {
     }
 
     if (mode === 'signup') {
-      setPendingConfirmationEmail(email)
-      setResendStatus('idle')
-      setMode('signin')
+      navigate(`/auth/confirm-email?email=${encodeURIComponent(email)}`)
     } else {
       navigate('/')
     }
-  }
-
-  async function resendConfirmationEmail() {
-    if (!pendingConfirmationEmail) return
-    setResendStatus('sending')
-    const { error: resendError } = await supabase.auth.resend({
-      type: 'signup',
-      email: pendingConfirmationEmail,
-    })
-    setResendStatus(resendError ? 'error' : 'sent')
   }
 
   return (
@@ -128,115 +112,80 @@ export default function AuthPage() {
         <h1>{mode === 'signin' ? 'Welcome back' : 'Create your account'}</h1>
         <p className="muted">Track every ground and match you attend, across all 32 counties.</p>
 
-        {pendingConfirmationEmail ? (
-          <div className="confirm-email-panel">
-            <p className="form-info">
-              We've sent a confirmation link to <strong>{pendingConfirmationEmail}</strong>. Click it, then come back
-              here and sign in.
-            </p>
-            {resendStatus === 'sent' ? (
-              <p className="muted small">Sent again — check your inbox (and spam folder).</p>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                disabled={resendStatus === 'sending'}
-                onClick={resendConfirmationEmail}
-              >
-                {resendStatus === 'sending' ? 'Resending…' : "Didn't get it? Resend email"}
-              </button>
-            )}
-            {resendStatus === 'error' && <p className="muted small error-text">Couldn't resend — try again shortly.</p>}
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => {
-                setPendingConfirmationEmail(null)
-                setResendStatus('idle')
-                setMode('signin')
-              }}
-            >
-              Back to sign in
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="auth-tabs">
-              <button className={mode === 'signin' ? 'active' : ''} onClick={() => setMode('signin')}>
-                Sign in
-              </button>
-              <button className={mode === 'signup' ? 'active' : ''} onClick={() => setMode('signup')}>
-                Sign up
-              </button>
-            </div>
+        <div className="auth-tabs">
+          <button className={mode === 'signin' ? 'active' : ''} onClick={() => setMode('signin')}>
+            Sign in
+          </button>
+          <button className={mode === 'signup' ? 'active' : ''} onClick={() => setMode('signup')}>
+            Sign up
+          </button>
+        </div>
 
-            <form onSubmit={handleSubmit}>
-              {mode === 'signup' && (
-                <>
-                  <label>
-                    Display name
-                    <input
-                      type="text"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="e.g. Sean O'Brien"
-                    />
-                  </label>
-
-                  <label>
-                    Supported county
-                    <select value={supportedCountyId} onChange={(e) => setSupportedCountyId(e.target.value)} required>
-                      <option value="">Select your county</option>
-                      {counties.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </>
-              )}
-
+        <form onSubmit={handleSubmit}>
+          {mode === 'signup' && (
+            <>
               <label>
-                Email
+                Display name
                 <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                />
-              </label>
-              <label>
-                Password
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="e.g. Sean O'Brien"
                 />
               </label>
 
-              {mode === 'signup' && (
-                // GDPR Article 6/8: Ireland sets the digital age of consent at
-                // 16, the maximum allowed under the regulation. Self-attestation,
-                // not ID verification -- matches AuthView.swift's Toggle exactly.
-                <label className="checkbox-label">
-                  <input type="checkbox" checked={confirmedAge16} onChange={(e) => setConfirmedAge16(e.target.checked)} />
-                  <span className="small">I confirm I am 16 years of age or older.</span>
-                </label>
-              )}
+              <label>
+                Supported county
+                <select value={supportedCountyId} onChange={(e) => setSupportedCountyId(e.target.value)} required>
+                  <option value="">Select your county</option>
+                  {counties.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
 
-              {error && <p className="form-error">{error}</p>}
+          <label>
+            Email
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
+          </label>
+          <label>
+            Password
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </label>
 
-              <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy || !canSubmit}>
-                {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
-              </button>
-            </form>
-          </>
-        )}
+          {mode === 'signup' && (
+            // GDPR Article 6/8: Ireland sets the digital age of consent at
+            // 16, the maximum allowed under the regulation. Self-attestation,
+            // not ID verification -- matches AuthView.swift's Toggle exactly.
+            <label className="checkbox-label">
+              <input type="checkbox" checked={confirmedAge16} onChange={(e) => setConfirmedAge16(e.target.checked)} />
+              <span className="small">I confirm I am 16 years of age or older.</span>
+            </label>
+          )}
+
+          {error && <p className="form-error">{error}</p>}
+
+          <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy || !canSubmit}>
+            {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
+          </button>
+        </form>
       </div>
     </div>
   )

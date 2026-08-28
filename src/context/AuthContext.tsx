@@ -133,6 +133,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           display_name: displayName.trim() || email.split('@')[0],
           supported_county_id: supportedCountyId,
         },
+        // Without this, Supabase falls back to the project's default Site
+        // URL for the confirmation link's redirect target. Pointing it at
+        // this origin's root means clicking that link lands the user
+        // straight back on the app already signed in (supabase-js's
+        // detectSessionInUrl -- on by default -- reads the session out of
+        // the redirect URL automatically) instead of dropping them back on
+        // a marketing page or a sign-up form they'd have to fill in again.
+        // Requires this exact URL to be in the project's Auth > URL
+        // Configuration > Redirect URLs allow-list, or Supabase silently
+        // ignores it and uses the Site URL instead.
+        emailRedirectTo: `${window.location.origin}/`,
       },
     })
     return { error: error?.message ?? null }

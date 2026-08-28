@@ -7,6 +7,7 @@ import { useBackground } from './context/BackgroundContext'
 import { hexToRgbTriplet } from './lib/format'
 import Dashboard from './pages/Dashboard'
 import AuthPage from './pages/AuthPage'
+import ConfirmEmail from './pages/ConfirmEmail'
 
 // Everything below is lazy-loaded: Dashboard and AuthPage above are the two
 // pages almost every visitor lands on first (a signed-in user redirected
@@ -72,6 +73,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
             <Route path="/counties" element={<Counties />} />
             <Route path="/counties/:id" element={<CountyDetail />} />
             <Route path="/counties/:countyId/teams/:teamId" element={<TeamDetail />} />
