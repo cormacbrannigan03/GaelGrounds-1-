@@ -15,7 +15,7 @@ type AuthContextValue = {
   loading: boolean
   supportedCounty: SupportedCounty | null
   refreshSupportedCounty: () => Promise<void>
-  signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
+  signInWithPassword: (email: string, password: string) => Promise<{ error: string | null; code?: string | null }>
   signUp: (email: string, password: string, displayName: string, supportedCountyId: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
@@ -109,7 +109,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signInWithPassword(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error?.message ?? null }
+    // error.code distinguishes 'email_not_confirmed' from 'invalid_credentials'
+    // -- AuthPage uses this to show "confirm your email" with a resend button
+    // instead of a generic error that reads like the password was wrong.
+    return { error: error?.message ?? null, code: error?.code ?? null }
   }
 
   async function signUp(email: string, password: string, displayName: string, supportedCountyId: string) {
