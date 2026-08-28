@@ -1231,6 +1231,20 @@ label {
   margin: -0.5rem 0 1rem;
 }
 
+.confirm-email-panel {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.confirm-email-panel .form-info {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
 /* Filter tabs */
 .filter-tabs {
   display: flex;
