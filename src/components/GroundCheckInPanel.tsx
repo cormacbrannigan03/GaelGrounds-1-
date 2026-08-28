@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useAchievements } from '../hooks/useAchievements'
@@ -224,7 +225,8 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
             <li key={v.id}>
               <span className="avatar-dot" />
               <span>
-                {v.display_name ?? 'A fan'} <span className="muted small">· {formatShortDate(v.visited_at)}</span>
+                <Link to={v.user_id === user?.id ? '/profile' : `/friends/${v.user_id}`}>{v.display_name ?? 'A fan'}</Link>{' '}
+                <span className="muted small">· {formatShortDate(v.visited_at)}</span>
                 {v.notes && <div className="muted small">"{v.notes}"</div>}
               </span>
               {v.user_id === user?.id && <span className="you-tag">you</span>}

@@ -203,7 +203,7 @@ export default function CheckInPanel({
           {attendees.map((a) => (
             <li key={a.id}>
               <span className="avatar-dot" />
-              {a.display_name ?? 'A fan'}
+              <Link to={a.user_id === user?.id ? '/profile' : `/friends/${a.user_id}`}>{a.display_name ?? 'A fan'}</Link>
               {a.user_id === user?.id && <span className="you-tag">you</span>}
             </li>
           ))}

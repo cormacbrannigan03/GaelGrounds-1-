@@ -232,7 +232,12 @@ export default function Leaderboard() {
             <li key={entry.id} className={entry.id === user?.id ? 'leaderboard-row current-user' : 'leaderboard-row'}>
               <span className="leaderboard-rank">{rankLabel(i + 1)}</span>
               <span className="leaderboard-name-block">
-                <span className="leaderboard-name">{entry.displayName}</span>
+                <Link
+                  to={entry.id === user?.id ? '/profile' : `/friends/${entry.id}`}
+                  className="leaderboard-name"
+                >
+                  {entry.displayName}
+                </Link>
                 <span className="muted small">{secondaryText(entry)}</span>
               </span>
               <span className="leaderboard-count">

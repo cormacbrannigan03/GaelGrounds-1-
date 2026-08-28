@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { useAuth } from '../context/AuthContext'
 import { formatMatchDate, formatShortDate } from '../lib/format'
+import { useCountyPageBackground } from '../hooks/useCountyPageBackground'
 
-type Profile = { id: string; display_name: string | null; best_match_id: string | null }
+type Profile = { id: string; display_name: string | null; best_match_id: string | null; supported_county_id: string | null }
+type County = { id: string; name: string; primary_colour: string | null; secondary_colour: string | null }
 type AchievementRow = {
   id: string
   title: string
@@ -22,9 +25,13 @@ type BestGame = {
   groundName: string | null
 }
 
+type FriendStatus = 'self' | 'none' | 'sent' | 'received' | 'friends'
+
 export default function FriendProfile() {
   const { id } = useParams<{ id: string }>()
+  const { user } = useAuth()
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [county, setCounty] = useState<County | null>(null)
   const [visitCount, setVisitCount] = useState(0)
   const [matchCount, setMatchCount] = useState(0)
   const [totalAchievementCount, setTotalAchievementCount] = useState(0)
@@ -32,13 +39,100 @@ export default function FriendProfile() {
   const [bestGame, setBestGame] = useState<BestGame | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const [friendStatus, setFriendStatus] = useState<FriendStatus>('none')
+  const [friendshipId, setFriendshipId] = useState<string | null>(null)
+  const [isPremium, setIsPremium] = useState(false)
+  const [friendError, setFriendError] = useState<string | null>(null)
+  const [friendBusy, setFriendBusy] = useState(false)
+
+  useCountyPageBackground(county?.primary_colour, county?.secondary_colour)
+
+  async function loadFriendStatus() {
+    if (!user || !id) return
+    if (id === user.id) {
+      setFriendStatus('self')
+      return
+    }
+    const [{ data: ownProfile }, { data: rows }] = await Promise.all([
+      supabase.from('user_profiles').select('is_premium').eq('id', user.id).single(),
+      supabase
+        .from('friendships')
+        .select('id, requester_id, addressee_id, status')
+        .or(`and(requester_id.eq.${user.id},addressee_id.eq.${id}),and(requester_id.eq.${id},addressee_id.eq.${user.id})`),
+    ])
+    setIsPremium(ownProfile?.is_premium ?? false)
+
+    const accepted = (rows ?? []).find((r) => r.status === 'accepted')
+    if (accepted) {
+      setFriendStatus('friends')
+      setFriendshipId(accepted.id)
+      return
+    }
+    const received = (rows ?? []).find((r) => r.status === 'pending' && r.addressee_id === user.id)
+    if (received) {
+      setFriendStatus('received')
+      setFriendshipId(received.id)
+      return
+    }
+    const sent = (rows ?? []).find((r) => r.status === 'pending' && r.requester_id === user.id)
+    if (sent) {
+      setFriendStatus('sent')
+      setFriendshipId(sent.id)
+      return
+    }
+    setFriendStatus('none')
+    setFriendshipId(null)
+  }
+
+  useEffect(() => {
+    loadFriendStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, id])
+
+  async function sendRequest() {
+    if (!user || !id) return
+    setFriendBusy(true)
+    setFriendError(null)
+    const { error } = await supabase.from('friendships').insert({ requester_id: user.id, addressee_id: id })
+    if (error) {
+      setFriendError(
+        isPremium
+          ? "Couldn't send that request — try again."
+          : 'Sending friend requests requires GaelGrounds Premium — visit the Premium page to upgrade.',
+      )
+    } else {
+      await loadFriendStatus()
+    }
+    setFriendBusy(false)
+  }
+
+  async function respond(accept: boolean) {
+    if (!friendshipId) return
+    setFriendBusy(true)
+    if (accept) {
+      await supabase.from('friendships').update({ status: 'accepted' }).eq('id', friendshipId)
+    } else {
+      await supabase.from('friendships').delete().eq('id', friendshipId)
+    }
+    await loadFriendStatus()
+    setFriendBusy(false)
+  }
+
+  async function removeFriendship() {
+    if (!friendshipId) return
+    setFriendBusy(true)
+    await supabase.from('friendships').delete().eq('id', friendshipId)
+    await loadFriendStatus()
+    setFriendBusy(false)
+  }
+
   useEffect(() => {
     if (!id) return
     let cancelled = false
 
     async function load() {
       const [{ data: fetchedProfile }, { data: visits }, { data: attendance }, { data: userAchievements }] = await Promise.all([
-        supabase.from('user_profiles').select('id, display_name, best_match_id').eq('id', id!).single(),
+        supabase.from('user_profiles').select('id, display_name, best_match_id, supported_county_id').eq('id', id!).single(),
         supabase.from('user_visits').select('ground_id').eq('user_id', id!),
         supabase.from('user_match_attendance').select('id').eq('user_id', id!),
         supabase
@@ -53,6 +147,17 @@ export default function FriendProfile() {
       setVisitCount(new Set((visits ?? []).map((v) => v.ground_id)).size)
       setMatchCount((attendance ?? []).length)
       setTotalAchievementCount((userAchievements ?? []).length)
+
+      if (fetchedProfile?.supported_county_id) {
+        const { data: countyRow } = await supabase
+          .from('counties')
+          .select('id, name, primary_colour, secondary_colour')
+          .eq('id', fetchedProfile.supported_county_id)
+          .single()
+        if (!cancelled) setCounty(countyRow)
+      } else if (!cancelled) {
+        setCounty(null)
+      }
 
       const achievementIds = (userAchievements ?? []).map((a) => a.achievement_id)
       if (achievementIds.length > 0) {
@@ -126,13 +231,50 @@ export default function FriendProfile() {
 
   if (loading) return <div className="page"><p className="muted">Loading…</p></div>
   if (!profile) return <div className="page"><p>Profile not found.</p></div>
+  if (id && user && id === user.id) return <Navigate to="/profile" replace />
 
   return (
     <div className="page">
       <div className="page-header">
         <h1>{profile.display_name ?? 'A fan'}</h1>
-        <p className="muted">GaelGrounds member</p>
+        {county ? (
+          <p className="muted">
+            Supports <Link to={`/counties/${county.id}`}>{county.name}</Link>
+          </p>
+        ) : (
+          <p className="muted">GaelGrounds member</p>
+        )}
       </div>
+
+      <div className="friend-action-row">
+        {friendStatus === 'friends' && (
+          <>
+            <span className="badge badge-visited">✓ Friends</span>
+            <button className="btn btn-ghost btn-sm" disabled={friendBusy} onClick={removeFriendship}>
+              Remove friend
+            </button>
+          </>
+        )}
+        {friendStatus === 'none' && (
+          <button className="btn btn-primary btn-sm" disabled={friendBusy} onClick={sendRequest}>
+            + Add friend
+          </button>
+        )}
+        {friendStatus === 'sent' && (
+          <span className="muted small">Friend request sent</span>
+        )}
+        {friendStatus === 'received' && (
+          <>
+            <button className="btn btn-primary btn-sm" disabled={friendBusy} onClick={() => respond(true)}>
+              Accept friend request
+            </button>
+            <button className="btn btn-ghost btn-sm" disabled={friendBusy} onClick={() => respond(false)}>
+              Decline
+            </button>
+          </>
+        )}
+      </div>
+      {friendError && <p className="muted small error-text">{friendError}</p>}
 
       <section className="stats-row">
         <div className="stat-tile">
@@ -189,4 +331,3 @@ export default function FriendProfile() {
     </div>
   )
 }
-

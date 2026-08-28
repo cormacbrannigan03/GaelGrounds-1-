@@ -683,6 +683,20 @@ main {
   text-transform: uppercase;
 }
 
+.attendee-list li a:hover,
+.leaderboard-name:hover,
+.history-list-item a:hover {
+  text-decoration: underline;
+}
+
+/* Add/accept/remove-friend controls on FriendProfile.tsx */
+.friend-action-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.75rem 0;
+}
+
 .ground-photos {
   margin: 1rem 0;
   padding-top: 1rem;

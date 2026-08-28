@@ -145,7 +145,7 @@ export default function Friends() {
           <ul className="history-list">
             {results.map((p) => (
               <li key={p.id} className="history-list-item">
-                <span>{p.display_name ?? 'A fan'}</span>
+                <Link to={`/friends/${p.id}`}>{p.display_name ?? 'A fan'}</Link>
                 <button className="btn btn-outline btn-sm" onClick={() => sendRequest(p.id)}>
                   Add friend
                 </button>
@@ -165,7 +165,7 @@ export default function Friends() {
               <ul className="history-list">
                 {pending.map((r) => (
                   <li key={r.friendshipId} className="history-list-item">
-                    <span>{r.profile.display_name ?? 'A fan'}</span>
+                    <Link to={`/friends/${r.profile.id}`}>{r.profile.display_name ?? 'A fan'}</Link>
                     <span className="request-actions">
                       <button className="btn btn-outline btn-sm" onClick={() => respond(r.friendshipId, true)}>
                         Accept
@@ -186,7 +186,7 @@ export default function Friends() {
               <ul className="history-list">
                 {sent.map((r) => (
                   <li key={r.friendshipId} className="history-list-item">
-                    <span>{r.profile.display_name ?? 'A fan'}</span>
+                    <Link to={`/friends/${r.profile.id}`}>{r.profile.display_name ?? 'A fan'}</Link>
                     <span className="muted small">Pending</span>
                   </li>
                 ))}
