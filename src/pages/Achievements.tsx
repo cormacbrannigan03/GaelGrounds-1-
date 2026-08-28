@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
-import { loadAchievementState, MAX_PINNED_ACHIEVEMENTS, type AchievementDefinition, type AchievementState } from '../lib/achievements'
+import {
+  loadAchievementState,
+  tierInfo,
+  MAX_PINNED_ACHIEVEMENTS,
+  type AchievementDefinition,
+  type AchievementState,
+} from '../lib/achievements'
 import { formatShortDate } from '../lib/format'
 
 type CountyRow = { id: string; name: string; province: string }
@@ -161,22 +167,32 @@ export default function Achievements() {
               <p className="muted">No achievements yet — check in to games to start unlocking achievements.</p>
             ) : (
               <div className="card-grid">
-                {unlocked.map(({ def, row }) => (
-                  <div key={def.id} className="card achievement-card">
-                    <div className="achievement-card-top">
-                      <h3>🏆 {def.title}</h3>
-                      <button
-                        className="star-toggle"
-                        onClick={() => togglePinned(def.id, row.id, row.pinned)}
-                        aria-label={row.pinned ? 'Remove from profile favourites' : 'Add to profile favourites'}
-                      >
-                        {row.pinned ? '★' : '☆'}
-                      </button>
+                {unlocked.map(({ def, row }) => {
+                  const tier = state ? tierInfo(def, state) : null
+                  return (
+                    <div key={def.id} className="card achievement-card">
+                      <div className="achievement-card-top">
+                        <h3>🏆 {def.title}</h3>
+                        <button
+                          className="star-toggle"
+                          onClick={() => togglePinned(def.id, row.id, row.pinned)}
+                          aria-label={row.pinned ? 'Remove from profile favourites' : 'Add to profile favourites'}
+                        >
+                          {row.pinned ? '★' : '☆'}
+                        </button>
+                      </div>
+                      <p className="muted small">{def.description}</p>
+                      {tier && (
+                        <p className={`achievement-tier tier-${tier.tier}`}>
+                          {tier.tier === 'standard'
+                            ? `${tier.count} ${tier.kindLabel} games`
+                            : `${tier.tier[0].toUpperCase()}${tier.tier.slice(1)} · ${tier.count} ${tier.kindLabel} games`}
+                        </p>
+                      )}
+                      <p className="muted small">Unlocked {formatShortDate(row.unlocked_at)}</p>
                     </div>
-                    <p className="muted small">{def.description}</p>
-                    <p className="muted small">Unlocked {formatShortDate(row.unlocked_at)}</p>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )
           ) : locked.length === 0 ? (
