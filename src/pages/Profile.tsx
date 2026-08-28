@@ -489,6 +489,15 @@ export default function Profile() {
         Sign out
       </button>
 
+      <p className="profile-legal-links">
+        <a href="https://www.gaelgrounds.ie/privacy.html" target="_blank" rel="noopener noreferrer">
+          Privacy Policy
+        </a>
+        <a href="https://www.gaelgrounds.ie/terms.html" target="_blank" rel="noopener noreferrer">
+          Terms of Service
+        </a>
+      </p>
+
       <button className="btn btn-ghost delete-account-btn" onClick={deleteAccount} disabled={deleting}>
         {deleting ? 'Deleting…' : 'Delete Account'}
       </button>

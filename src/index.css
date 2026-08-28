@@ -1016,6 +1016,26 @@ main {
   margin-top: 0.35rem;
 }
 
+/* Matches ProfileView.swift's Privacy Policy / Terms of Service links --
+   centered caption text between Sign out and Delete Account. */
+.profile-legal-links {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 0.25rem 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.profile-legal-links a {
+  color: var(--muted);
+}
+
+.profile-legal-links a:hover {
+  color: var(--green-light);
+  text-decoration: underline;
+}
+
 /* Profile's compact "starred" achievements preview -- the whole card links
    into /achievements, matching ProfileView.swift's homeScreenAchievements
    NavigationLink (a preview, not the full unlocked+locked list Profile used
