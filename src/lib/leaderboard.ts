@@ -12,6 +12,13 @@ export type LeaderboardEntry = {
   provinceMatchCounts: Record<string, number>
   tierCounts: Record<Tier, number>
   supportedCountyId: string | null
+  // Matches attended (home or away, either sport) involving this entry's
+  // OWN supported county specifically -- distinct from matchCount, which is
+  // every match they've ever attended regardless of county. The "My
+  // County" tab filters the leaderboard down to a county's supporters, but
+  // without this it was still ranking/displaying them by their overall
+  // match count, not by how engaged they actually are with that county.
+  supportedCountyMatchCount: number
 }
 
 /** Matches AchievementTier.forHomeMatchCount in UserData.swift. */
@@ -135,6 +142,24 @@ export async function loadLeaderboardEntries(): Promise<LeaderboardEntry[]> {
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]))
   const allIds = new Set([...overallMatchCounts.keys(), ...groundIdsByUser.keys()])
 
+  // For each attended match, credit it to the attendee's supported-county
+  // tally only if one of the two teams actually belongs to their county --
+  // computed per-user (not globally per county) since every user has their
+  // own supported county to check against.
+  const supportedCountyMatchCounts = new Map<string, number>()
+  for (const a of attendance ?? []) {
+    const supportedCountyId = profileById.get(a.user_id)?.supported_county_id
+    if (!supportedCountyId) continue
+    const match = matchById.get(a.match_id)
+    if (!match) continue
+    const involvesSupportedCounty = [match.home_county_team_id, match.away_county_team_id].some(
+      (teamId) => teamId && teamToCounty.get(teamId) === supportedCountyId,
+    )
+    if (involvesSupportedCounty) {
+      supportedCountyMatchCounts.set(a.user_id, (supportedCountyMatchCounts.get(a.user_id) ?? 0) + 1)
+    }
+  }
+
   const entries: LeaderboardEntry[] = []
   for (const uid of allIds) {
     const profile = profileById.get(uid)
@@ -151,6 +176,7 @@ export async function loadLeaderboardEntries(): Promise<LeaderboardEntry[]> {
       provinceMatchCounts,
       tierCounts: tierCountsByUser.get(uid) ?? { bronze: 0, silver: 0, gold: 0 },
       supportedCountyId: profile.supported_county_id,
+      supportedCountyMatchCount: supportedCountyMatchCounts.get(uid) ?? 0,
     })
   }
 

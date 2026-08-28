@@ -23,6 +23,18 @@ function sortedOverall(entries: LeaderboardEntry[], sortBy: SortKey) {
   )
 }
 
+// "My County" ranks by matches attended involving that county specifically,
+// not overall match count -- otherwise the tab just filters who appears
+// while still crediting people for matches that had nothing to do with the
+// county they support.
+function sortedByCounty(entries: LeaderboardEntry[], sortBy: SortKey) {
+  return [...entries].sort((a, b) =>
+    sortBy === 'matches'
+      ? b.supportedCountyMatchCount - a.supportedCountyMatchCount || b.groundCount - a.groundCount
+      : b.groundCount - a.groundCount || b.supportedCountyMatchCount - a.supportedCountyMatchCount,
+  )
+}
+
 export default function Leaderboard() {
   const { user, supportedCounty } = useAuth()
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
@@ -73,7 +85,7 @@ export default function Leaderboard() {
   const displayed = useMemo(() => {
     if (tab === 'myCounty') {
       if (!supportedCounty) return []
-      return sortedOverall(
+      return sortedByCounty(
         scoped.filter((e) => e.supportedCountyId === supportedCounty.id),
         sortBy,
       )
@@ -98,6 +110,7 @@ export default function Leaderboard() {
     const tierTab = TIER_TABS.find((t) => t.key === tab)
     if (tierTab) return entry.tierCounts[tierTab.tier]
     if ((PROVINCE_TABS as string[]).includes(tab)) return entry.provinceMatchCounts[tab] ?? 0
+    if (tab === 'myCounty' && sortBy === 'matches') return entry.supportedCountyMatchCount
     return sortBy === 'matches' ? entry.matchCount : entry.groundCount
   }
 
@@ -117,6 +130,9 @@ export default function Leaderboard() {
     }
     if ((PROVINCE_TABS as string[]).includes(tab)) {
       return `${entry.matchCount} total · ${entry.groundCount} grounds`
+    }
+    if (tab === 'myCounty') {
+      return sortBy === 'matches' ? `${entry.groundCount} grounds` : `${entry.supportedCountyMatchCount} matches`
     }
     return sortBy === 'matches' ? `${entry.groundCount} grounds` : `${entry.matchCount} matches`
   }

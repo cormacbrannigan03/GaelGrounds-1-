@@ -65,7 +65,7 @@ struct LeaderboardView: View {
     private var displayed: [LeaderboardEntry] {
         if activeTab == .myCounty {
             guard let supportedCountyId else { return [] }
-            return sortedOverall(
+            return sortedByCounty(
                 scoped.filter { $0.supportedCountyId == supportedCountyId }
             )
         }
@@ -88,6 +88,27 @@ struct LeaderboardView: View {
             return entries.sorted { $0.matchCount != $1.matchCount ? $0.matchCount > $1.matchCount : $0.groundCount > $1.groundCount }
         case .grounds:
             return entries.sorted { $0.groundCount != $1.groundCount ? $0.groundCount > $1.groundCount : $0.matchCount > $1.matchCount }
+        }
+    }
+
+    // "My County" ranks by matches attended involving that county
+    // specifically, not overall match count -- otherwise the tab just
+    // filters who appears while still crediting people for matches that
+    // had nothing to do with the county they support.
+    private func sortedByCounty(_ entries: [LeaderboardEntry]) -> [LeaderboardEntry] {
+        switch sortBy {
+        case .matches:
+            return entries.sorted {
+                $0.supportedCountyMatchCount != $1.supportedCountyMatchCount
+                    ? $0.supportedCountyMatchCount > $1.supportedCountyMatchCount
+                    : $0.groundCount > $1.groundCount
+            }
+        case .grounds:
+            return entries.sorted {
+                $0.groundCount != $1.groundCount
+                    ? $0.groundCount > $1.groundCount
+                    : $0.supportedCountyMatchCount > $1.supportedCountyMatchCount
+            }
         }
     }
 
@@ -310,6 +331,24 @@ struct LeaderboardView: View {
             let profileById = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
             let allIds = Set(overallMatchCounts.keys).union(groundCounts.keys)
 
+            // For each attended match, credit it to the attendee's
+            // supported-county tally only if one of the two teams actually
+            // belongs to their county -- computed per-user (not globally
+            // per county) since every user has their own supported county
+            // to check against.
+            var supportedCountyMatchCounts: [UUID: Int] = [:]
+            for a in attendance {
+                guard let supportedCountyId = profileById[a.userId]?.supportedCountyId,
+                      let match = matchById[a.matchId] else { continue }
+                let participatingTeamIds = [match.homeCountyTeamId, match.awayCountyTeamId].compactMap { $0 }
+                let involvesSupportedCounty = participatingTeamIds.contains {
+                    teamToCounty[$0] == supportedCountyId
+                }
+                if involvesSupportedCounty {
+                    supportedCountyMatchCounts[a.userId, default: 0] += 1
+                }
+            }
+
             // Free accounts can browse the leaderboard but never appear on
             // it — only premium profiles are ranked. Premium status alone
             // is not consent to publish someone's name/stats though (App
@@ -325,7 +364,8 @@ struct LeaderboardView: View {
                     groundCount: groundCounts[uid] ?? 0,
                     provinceMatchCounts: provMap,
                     tierCounts: tierCountsByUser[uid] ?? [:],
-                    supportedCountyId: profile.supportedCountyId
+                    supportedCountyId: profile.supportedCountyId,
+                    supportedCountyMatchCount: supportedCountyMatchCounts[uid] ?? 0
                 )
             }
         } catch {
@@ -344,6 +384,10 @@ private struct LeaderboardEntry: Identifiable {
     let provinceMatchCounts: [Province: Int]
     let tierCounts: [AchievementTier: Int]
     let supportedCountyId: UUID?
+    // Matches attended (home or away, either sport) involving this entry's
+    // OWN supported county specifically -- distinct from matchCount, which
+    // is every match they've ever attended regardless of county.
+    let supportedCountyMatchCount: Int
 }
 
 private struct AttendanceRecord: Decodable {
@@ -406,6 +450,7 @@ private struct LeaderboardRow: View {
     private var primaryCount: Int {
         if let tier = tab.tier { return entry.tierCounts[tier, default: 0] }
         if let p = tab.province { return entry.provinceMatchCounts[p] ?? 0 }
+        if tab == .myCounty && sortBy == .matches { return entry.supportedCountyMatchCount }
         return sortBy == .matches ? entry.matchCount : entry.groundCount
     }
 
@@ -424,6 +469,11 @@ private struct LeaderboardRow: View {
         }
         if tab.province != nil {
             return "\(entry.matchCount) total · \(entry.groundCount) grounds"
+        }
+        if tab == .myCounty {
+            return sortBy == .matches
+                ? "\(entry.groundCount) grounds"
+                : "\(entry.supportedCountyMatchCount) matches"
         }
         return sortBy == .matches
             ? "\(entry.groundCount) grounds"
