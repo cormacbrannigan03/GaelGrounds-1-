@@ -2,7 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
-import { loadLeaderboardEntries, type LeaderboardEntry, type Tier } from '../lib/leaderboard'
+import {
+  fetchLeaderboardRawData,
+  buildLeaderboardEntries,
+  type LeaderboardEntry,
+  type LeaderboardRawData,
+  type SportFilter,
+  type Tier,
+} from '../lib/leaderboard'
+import { SPORT_ICONS, SPORT_LABELS } from '../lib/format'
 
 type SortKey = 'matches' | 'grounds'
 type Scope = 'everyone' | 'friends'
@@ -14,6 +22,7 @@ const TIER_TABS: { key: TabKey; tier: Tier; label: string }[] = [
   { key: 'silver', tier: 'silver', label: 'Most Silver' },
   { key: 'gold', tier: 'gold', label: 'Top Gold' },
 ]
+const SPORT_OPTIONS: SportFilter[] = ['combined', 'gaelic_football', 'hurling']
 
 function sortedOverall(entries: LeaderboardEntry[], sortBy: SortKey) {
   return [...entries].sort((a, b) =>
@@ -37,11 +46,12 @@ function sortedByCounty(entries: LeaderboardEntry[], sortBy: SortKey) {
 
 export default function Leaderboard() {
   const { user, supportedCounty } = useAuth()
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([])
+  const [rawData, setRawData] = useState<LeaderboardRawData | null>(null)
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set())
   const [isPremium, setIsPremium] = useState(false)
   const [sortBy, setSortBy] = useState<SortKey>('matches')
   const [scope, setScope] = useState<Scope>('everyone')
+  const [sport, setSport] = useState<SportFilter>('combined')
   const [tab, setTab] = useState<TabKey>('overall')
   const [loading, setLoading] = useState(true)
 
@@ -50,8 +60,8 @@ export default function Leaderboard() {
 
     async function load() {
       setLoading(true)
-      const [loadedEntries, ownProfile, friendshipRows] = await Promise.all([
-        loadLeaderboardEntries(),
+      const [loadedRawData, ownProfile, friendshipRows] = await Promise.all([
+        fetchLeaderboardRawData(),
         user ? supabase.from('user_profiles').select('is_premium').eq('id', user.id).single() : Promise.resolve({ data: null }),
         user
           ? supabase
@@ -63,7 +73,7 @@ export default function Leaderboard() {
       ])
 
       if (cancelled) return
-      setEntries(loadedEntries)
+      setRawData(loadedRawData)
       setIsPremium(ownProfile?.data?.is_premium ?? false)
       setFriendIds(
         new Set((friendshipRows.data ?? []).map((r) => (r.requester_id === user?.id ? r.addressee_id : r.requester_id))),
@@ -76,6 +86,11 @@ export default function Leaderboard() {
       cancelled = true
     }
   }, [user])
+
+  // Recomputed client-side from already-fetched data -- switching Combined/
+  // Football/Hurling feels instant, same as every other tab on this page,
+  // instead of re-querying Supabase on every tap.
+  const entries = useMemo(() => (rawData ? buildLeaderboardEntries(rawData, sport) : []), [rawData, sport])
 
   const scoped = useMemo(
     () => (scope === 'friends' ? entries.filter((e) => e.id === user?.id || friendIds.has(e.id)) : entries),
@@ -170,6 +185,14 @@ export default function Leaderboard() {
       )}
 
       <p className="muted small">Only Premium members who've opted in on their Profile appear on the leaderboard.</p>
+
+      <div className="filter-tabs">
+        {SPORT_OPTIONS.map((s) => (
+          <button key={s} className={sport === s ? 'active' : ''} onClick={() => setSport(s)}>
+            {s === 'combined' ? '🏐🏑 Combined' : `${SPORT_ICONS[s]} ${SPORT_LABELS[s]}`}
+          </button>
+        ))}
+      </div>
 
       <div className="leaderboard-tabs">
         {TABS.map((t) => (
