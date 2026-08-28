@@ -219,6 +219,23 @@ export type TierInfo = { tier: Tier | 'standard'; count: number; kindLabel: 'hom
  * recorded games still shows "0 home games" rather than nothing at all.
  * Returns null for every other rule_type, which has no tier to show.
  */
+/** Matches AchievementsService.progressMessage in AchievementsService.swift. */
+export function nextTierMessage(tier: Tier | 'standard', count: number, kindLabel: 'home' | 'road'): string {
+  const next =
+    tier === 'gold'
+      ? null
+      : tier === 'silver'
+        ? { threshold: 50, name: 'Gold' }
+        : tier === 'bronze'
+          ? { threshold: 25, name: 'Silver' }
+          : { threshold: 10, name: 'Bronze' }
+
+  if (!next) return `Outstanding — you've earned Gold level with ${count} ${kindLabel} games.`
+  const remaining = next.threshold - count
+  const noun = remaining === 1 ? 'game' : 'games'
+  return `Good work — you're only ${remaining} ${noun} away from earning ${next.name} level.`
+}
+
 export function tierInfo(def: AchievementDefinition, state: AchievementState): TierInfo | null {
   const countyId = countyIdOf(def)
   const sportCode = def.rule_params?.sport_code as string | undefined

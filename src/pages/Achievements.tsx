@@ -4,11 +4,13 @@ import { supabase } from '../lib/supabaseClient'
 import {
   loadAchievementState,
   tierInfo,
+  nextTierMessage,
   MAX_PINNED_ACHIEVEMENTS,
   type AchievementDefinition,
   type AchievementState,
 } from '../lib/achievements'
 import { formatShortDate } from '../lib/format'
+import TierRoadmap from '../components/TierRoadmap'
 
 type CountyRow = { id: string; name: string; province: string }
 
@@ -183,11 +185,17 @@ export default function Achievements() {
                       </div>
                       <p className="muted small">{def.description}</p>
                       {tier && (
-                        <p className={`achievement-tier tier-${tier.tier}`}>
-                          {tier.tier === 'standard'
-                            ? `${tier.count} ${tier.kindLabel} games`
-                            : `${tier.tier[0].toUpperCase()}${tier.tier.slice(1)} · ${tier.count} ${tier.kindLabel} games`}
-                        </p>
+                        <>
+                          <p className={`achievement-tier tier-${tier.tier}`}>
+                            {tier.tier === 'standard'
+                              ? `${tier.count} ${tier.kindLabel} games`
+                              : `${tier.tier[0].toUpperCase()}${tier.tier.slice(1)} · ${tier.count} ${tier.kindLabel} games`}
+                          </p>
+                          <TierRoadmap count={tier.count} />
+                          <p className="muted small tier-roadmap-message">
+                            {nextTierMessage(tier.tier, tier.count, tier.kindLabel)}
+                          </p>
+                        </>
                       )}
                       <p className="muted small">Unlocked {formatShortDate(row.unlocked_at)}</p>
                     </div>

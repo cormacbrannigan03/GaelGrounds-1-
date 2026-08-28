@@ -923,6 +923,85 @@ main {
   font-weight: 400;
 }
 
+/* Visual roadmap of the bronze/silver/gold thresholds under an unlocked
+   county_home_match/county_away_match achievement's tier line. */
+.tier-roadmap {
+  margin-top: 0.6rem;
+}
+
+.tier-roadmap-track {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.tier-roadmap-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b87333, #8c99a8, var(--gold));
+}
+
+.tier-roadmap-stop {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  transform: translate(-50%, -50%);
+}
+
+.tier-roadmap-stop.reached.tier-roadmap-stop-bronze {
+  border-color: #b87333;
+  background: #b87333;
+}
+
+.tier-roadmap-stop.reached.tier-roadmap-stop-silver {
+  border-color: #8c99a8;
+  background: #8c99a8;
+}
+
+.tier-roadmap-stop.reached.tier-roadmap-stop-gold {
+  border-color: var(--gold);
+  background: var(--gold);
+}
+
+.tier-roadmap-labels {
+  position: relative;
+  height: 1.1rem;
+  margin-top: 0.2rem;
+}
+
+.tier-roadmap-label {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.tier-roadmap-label.reached.tier-roadmap-label-bronze {
+  color: #b87333;
+}
+
+.tier-roadmap-label.reached.tier-roadmap-label-silver {
+  color: #8c99a8;
+}
+
+.tier-roadmap-label.reached.tier-roadmap-label-gold {
+  color: var(--gold);
+}
+
+.tier-roadmap-message {
+  margin-top: 0.35rem;
+}
+
 /* Profile's compact "starred" achievements preview -- the whole card links
    into /achievements, matching ProfileView.swift's homeScreenAchievements
    NavigationLink (a preview, not the full unlocked+locked list Profile used
