@@ -65,22 +65,40 @@ function uniqueSorted(values: (string | null | undefined)[]): string[] {
 // default -- an unbounded .select() silently truncates rather than erroring,
 // so a plain query only ever returned the most recent ~1000 matches
 // (ordered newest-first, so everything older than that just never arrived).
-// This fetches every page until one comes back short.
+// This fetches every page needed to cover the full table.
+//
+// With 8,000+ rows in `matches`, that's up to 9 pages -- fetching them one
+// at a time, each awaiting the last before starting the next, means paying
+// 9 full network round trips back-to-back before the page can render
+// anything, which is exactly what made Results feel "extremely long" to
+// load on a slower connection. A cheap `head: true` count tells us the page
+// count upfront, so every page can be requested in parallel instead: total
+// wall-clock time then depends on the slowest single round trip rather than
+// the sum of all of them.
 async function fetchAllRows<T>(
   table: string,
   select: string,
   configure?: (q: any) => any,
 ): Promise<T[]> {
+  let countQuery = supabase.from(table as any).select(select, { count: 'exact', head: true })
+  if (configure) countQuery = configure(countQuery)
+  const { count } = await countQuery
+  const total = count ?? 0
+  if (total === 0) return []
+
+  const pageCount = Math.ceil(total / PAGE_SIZE)
+  const pages = await Promise.all(
+    Array.from({ length: pageCount }, (_, i) => {
+      let query = supabase.from(table as any).select(select)
+      if (configure) query = configure(query)
+      const from = i * PAGE_SIZE
+      return query.range(from, from + PAGE_SIZE - 1)
+    }),
+  )
+
   const rows: T[] = []
-  let from = 0
-  while (true) {
-    let query = supabase.from(table as any).select(select)
-    if (configure) query = configure(query)
-    const { data, error } = await query.range(from, from + PAGE_SIZE - 1)
-    if (error || !data || data.length === 0) break
-    rows.push(...(data as T[]))
-    if (data.length < PAGE_SIZE) break
-    from += PAGE_SIZE
+  for (const { data } of pages) {
+    if (data) rows.push(...(data as T[]))
   }
   return rows
 }
