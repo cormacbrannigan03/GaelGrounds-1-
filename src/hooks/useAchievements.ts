@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { loadAchievementState, qualifies } from '../lib/achievements'
+import { loadAchievementState, qualifies, type AchievementDefinition } from '../lib/achievements'
 
 /**
  * Reconciles achievement_definitions against the signed-in user's current
@@ -15,13 +15,13 @@ import { loadAchievementState, qualifies } from '../lib/achievements'
  * qualifying.
  */
 export function useAchievements(userId: string | undefined) {
-  const evaluate = useCallback(async (): Promise<string[]> => {
+  const evaluate = useCallback(async (): Promise<AchievementDefinition[]> => {
     if (!userId) return []
 
     const state = await loadAchievementState(userId)
 
     const newlyUnlocked: { achievement_id: string; user_id: string }[] = []
-    const newTitles: string[] = []
+    const newDefs: AchievementDefinition[] = []
     const revokedRowIds: string[] = []
 
     for (const def of state.defs) {
@@ -31,7 +31,7 @@ export function useAchievements(userId: string | undefined) {
       const existingRow = state.unlockedByDefId.get(def.id)
       if (earned && !existingRow) {
         newlyUnlocked.push({ achievement_id: def.id, user_id: userId })
-        newTitles.push(def.title)
+        newDefs.push(def)
       } else if (!earned && existingRow) {
         revokedRowIds.push(existingRow.id)
       }
@@ -44,7 +44,7 @@ export function useAchievements(userId: string | undefined) {
       await supabase.from('user_achievements').delete().in('id', revokedRowIds)
     }
 
-    return newTitles
+    return newDefs
   }, [userId])
 
   return { evaluate }

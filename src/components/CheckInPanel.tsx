@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useAchievements } from '../hooks/useAchievements'
 import { canLogAnotherMatch, isDateAllowedForFreeTier } from '../lib/matchLimits'
+import type { AchievementDefinition } from '../lib/achievements'
+import AchievementUnlockedModal from './AchievementUnlockedModal'
 
 type Attendee = {
   id: string
@@ -27,7 +29,7 @@ export default function CheckInPanel({
   const [myAttendanceId, setMyAttendanceId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [unlockedToast, setUnlockedToast] = useState<string[] | null>(null)
+  const [unlockedAchievements, setUnlockedAchievements] = useState<AchievementDefinition[] | null>(null)
   const [checkInError, setCheckInError] = useState<string | null>(null)
   // Free-tier gating is really enforced server-side (RLS), this is just to
   // show an upgrade prompt proactively instead of a bare failed check-in --
@@ -125,7 +127,7 @@ export default function CheckInPanel({
     await loadAttendees()
     if (!error) {
       const newlyUnlocked = await evaluate()
-      if (newlyUnlocked.length > 0) setUnlockedToast(newlyUnlocked)
+      if (newlyUnlocked.length > 0) setUnlockedAchievements(newlyUnlocked)
     } else if (blocked) {
       // The client-side gate above already flagged this as free-tier-
       // blocked before the click landed, so RLS rejecting it too is
@@ -188,10 +190,8 @@ export default function CheckInPanel({
       )}
       {checkInError && <p className="muted small error-text">{checkInError}</p>}
 
-      {unlockedToast && (
-        <div className="toast toast-achievement" onClick={() => setUnlockedToast(null)}>
-          🏆 Achievement unlocked: {unlockedToast.join(', ')}
-        </div>
+      {unlockedAchievements && (
+        <AchievementUnlockedModal achievements={unlockedAchievements} onClose={() => setUnlockedAchievements(null)} />
       )}
 
       {loading ? (
