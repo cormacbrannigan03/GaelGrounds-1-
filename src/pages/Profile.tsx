@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { formatShortDate, formatMatchDate } from '../lib/format'
-import { loadAchievementState, type AchievementState } from '../lib/achievements'
+import { loadAchievementState, tierInfo, type AchievementState } from '../lib/achievements'
 
 type VisitedGround = { groundId: string; name: string; visitCount: number; lastVisitedAt: string }
 type AttendedMatch = { id: string; matchId: string; competition: string | null; played_at: string; homeName: string; awayName: string }
@@ -409,13 +409,23 @@ export default function Profile() {
                 </span>
               </div>
               <div className="card-grid">
-                {homeScreenAchievements.map(({ def, row }) => (
-                  <div key={def.id} className="achievements-preview-item">
-                    <h3>🏆 {def.title}</h3>
-                    <p className="muted small">{def.description}</p>
-                    {row.pinned && <span className="achievements-preview-star">★</span>}
-                  </div>
-                ))}
+                {homeScreenAchievements.map(({ def, row }) => {
+                  const tier = achievementState ? tierInfo(def, achievementState) : null
+                  return (
+                    <div key={def.id} className="achievements-preview-item">
+                      <h3>🏆 {def.title}</h3>
+                      <p className="muted small">{def.description}</p>
+                      {tier && (
+                        <p className={`achievement-tier tier-${tier.tier}`}>
+                          {tier.tier === 'standard'
+                            ? `${tier.count} ${tier.kindLabel} games`
+                            : `${tier.tier[0].toUpperCase()}${tier.tier.slice(1)} · ${tier.count} ${tier.kindLabel} games`}
+                        </p>
+                      )}
+                      {row.pinned && <span className="achievements-preview-star">★</span>}
+                    </div>
+                  )
+                })}
               </div>
             </Link>
           )}

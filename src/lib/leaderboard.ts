@@ -1,9 +1,15 @@
 import { supabase } from './supabaseClient'
 import { fetchAllRows } from './fetchAllRows'
+import { tierForHomeMatchCount, type Tier } from './achievements'
 import type { Enums } from './database.types'
 
+// Re-exported so existing importers (Leaderboard.tsx) don't need to change
+// -- the medal-tier logic itself now lives in achievements.ts since
+// Achievements.tsx/Profile.tsx need it too, not just the leaderboard.
+export { tierForHomeMatchCount }
+export type { Tier }
+
 export type Province = Enums<'province'>
-export type Tier = 'bronze' | 'silver' | 'gold'
 export type SportCode = Enums<'sport_code'>
 export type SportFilter = SportCode | 'combined'
 
@@ -23,14 +29,6 @@ export type LeaderboardEntry = {
   // displaying them by their overall match count, not by how engaged they
   // actually are with that county.
   supportedCountyMatchCount: number
-}
-
-/** Matches AchievementTier.forHomeMatchCount in UserData.swift. */
-export function tierForHomeMatchCount(count: number): Tier | 'standard' {
-  if (count >= 50) return 'gold'
-  if (count >= 25) return 'silver'
-  if (count >= 10) return 'bronze'
-  return 'standard'
 }
 
 const teamKey = (countyId: string, sportCode: string) => `${countyId}:${sportCode}`

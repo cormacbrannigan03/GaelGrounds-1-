@@ -854,6 +854,32 @@ main {
   font-size: 1rem;
 }
 
+/* Medal tier line on county_home_match/county_away_match achievements --
+   same bronze/silver/gold colours as AchievementTier.tint in Theme.swift
+   and the Leaderboard's Most Bronze/Silver/Gold tabs. */
+.achievement-tier {
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin: 0.15rem 0 0;
+}
+
+.achievement-tier.tier-bronze {
+  color: #b87333;
+}
+
+.achievement-tier.tier-silver {
+  color: #8c99a8;
+}
+
+.achievement-tier.tier-gold {
+  color: var(--gold);
+}
+
+.achievement-tier.tier-standard {
+  color: var(--muted);
+  font-weight: 400;
+}
+
 /* Profile's compact "starred" achievements preview -- the whole card links
    into /achievements, matching ProfileView.swift's homeScreenAchievements
    NavigationLink (a preview, not the full unlocked+locked list Profile used

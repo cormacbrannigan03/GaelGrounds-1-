@@ -2,6 +2,16 @@ import { supabase } from './supabaseClient'
 
 export const MAX_PINNED_ACHIEVEMENTS = 4
 
+export type Tier = 'bronze' | 'silver' | 'gold'
+
+/** Matches AchievementTier.forHomeMatchCount in UserData.swift. */
+export function tierForHomeMatchCount(count: number): Tier | 'standard' {
+  if (count >= 50) return 'gold'
+  if (count >= 25) return 'silver'
+  if (count >= 10) return 'bronze'
+  return 'standard'
+}
+
 export type AchievementDefinition = {
   id: string
   code: string
@@ -30,7 +40,7 @@ export type AchievementState = {
   allGroundIds: Set<string>
 }
 
-const homeKey = (countyId: string, sportCode: string) => `${countyId}:${sportCode}`
+export const homeKey = (countyId: string, sportCode: string) => `${countyId}:${sportCode}`
 
 /**
  * Loads everything needed to grant/revoke achievements and to render the
@@ -194,4 +204,33 @@ export function countyIdOf(def: AchievementDefinition): string | null {
 
 export function provinceOf(def: AchievementDefinition): string | null {
   return (def.rule_params?.province as string | undefined) ?? null
+}
+
+export type TierInfo = { tier: Tier | 'standard'; count: number; kindLabel: 'home' | 'road' }
+
+/**
+ * The medal system: only county_home_match/county_away_match achievements
+ * have a tier -- bronze/silver/gold based on how many home or road games
+ * have actually been verified for that county+sport, same basis the
+ * Leaderboard's Most Bronze/Silver/Gold tabs use. Matches ProfileView.swift/
+ * FriendProfileView.swift's AchievementRow, which always shows a tier line
+ * (defaulting the count to 0 rather than omitting it) so every unlocked
+ * county+sport achievement displays consistently -- a sport with zero
+ * recorded games still shows "0 home games" rather than nothing at all.
+ * Returns null for every other rule_type, which has no tier to show.
+ */
+export function tierInfo(def: AchievementDefinition, state: AchievementState): TierInfo | null {
+  const countyId = countyIdOf(def)
+  const sportCode = def.rule_params?.sport_code as string | undefined
+  if (!countyId || !sportCode) return null
+
+  if (def.rule_type === 'county_home_match') {
+    const count = state.homeCounts.get(homeKey(countyId, sportCode)) ?? 0
+    return { tier: tierForHomeMatchCount(count), count, kindLabel: 'home' }
+  }
+  if (def.rule_type === 'county_away_match') {
+    const count = state.roadCounts.get(homeKey(countyId, sportCode)) ?? 0
+    return { tier: tierForHomeMatchCount(count), count, kindLabel: 'road' }
+  }
+  return null
 }
