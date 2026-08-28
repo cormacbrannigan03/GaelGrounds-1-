@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -6,20 +7,29 @@ import { useBackground } from './context/BackgroundContext'
 import { hexToRgbTriplet } from './lib/format'
 import Dashboard from './pages/Dashboard'
 import AuthPage from './pages/AuthPage'
-import Counties from './pages/Counties'
-import CountyDetail from './pages/CountyDetail'
-import TeamDetail from './pages/TeamDetail'
-import Grounds from './pages/Grounds'
-import GroundDetail from './pages/GroundDetail'
-import Matches from './pages/Matches'
-import MatchDetail from './pages/MatchDetail'
-import Profile from './pages/Profile'
-import Achievements from './pages/Achievements'
-import Friends from './pages/Friends'
-import FriendProfile from './pages/FriendProfile'
-import Leaderboard from './pages/Leaderboard'
-import Premium from './pages/Premium'
-import NotFound from './pages/NotFound'
+
+// Everything below is lazy-loaded: Dashboard and AuthPage above are the two
+// pages almost every visitor lands on first (a signed-in user redirected
+// straight to '/', or a new/signed-out one going to '/auth'), so they ship
+// in the initial bundle. Every other page only used to be reachable by
+// navigating there anyway, so there's no reason a first-time visitor on a
+// slow connection -- exactly the paying-customer sign-up scenario -- should
+// have to download Achievements/Leaderboard/Premium/every detail page
+// before they can even see the sign-in form.
+const Counties = lazy(() => import('./pages/Counties'))
+const CountyDetail = lazy(() => import('./pages/CountyDetail'))
+const TeamDetail = lazy(() => import('./pages/TeamDetail'))
+const Grounds = lazy(() => import('./pages/Grounds'))
+const GroundDetail = lazy(() => import('./pages/GroundDetail'))
+const Matches = lazy(() => import('./pages/Matches'))
+const MatchDetail = lazy(() => import('./pages/MatchDetail'))
+const Profile = lazy(() => import('./pages/Profile'))
+const Achievements = lazy(() => import('./pages/Achievements'))
+const Friends = lazy(() => import('./pages/Friends'))
+const FriendProfile = lazy(() => import('./pages/FriendProfile'))
+const Leaderboard = lazy(() => import('./pages/Leaderboard'))
+const Premium = lazy(() => import('./pages/Premium'))
+const NotFound = lazy(() => import('./pages/NotFound'))
 
 // Matches Theme.swift's brandGreen/brandGold -- the same default the
 // body's CSS gradient already falls back to when no county is set.
@@ -58,52 +68,54 @@ export default function App() {
       <div className="app-background" style={countyBackground} aria-hidden="true" />
       <Navbar />
       <main>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/counties" element={<Counties />} />
-          <Route path="/counties/:id" element={<CountyDetail />} />
-          <Route path="/counties/:countyId/teams/:teamId" element={<TeamDetail />} />
-          <Route path="/grounds" element={<Grounds />} />
-          <Route path="/grounds/:id" element={<GroundDetail />} />
-          <Route path="/matches" element={<Matches />} />
-          <Route path="/matches/:id" element={<MatchDetail />} />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/friends"
-            element={
-              <ProtectedRoute>
-                <Friends />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/friends/:id"
-            element={
-              <ProtectedRoute>
-                <FriendProfile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/achievements"
-            element={
-              <ProtectedRoute>
-                <Achievements />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-          <Route path="/premium" element={<Premium />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Suspense fallback={<div className="page-loading">Loading…</div>}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/counties" element={<Counties />} />
+            <Route path="/counties/:id" element={<CountyDetail />} />
+            <Route path="/counties/:countyId/teams/:teamId" element={<TeamDetail />} />
+            <Route path="/grounds" element={<Grounds />} />
+            <Route path="/grounds/:id" element={<GroundDetail />} />
+            <Route path="/matches" element={<Matches />} />
+            <Route path="/matches/:id" element={<MatchDetail />} />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/friends"
+              element={
+                <ProtectedRoute>
+                  <Friends />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/friends/:id"
+              element={
+                <ProtectedRoute>
+                  <FriendProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/achievements"
+              element={
+                <ProtectedRoute>
+                  <Achievements />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/premium" element={<Premium />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </main>
     </>
   )
