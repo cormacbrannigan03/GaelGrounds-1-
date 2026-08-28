@@ -575,6 +575,49 @@ main {
   border-color: var(--green-light);
 }
 
+.ground-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ground-card-alternates {
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.ground-card-alternates p {
+  margin: 0 0 0.3rem;
+}
+
+.ground-card-alternates ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ground-card-alternates a {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.ground-card-alternates a:hover {
+  color: var(--green-light);
+  text-decoration: underline;
+}
+
+.ground-card-alternates .badge-visited {
+  padding: 0.05rem 0.4rem;
+}
+
 /* Check-in panel */
 .checkin-panel {
   background: var(--surface);

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import GroundCard, { type GroundCardData } from '../components/GroundCard'
+import type { AlternateGround } from '../components/GroundCard'
 
 type Row = { id: string; name: string; capacity: number | null; county_id: string; is_primary: boolean }
 type County = { id: string; name: string }
@@ -45,6 +46,21 @@ export default function Grounds() {
   // county's main ground.
   const primaryGrounds = useMemo(() => allGrounds.filter((g) => g.is_primary), [allGrounds])
 
+  // Alternate grounds don't get their own card in the list, but each one's
+  // county still has exactly one primary ground to attach it under.
+  const alternatesByCounty = useMemo(() => {
+    const map = new Map<string, AlternateGround[]>()
+    for (const g of allGrounds) {
+      if (g.is_primary) continue
+      map.set(g.county_id, [
+        ...(map.get(g.county_id) ?? []),
+        { id: g.id, name: g.name, visited: visitedIds.has(g.id) },
+      ])
+    }
+    for (const list of map.values()) list.sort((a, b) => a.name.localeCompare(b.name))
+    return map
+  }, [allGrounds, visitedIds])
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     if (!q) return primaryGrounds
@@ -59,6 +75,7 @@ export default function Grounds() {
     countyName: counties.get(g.county_id) ?? '',
     capacity: g.capacity,
     visited: visitedIds.has(g.id),
+    alternateGrounds: alternatesByCounty.get(g.county_id),
   }))
 
   const visitedPrimaryCount = primaryGrounds.filter((g) => visitedIds.has(g.id)).length
