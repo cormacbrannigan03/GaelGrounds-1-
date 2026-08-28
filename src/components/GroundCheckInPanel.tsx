@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useAchievements } from '../hooks/useAchievements'
 import { formatShortDate } from '../lib/format'
+import type { AchievementDefinition } from '../lib/achievements'
+import AchievementUnlockedModal from './AchievementUnlockedModal'
 
 type Visit = {
   id: string
@@ -20,7 +22,7 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [unlockedToast, setUnlockedToast] = useState<string[] | null>(null)
+  const [unlockedAchievements, setUnlockedAchievements] = useState<AchievementDefinition[] | null>(null)
   const [photoUrls, setPhotoUrls] = useState<string[]>([])
   const [myPhotoUrls, setMyPhotoUrls] = useState<string[]>([])
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -97,7 +99,7 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
     if (!error) {
       setNotes('')
       const newlyUnlocked = await evaluate()
-      if (newlyUnlocked.length > 0) setUnlockedToast(newlyUnlocked)
+      if (newlyUnlocked.length > 0) setUnlockedAchievements(newlyUnlocked)
     }
     setBusy(false)
   }
@@ -172,10 +174,8 @@ export default function GroundCheckInPanel({ groundId }: { groundId: string }) {
         </button>
       )}
 
-      {unlockedToast && (
-        <div className="toast toast-achievement" onClick={() => setUnlockedToast(null)}>
-          🏆 Achievement unlocked: {unlockedToast.join(', ')}
-        </div>
+      {unlockedAchievements && (
+        <AchievementUnlockedModal achievements={unlockedAchievements} onClose={() => setUnlockedAchievements(null)} />
       )}
 
       <div className="ground-photos">
