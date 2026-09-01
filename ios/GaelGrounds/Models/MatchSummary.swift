@@ -63,6 +63,7 @@ struct MatchSummary: Identifiable, Hashable {
 struct GroundSummary: Identifiable, Hashable {
     let id: UUID
     let name: String
+    let countyId: UUID
     let countyName: String
     let capacity: Int?
     let visited: Bool

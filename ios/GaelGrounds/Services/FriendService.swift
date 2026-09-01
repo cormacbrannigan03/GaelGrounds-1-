@@ -19,6 +19,43 @@ enum FriendService {
         var id: UUID { friendshipId }
     }
 
+    enum RelationshipStatus: Equatable {
+        // Deliberately not named `none` -- that spelling collides with
+        // Optional<RelationshipStatus>.none in switch pattern matching.
+        case unrelated
+        case sent
+        case received
+        case friends
+    }
+
+    struct Relationship {
+        let status: RelationshipStatus
+        let friendshipId: UUID?
+    }
+
+    /// Resolves the relationship between two specific users, whichever
+    /// direction the request went (or none at all) -- used by
+    /// FriendProfileView to decide which friend-action control to show.
+    static func fetchRelationship(between userId: UUID, and otherId: UUID) async throws -> Relationship {
+        let rows: [Friendship] = try await Supa.client
+            .from("friendships")
+            .select()
+            .or("and(requester_id.eq.\(userId.uuidString),addressee_id.eq.\(otherId.uuidString)),and(requester_id.eq.\(otherId.uuidString),addressee_id.eq.\(userId.uuidString))")
+            .execute()
+            .value
+
+        if let accepted = rows.first(where: { $0.status == "accepted" }) {
+            return Relationship(status: .friends, friendshipId: accepted.id)
+        }
+        if let received = rows.first(where: { $0.status == "pending" && $0.addresseeId == userId }) {
+            return Relationship(status: .received, friendshipId: received.id)
+        }
+        if let sent = rows.first(where: { $0.status == "pending" && $0.requesterId == userId }) {
+            return Relationship(status: .sent, friendshipId: sent.id)
+        }
+        return Relationship(status: .unrelated, friendshipId: nil)
+    }
+
     static func fetchFriends(userId: UUID) async throws -> [FriendEntry] {
         let rows: [Friendship] = try await Supa.client
             .from("friendships")

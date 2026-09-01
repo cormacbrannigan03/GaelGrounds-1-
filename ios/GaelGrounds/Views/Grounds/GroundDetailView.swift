@@ -92,6 +92,9 @@ struct GroundDetailView: View {
         .navigationDestination(for: MatchRoute.self) { route in
             MatchDetailView(matchId: route.id)
         }
+        .navigationDestination(for: FriendProfileRoute.self) { route in
+            FriendProfileView(userId: route.id)
+        }
         .task { await load() }
         .countyBackground(countyName)
     }

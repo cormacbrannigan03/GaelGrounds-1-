@@ -48,7 +48,25 @@ struct LeaderboardView: View {
         case friends  = "Friends"
     }
 
-    @State private var entries:   [LeaderboardEntry] = []
+    // MARK: - Raw fetched data, kept in state so switching the sport filter
+    // recomputes `entries` instantly instead of re-querying Supabase --
+    // matches leaderboard.ts's fetchLeaderboardRawData()/buildLeaderboardEntries() split.
+    private struct RawData {
+        var profiles: [UserProfile] = []
+        var attendance: [AttendanceRecord] = []
+        var visits: [VisitGroundRef] = []
+        var matchTeams: [MatchTeamRef] = []
+        var countyTeams: [CountyTeamRef] = []
+        var counties: [CountyProvinceRef] = []
+        var grounds: [GroundCountyRef] = []
+        var userAchievements: [UserAchievementRef] = []
+        var achievementDefs: [AchievementDefinition] = []
+        // A match's own sport, resolved from either participating team --
+        // a match has no sport_code column of its own.
+        var matchSport: [UUID: SportCode] = [:]
+    }
+
+    @State private var raw = RawData()
     @State private var friendIds: Set<UUID> = []
     @State private var supportedCountyId: UUID?
     @State private var supportedCountyName: String?
@@ -56,6 +74,109 @@ struct LeaderboardView: View {
     @State private var activeTab: Tab     = .overall
     @State private var sortBy:    SortKey = .matches
     @State private var scope:     Scope   = .everyone
+    @State private var selectedSport: SportCode?
+
+    // MARK: - Entries, recomputed from `raw` + `selectedSport`
+
+    private var entries: [LeaderboardEntry] {
+        let teamToCounty = Dictionary(uniqueKeysWithValues: raw.countyTeams.map { ($0.id, $0.countyId) })
+        let teamSportById = Dictionary(uniqueKeysWithValues: raw.countyTeams.map { ($0.id, $0.sportCode) })
+        let countyToProvince = Dictionary(uniqueKeysWithValues: raw.counties.map { ($0.id, $0.province) })
+        let matchById = Dictionary(uniqueKeysWithValues: raw.matchTeams.map { ($0.id, $0) })
+        let groundCountyById = Dictionary(uniqueKeysWithValues: raw.grounds.map { ($0.id, $0.countyId) })
+        let profileById = Dictionary(uniqueKeysWithValues: raw.profiles.map { ($0.id, $0) })
+
+        let attendance = selectedSport == nil
+            ? raw.attendance
+            : raw.attendance.filter { raw.matchSport[$0.matchId] == selectedSport }
+
+        // Province(s) for each match attended
+        var matchProvinces: [UUID: Set<Province>] = [:]
+        for m in raw.matchTeams {
+            var provs = Set<Province>()
+            if let hid = m.homeCountyTeamId, let cid = teamToCounty[hid], let p = countyToProvince[cid] { provs.insert(p) }
+            if let aid = m.awayCountyTeamId, let cid = teamToCounty[aid], let p = countyToProvince[cid] { provs.insert(p) }
+            matchProvinces[m.id] = provs
+        }
+
+        var overallMatchCounts: [UUID: Int] = [:]
+        var provinceCounts = Dictionary(uniqueKeysWithValues: Province.allCases.map { ($0, [UUID: Int]()) })
+        for a in attendance {
+            overallMatchCounts[a.userId, default: 0] += 1
+            for p in matchProvinces[a.matchId] ?? [] {
+                provinceCounts[p, default: [:]][a.userId, default: 0] += 1
+            }
+        }
+
+        // Ground counts -- distinct grounds per user, never sport-filtered
+        // (a ground visit has no reliable link back to which match/sport it
+        // was for).
+        var groundIdsByUser: [UUID: Set<UUID>] = [:]
+        for v in raw.visits { groundIdsByUser[v.userId, default: []].insert(v.groundId) }
+        let groundCounts: [UUID: Int] = groundIdsByUser.mapValues(\.count)
+
+        struct TierKey: Hashable { let userId: UUID; let countyId: UUID; let sportCode: SportCode }
+        var homeCountsByUser: [TierKey: Int] = [:]
+        var roadCountsByUser: [TierKey: Int] = [:]
+        for a in attendance {
+            guard let match = matchById[a.matchId],
+                  let groundId = match.groundId,
+                  let groundCountyId = groundCountyById[groundId] else { continue }
+            let participatingTeamIds = [match.homeCountyTeamId, match.awayCountyTeamId].compactMap { $0 }
+            for teamId in participatingTeamIds {
+                guard let teamCountyId = teamToCounty[teamId], let sportCode = teamSportById[teamId] else { continue }
+                let key = TierKey(userId: a.userId, countyId: teamCountyId, sportCode: sportCode)
+                if teamCountyId == groundCountyId {
+                    homeCountsByUser[key, default: 0] += 1
+                } else {
+                    roadCountsByUser[key, default: 0] += 1
+                }
+            }
+        }
+
+        let defById = Dictionary(uniqueKeysWithValues: raw.achievementDefs.map { ($0.id, $0) })
+        var tierCountsByUser: [UUID: [AchievementTier: Int]] = [:]
+        for ua in raw.userAchievements {
+            guard let def = defById[ua.achievementId],
+                  def.ruleType == "county_home_match" || def.ruleType == "county_away_match",
+                  let countyId = def.ruleParams.countyId,
+                  let sportCode = def.ruleParams.sportCode else { continue }
+            if let selectedSport, sportCode != selectedSport { continue }
+            let key = TierKey(userId: ua.userId, countyId: countyId, sportCode: sportCode)
+            let count = def.ruleType == "county_home_match" ? (homeCountsByUser[key] ?? 0) : (roadCountsByUser[key] ?? 0)
+            let tier = AchievementTier.forHomeMatchCount(count)
+            guard tier != .standard else { continue }
+            tierCountsByUser[ua.userId, default: [:]][tier, default: 0] += 1
+        }
+
+        let allIds = Set(overallMatchCounts.keys).union(groundCounts.keys)
+
+        var supportedCountyMatchCounts: [UUID: Int] = [:]
+        for a in attendance {
+            guard let supportedCountyId = profileById[a.userId]?.supportedCountyId,
+                  let match = matchById[a.matchId] else { continue }
+            let participatingTeamIds = [match.homeCountyTeamId, match.awayCountyTeamId].compactMap { $0 }
+            let involvesSupportedCounty = participatingTeamIds.contains { teamToCounty[$0] == supportedCountyId }
+            if involvesSupportedCounty {
+                supportedCountyMatchCounts[a.userId, default: 0] += 1
+            }
+        }
+
+        return allIds.compactMap { uid in
+            guard let profile = profileById[uid], profile.isPremium, profile.leaderboardOptIn else { return nil }
+            let provMap = Dictionary(uniqueKeysWithValues: Province.allCases.map { ($0, provinceCounts[$0]?[uid] ?? 0) })
+            return LeaderboardEntry(
+                id: uid,
+                displayName: profile.displayName ?? "Anonymous",
+                matchCount: overallMatchCounts[uid] ?? 0,
+                groundCount: groundCounts[uid] ?? 0,
+                provinceMatchCounts: provMap,
+                tierCounts: tierCountsByUser[uid] ?? [:],
+                supportedCountyId: profile.supportedCountyId,
+                supportedCountyMatchCount: supportedCountyMatchCounts[uid] ?? 0
+            )
+        }
+    }
 
     private var scoped: [LeaderboardEntry] {
         guard scope == .friends else { return entries }
@@ -157,6 +278,13 @@ struct LeaderboardView: View {
                         .buttonStyle(.plain)
                     }
 
+                    Picker("Sport", selection: $selectedSport) {
+                        Text("🏐🏑 Combined").tag(SportCode?.none)
+                        Text("Football").tag(SportCode?.some(.gaelicFootball))
+                        Text("Hurling").tag(SportCode?.some(.hurling))
+                    }
+                    .pickerStyle(.segmented)
+
                     Picker("Scope", selection: $scope) {
                         ForEach(Scope.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }
@@ -179,13 +307,17 @@ struct LeaderboardView: View {
                     } else {
                         VStack(spacing: 8) {
                             ForEach(Array(displayed.enumerated()), id: \.element.id) { index, entry in
-                                LeaderboardRow(
-                                    rank: index + 1,
-                                    entry: entry,
-                                    tab: activeTab,
-                                    sortBy: sortBy,
-                                    isCurrentUser: entry.id == auth.userId
-                                )
+                                NavigationLink(value: FriendProfileRoute(id: entry.id)) {
+                                    LeaderboardRow(
+                                        rank: index + 1,
+                                        entry: entry,
+                                        tab: activeTab,
+                                        sortBy: sortBy,
+                                        isCurrentUser: entry.id == auth.userId
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(entry.id == auth.userId)
                             }
                         }
                     }
@@ -194,6 +326,9 @@ struct LeaderboardView: View {
             }
         }
         .navigationTitle("Leaderboard")
+        .navigationDestination(for: FriendProfileRoute.self) { route in
+            FriendProfileView(userId: route.id)
+        }
         .task { await load() }
         .refreshable { await load() }
         .countyBackground(supportedCounty.countyName)
@@ -242,9 +377,26 @@ struct LeaderboardView: View {
             let (grounds, userAchievements, achievementDefs) =
                 try await (groundsTask, userAchievementsTask, achievementDefsTask)
 
-            // Build lookup maps
-            let teamToCounty    = Dictionary(uniqueKeysWithValues: countyTeams.map { ($0.id, $0.countyId) })
-            let countyToProvince = Dictionary(uniqueKeysWithValues: counties.map { ($0.id, $0.province) })
+            let teamSportById = Dictionary(uniqueKeysWithValues: countyTeams.map { ($0.id, $0.sportCode) })
+            var matchSport: [UUID: SportCode] = [:]
+            for m in matchTeams {
+                if let hid = m.homeCountyTeamId, let s = teamSportById[hid] { matchSport[m.id] = s }
+                else if let aid = m.awayCountyTeamId, let s = teamSportById[aid] { matchSport[m.id] = s }
+            }
+
+            raw = RawData(
+                profiles: profiles,
+                attendance: attendance,
+                visits: visits,
+                matchTeams: matchTeams,
+                countyTeams: countyTeams,
+                counties: counties,
+                grounds: grounds,
+                userAchievements: userAchievements,
+                achievementDefs: achievementDefs,
+                matchSport: matchSport
+            )
+
             let countyNames = Dictionary(uniqueKeysWithValues: counties.map { ($0.id, $0.name) })
             let currentProfile = profiles.first { $0.id == auth.userId }
             supportedCountyId = currentProfile?.supportedCountyId
@@ -255,118 +407,6 @@ struct LeaderboardView: View {
                 friendIds = Set(friends.map(\.id))
             } else {
                 friendIds = []
-            }
-
-            // Province(s) for each match
-            var matchProvinces: [UUID: Set<Province>] = [:]
-            for m in matchTeams {
-                var provs = Set<Province>()
-                if let hid = m.homeCountyTeamId, let cid = teamToCounty[hid], let p = countyToProvince[cid] { provs.insert(p) }
-                if let aid = m.awayCountyTeamId, let cid = teamToCounty[aid], let p = countyToProvince[cid] { provs.insert(p) }
-                matchProvinces[m.id] = provs
-            }
-
-            // Attendance counts — overall and per province
-            var overallMatchCounts: [UUID: Int] = [:]
-            var provinceCounts = Dictionary(uniqueKeysWithValues: Province.allCases.map { ($0, [UUID: Int]()) })
-            for a in attendance {
-                overallMatchCounts[a.userId, default: 0] += 1
-                for p in matchProvinces[a.matchId] ?? [] {
-                    provinceCounts[p, default: [:]][a.userId, default: 0] += 1
-                }
-            }
-
-            // Ground counts — distinct grounds per user, not raw visit rows
-            // (checking into the same ground for multiple matches is
-            // multiple rows but one ground).
-            var groundIdsByUser: [UUID: Set<UUID>] = [:]
-            for v in visits { groundIdsByUser[v.userId, default: []].insert(v.groundId) }
-            let groundCounts: [UUID: Int] = groundIdsByUser.mapValues(\.count)
-
-            // Home/road match counts per user, per (county, sport) — the
-            // same basis county_home_match/county_away_match achievements
-            // are tiered on in AchievementsService, computed here globally
-            // across every user instead of one at a time.
-            struct TierKey: Hashable { let userId: UUID; let countyId: UUID; let sportCode: SportCode }
-            let matchById = Dictionary(uniqueKeysWithValues: matchTeams.map { ($0.id, $0) })
-            let groundCountyById = Dictionary(uniqueKeysWithValues: grounds.map { ($0.id, $0.countyId) })
-            let teamSportById = Dictionary(uniqueKeysWithValues: countyTeams.map { ($0.id, $0.sportCode) })
-
-            var homeCountsByUser: [TierKey: Int] = [:]
-            var roadCountsByUser: [TierKey: Int] = [:]
-            for a in attendance {
-                guard let match = matchById[a.matchId],
-                      let groundId = match.groundId,
-                      let groundCountyId = groundCountyById[groundId] else { continue }
-                let participatingTeamIds = [match.homeCountyTeamId, match.awayCountyTeamId].compactMap { $0 }
-                for teamId in participatingTeamIds {
-                    guard let teamCountyId = teamToCounty[teamId], let sportCode = teamSportById[teamId] else { continue }
-                    let key = TierKey(userId: a.userId, countyId: teamCountyId, sportCode: sportCode)
-                    if teamCountyId == groundCountyId {
-                        homeCountsByUser[key, default: 0] += 1
-                    } else {
-                        roadCountsByUser[key, default: 0] += 1
-                    }
-                }
-            }
-
-            // Tally each user's unlocked county_home_match/county_away_match
-            // achievements into bronze/silver/gold buckets for the tier
-            // leaderboards ("Most Bronze", "Most Silver", "Top Gold").
-            let defById = Dictionary(uniqueKeysWithValues: achievementDefs.map { ($0.id, $0) })
-            var tierCountsByUser: [UUID: [AchievementTier: Int]] = [:]
-            for ua in userAchievements {
-                guard let def = defById[ua.achievementId],
-                      def.ruleType == "county_home_match" || def.ruleType == "county_away_match",
-                      let countyId = def.ruleParams.countyId,
-                      let sportCode = def.ruleParams.sportCode else { continue }
-                let key = TierKey(userId: ua.userId, countyId: countyId, sportCode: sportCode)
-                let count = def.ruleType == "county_home_match" ? (homeCountsByUser[key] ?? 0) : (roadCountsByUser[key] ?? 0)
-                let tier = AchievementTier.forHomeMatchCount(count)
-                guard tier != .standard else { continue }
-                tierCountsByUser[ua.userId, default: [:]][tier, default: 0] += 1
-            }
-
-            // Build entries
-            let profileById = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
-            let allIds = Set(overallMatchCounts.keys).union(groundCounts.keys)
-
-            // For each attended match, credit it to the attendee's
-            // supported-county tally only if one of the two teams actually
-            // belongs to their county -- computed per-user (not globally
-            // per county) since every user has their own supported county
-            // to check against.
-            var supportedCountyMatchCounts: [UUID: Int] = [:]
-            for a in attendance {
-                guard let supportedCountyId = profileById[a.userId]?.supportedCountyId,
-                      let match = matchById[a.matchId] else { continue }
-                let participatingTeamIds = [match.homeCountyTeamId, match.awayCountyTeamId].compactMap { $0 }
-                let involvesSupportedCounty = participatingTeamIds.contains {
-                    teamToCounty[$0] == supportedCountyId
-                }
-                if involvesSupportedCounty {
-                    supportedCountyMatchCounts[a.userId, default: 0] += 1
-                }
-            }
-
-            // Free accounts can browse the leaderboard but never appear on
-            // it — only premium profiles are ranked. Premium status alone
-            // is not consent to publish someone's name/stats though (App
-            // Store guideline 5.1.2) — they also have to have explicitly
-            // opted in via the toggle on their own profile.
-            entries = allIds.compactMap { uid in
-                guard let profile = profileById[uid], profile.isPremium, profile.leaderboardOptIn else { return nil }
-                let provMap = Dictionary(uniqueKeysWithValues: Province.allCases.map { ($0, provinceCounts[$0]?[uid] ?? 0) })
-                return LeaderboardEntry(
-                    id: uid,
-                    displayName: profile.displayName ?? "Anonymous",
-                    matchCount: overallMatchCounts[uid] ?? 0,
-                    groundCount: groundCounts[uid] ?? 0,
-                    provinceMatchCounts: provMap,
-                    tierCounts: tierCountsByUser[uid] ?? [:],
-                    supportedCountyId: profile.supportedCountyId,
-                    supportedCountyMatchCount: supportedCountyMatchCounts[uid] ?? 0
-                )
             }
         } catch {
             print("Leaderboard load failed: \(error)")
@@ -384,9 +424,10 @@ private struct LeaderboardEntry: Identifiable {
     let provinceMatchCounts: [Province: Int]
     let tierCounts: [AchievementTier: Int]
     let supportedCountyId: UUID?
-    // Matches attended (home or away, either sport) involving this entry's
-    // OWN supported county specifically -- distinct from matchCount, which
-    // is every match they've ever attended regardless of county.
+    // Matches attended (home or away, either sport unless a sport filter is
+    // applied) involving this entry's OWN supported county specifically --
+    // distinct from matchCount, which is every match they've ever attended
+    // regardless of county.
     let supportedCountyMatchCount: Int
 }
 
@@ -521,5 +562,6 @@ private struct LeaderboardRow: View {
                     }
                 }
         }
+        .contentShape(Rectangle())
     }
 }

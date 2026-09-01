@@ -55,10 +55,14 @@ struct CheckInPanel: View {
                     ForEach(attendees) { attendee in
                         HStack(spacing: 8) {
                             Circle().fill(Color.brandGreenLight).frame(width: 8, height: 8)
-                            Text(attendee.displayName ?? "A fan")
                             if attendee.userId == auth.userId {
+                                Text(attendee.displayName ?? "A fan")
                                 Spacer()
                                 Text("YOU").font(.caption2.bold()).foregroundStyle(.brandGold)
+                            } else {
+                                NavigationLink(value: FriendProfileRoute(id: attendee.userId)) {
+                                    Text(attendee.displayName ?? "A fan")
+                                }
                             }
                         }
                     }

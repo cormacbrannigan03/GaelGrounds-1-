@@ -10,6 +10,7 @@ struct AuthView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var displayName = ""
+    @State private var referralCode = ""
     @State private var counties: [County] = []
     @State private var supportedCountyId: UUID?
     @State private var errorMessage: String?
@@ -45,6 +46,11 @@ struct AuthView: View {
                         }
                     }
                     .pickerStyle(.menu)
+
+                    TextField("Referral code (optional)", text: $referralCode)
+                        .textFieldStyle(.roundedBorder)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
 
                     // GDPR Article 6/8: Ireland sets the digital age of
                     // consent at 16, the maximum allowed under the
@@ -125,7 +131,8 @@ struct AuthView: View {
                 email: email,
                 password: password,
                 displayName: displayName,
-                supportedCountyId: supportedCountyId
+                supportedCountyId: supportedCountyId,
+                referralCode: referralCode
             )
         }
 

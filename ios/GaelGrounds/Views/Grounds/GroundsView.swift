@@ -2,12 +2,22 @@ import MapKit
 import SwiftUI
 import Supabase
 
+struct AlternateGround: Identifiable, Hashable {
+    let id: UUID
+    let name: String
+    let visited: Bool
+}
+
 struct GroundsView: View {
     @EnvironmentObject private var auth: AuthViewModel
     @EnvironmentObject private var supportedCounty: SupportedCountyStore
 
     @State private var grounds: [GroundSummary] = []
     @State private var mapGrounds: [GroundSummary] = []
+    // Alternate grounds don't get their own card in the list, but each
+    // one's county still has exactly one primary ground to attach it
+    // under -- matches Grounds.tsx's alternatesByCounty.
+    @State private var alternatesByCounty: [UUID: [AlternateGround]] = [:]
     @State private var search = ""
     @State private var isLoading = true
     @State private var showMap = false
@@ -38,7 +48,7 @@ struct GroundsView: View {
                 } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
                         ForEach(filtered) { ground in
-                            GroundCardView(ground: ground)
+                            GroundCardView(ground: ground, alternates: alternatesByCounty[ground.countyId] ?? [])
                         }
                     }
                 }
@@ -83,6 +93,7 @@ struct GroundsView: View {
                 GroundSummary(
                     id: g.id,
                     name: g.name,
+                    countyId: g.countyId,
                     countyName: countyNameById[g.countyId] ?? "",
                     capacity: g.capacity,
                     visited: visitedIds.contains(g.id),
@@ -92,6 +103,16 @@ struct GroundsView: View {
                 )
             }
             grounds = mapGrounds.filter(\.isPrimary)
+
+            var alternates: [UUID: [AlternateGround]] = [:]
+            for g in groundRows where !g.isPrimary {
+                let alt = AlternateGround(id: g.id, name: g.name, visited: visitedIds.contains(g.id))
+                alternates[g.countyId, default: []].append(alt)
+            }
+            for key in alternates.keys {
+                alternates[key]?.sort { $0.name < $1.name }
+            }
+            alternatesByCounty = alternates
         } catch {
             print("Grounds load failed: \(error)")
         }

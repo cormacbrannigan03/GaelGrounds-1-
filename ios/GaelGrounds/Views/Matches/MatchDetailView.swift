@@ -47,6 +47,9 @@ struct MatchDetailView: View {
         }
         .navigationTitle("Match")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(for: FriendProfileRoute.self) { route in
+            FriendProfileView(userId: route.id)
+        }
         .onAppear {
             if isFinalOnLoad, let winner = winnerNameOnLoad {
                 confettiWinner = winner

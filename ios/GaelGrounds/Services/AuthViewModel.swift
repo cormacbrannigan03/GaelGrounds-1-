@@ -42,16 +42,22 @@ final class AuthViewModel: ObservableObject {
         email: String,
         password: String,
         displayName: String,
-        supportedCountyId: UUID
+        supportedCountyId: UUID,
+        referralCode: String? = nil
     ) async -> String? {
         do {
             let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Sent even when empty -- handle_new_user() on the server only
+            // looks up a referrer when this is non-empty, so there's
+            // nothing to guard client-side.
+            let trimmedCode = referralCode?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             _ = try await Supa.client.auth.signUp(
                 email: email,
                 password: password,
                 data: [
                     "display_name": .string(name),
                     "supported_county_id": .string(supportedCountyId.uuidString),
+                    "referral_code": .string(trimmedCode),
                 ]
             )
             return nil

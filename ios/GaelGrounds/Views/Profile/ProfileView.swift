@@ -184,6 +184,22 @@ struct ProfileView: View {
                 }
                 .buttonStyle(.plain)
 
+                if let userId = auth.userId {
+                    NavigationLink {
+                        ReferralView(userId: userId)
+                    } label: {
+                        HStack {
+                            Label("Referral Code", systemImage: "gift.fill")
+                                .font(.subheadline.bold())
+                            Spacer()
+                            Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                        }
+                        .padding()
+                        .gaelCard(cornerRadius: 14)
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 Button { showingPaywall = true } label: {
                     HStack {
                         Label(
@@ -1302,6 +1318,8 @@ private struct ProfileAchievementCard: View {
                 Text(tier == .standard ? "\(count) \(achievement.gameKindLabel) games" : "\(tier.label) · \(count) \(achievement.gameKindLabel) games")
                     .font(.caption.bold())
                     .foregroundStyle(tier.tint)
+                TierRoadmapView(count: count)
+                    .padding(.top, 2)
             }
             Text(achievement.description).font(.caption).foregroundStyle(.secondary)
             if let progressMessage = achievement.progressMessage {

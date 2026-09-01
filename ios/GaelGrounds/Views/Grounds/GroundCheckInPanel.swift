@@ -139,7 +139,13 @@ struct GroundCheckInPanel: View {
                             Circle().fill(Color.brandGreenLight).frame(width: 8, height: 8).padding(.top, 5)
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack {
-                                    Text(visitor.displayName ?? "A fan")
+                                    if visitor.userId == auth.userId {
+                                        Text(visitor.displayName ?? "A fan")
+                                    } else {
+                                        NavigationLink(value: FriendProfileRoute(id: visitor.userId)) {
+                                            Text(visitor.displayName ?? "A fan")
+                                        }
+                                    }
                                     Text("· \(Formatting.shortDate(visitor.visitedAt))")
                                         .foregroundStyle(.secondary)
                                 }
