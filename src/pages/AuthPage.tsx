@@ -9,7 +9,9 @@ export default function AuthPage() {
   const { signInWithPassword, signUp, session } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const referralCode = searchParams.get('ref')?.trim() || ''
+  // Seeded from a shared link's ?ref= param, but also editable directly --
+  // not everyone shares the link, some just tell a friend the code.
+  const [referralCode, setReferralCode] = useState(() => searchParams.get('ref')?.trim() ?? '')
   // A shared referral link should land straight on the sign-up form, not
   // sign-in -- the person clicking it doesn't have an account yet.
   const [mode, setMode] = useState<'signin' | 'signup'>(referralCode ? 'signup' : 'signin')
@@ -116,7 +118,7 @@ export default function AuthPage() {
         <h1>{mode === 'signin' ? 'Welcome back' : 'Create your account'}</h1>
         <p className="muted">Track every ground and match you attend, across all 32 counties.</p>
         {mode === 'signup' && referralCode && (
-          <p className="muted small">You were invited by a friend — they'll get credit once you check in to a match.</p>
+          <p className="muted small">Referred by a friend — they'll get credit once you check in to a match.</p>
         )}
 
         <div className="auth-tabs">
@@ -151,6 +153,17 @@ export default function AuthPage() {
                     </option>
                   ))}
                 </select>
+              </label>
+
+              <label>
+                Referral code (optional)
+                <input
+                  type="text"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. AB12CD"
+                  maxLength={6}
+                />
               </label>
             </>
           )}
