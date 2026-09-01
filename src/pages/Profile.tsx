@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { formatShortDate, formatMatchDate } from '../lib/format'
 import { loadAchievementState, tierInfo, type AchievementState } from '../lib/achievements'
+import ReferralTab from '../components/ReferralTab'
 
 type VisitedGround = { groundId: string; name: string; visitCount: number; lastVisitedAt: string }
 type AttendedMatch = { id: string; matchId: string; competition: string | null; played_at: string; homeName: string; awayName: string }
@@ -49,6 +50,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [view, setView] = useState<'profile' | 'referral'>('profile')
 
   useEffect(() => {
     if (!user) return
@@ -296,6 +298,19 @@ export default function Profile() {
         <p className="muted">Loading your profile…</p>
       ) : (
         <>
+          <div className="segmented">
+            <button className={view === 'profile' ? 'active' : ''} onClick={() => setView('profile')}>
+              Profile
+            </button>
+            <button className={view === 'referral' ? 'active' : ''} onClick={() => setView('referral')}>
+              Referral Code
+            </button>
+          </div>
+
+          {view === 'referral' ? (
+            <ReferralTab userId={user.id} />
+          ) : (
+            <>
           <label className="avatar-upload card">
             {avatarUrl ? (
               <img src={avatarUrl} alt="" className="avatar-preview" />
@@ -482,6 +497,8 @@ export default function Profile() {
               </ul>
             )}
           </section>
+            </>
+          )}
         </>
       )}
 

@@ -16,7 +16,13 @@ type AuthContextValue = {
   supportedCounty: SupportedCounty | null
   refreshSupportedCounty: () => Promise<void>
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null; code?: string | null }>
-  signUp: (email: string, password: string, displayName: string, supportedCountyId: string) => Promise<{ error: string | null }>
+  signUp: (
+    email: string,
+    password: string,
+    displayName: string,
+    supportedCountyId: string,
+    referralCode?: string,
+  ) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
 
@@ -115,16 +121,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null, code: error?.code ?? null }
   }
 
-  async function signUp(email: string, password: string, displayName: string, supportedCountyId: string) {
+  async function signUp(
+    email: string,
+    password: string,
+    displayName: string,
+    supportedCountyId: string,
+    referralCode?: string,
+  ) {
     // A profile row is created server-side by a trigger on auth.users (see
-    // supabase/migrations/20260805001600_create_profile_on_signup_trigger.sql)
-    // reading this metadata -- NOT by inserting into user_profiles directly
-    // here. That trigger's own comment documents exactly why: with email
-    // confirmation on, signUp() returns no session, so a client-side insert
-    // right after it runs as the anon role (which has no grants on
-    // user_profiles at all) and fails with "permission denied" on every
-    // single signup. Matches AuthViewModel.swift's signUp(), which passes
-    // the same two fields the same way.
+    // supabase/migrations/20260805001600_create_profile_on_signup_trigger.sql,
+    // extended in 20260901000000_referral_program.sql) reading this
+    // metadata -- NOT by inserting into user_profiles directly here. That
+    // trigger's own comment documents exactly why: with email confirmation
+    // on, signUp() returns no session, so a client-side insert right after
+    // it runs as the anon role (which has no grants on user_profiles at
+    // all) and fails with "permission denied" on every single signup.
+    // Matches AuthViewModel.swift's signUp(), which passes the same two
+    // core fields the same way (referralCode is web-only for now).
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -132,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: {
           display_name: displayName.trim() || email.split('@')[0],
           supported_county_id: supportedCountyId,
+          referral_code: referralCode?.trim() || undefined,
         },
         // Without this, Supabase falls back to the project's default Site
         // URL for the confirmation link's redirect target. Pointing it at

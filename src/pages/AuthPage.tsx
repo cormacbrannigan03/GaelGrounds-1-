@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase, withAuthTimeout, clearStaleSession } from '../lib/supabaseClient'
 
@@ -8,7 +8,11 @@ type County = { id: string; name: string }
 export default function AuthPage() {
   const { signInWithPassword, signUp, session } = useAuth()
   const navigate = useNavigate()
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [searchParams] = useSearchParams()
+  const referralCode = searchParams.get('ref')?.trim() || ''
+  // A shared referral link should land straight on the sign-up form, not
+  // sign-in -- the person clicking it doesn't have an account yet.
+  const [mode, setMode] = useState<'signin' | 'signup'>(referralCode ? 'signup' : 'signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -72,7 +76,7 @@ export default function AuthPage() {
       result = await withAuthTimeout(
         mode === 'signin'
           ? signInWithPassword(email, password)
-          : signUp(email, password, displayName, supportedCountyId),
+          : signUp(email, password, displayName, supportedCountyId, referralCode),
       )
     } catch (err) {
       setBusy(false)
@@ -111,6 +115,9 @@ export default function AuthPage() {
       <div className="auth-card">
         <h1>{mode === 'signin' ? 'Welcome back' : 'Create your account'}</h1>
         <p className="muted">Track every ground and match you attend, across all 32 counties.</p>
+        {mode === 'signup' && referralCode && (
+          <p className="muted small">You were invited by a friend — they'll get credit once you check in to a match.</p>
+        )}
 
         <div className="auth-tabs">
           <button className={mode === 'signin' ? 'active' : ''} onClick={() => setMode('signin')}>

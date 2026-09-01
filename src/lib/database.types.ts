@@ -932,6 +932,9 @@ export type Database = {
           is_premium: boolean
           leaderboard_opt_in: boolean
           premium_expires_at: string | null
+          referral_code: string
+          referral_months_granted: number
+          referred_by_user_id: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           supported_county_id: string | null
@@ -945,6 +948,9 @@ export type Database = {
           is_premium?: boolean
           leaderboard_opt_in?: boolean
           premium_expires_at?: string | null
+          referral_code: string
+          referral_months_granted?: number
+          referred_by_user_id?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           supported_county_id?: string | null
@@ -958,6 +964,9 @@ export type Database = {
           is_premium?: boolean
           leaderboard_opt_in?: boolean
           premium_expires_at?: string | null
+          referral_code?: string
+          referral_months_granted?: number
+          referred_by_user_id?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           supported_county_id?: string | null
@@ -968,6 +977,13 @@ export type Database = {
             columns: ["best_match_id"]
             isOneToOne: false
             referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_profiles_referred_by_user_id_fkey"
+            columns: ["referred_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -2118,6 +2134,7 @@ export type Database = {
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       gaa_score_total: { Args: { score: string }; Returns: number }
+      generate_referral_code: { Args: never; Returns: string }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
