@@ -6,7 +6,7 @@ import { supabase, withAuthTimeout, clearStaleSession } from '../lib/supabaseCli
 type County = { id: string; name: string }
 
 export default function AuthPage() {
-  const { signInWithPassword, signUp, session } = useAuth()
+  const { signInWithPassword, signUp, sendPasswordReset, session } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   // Seeded from a shared link's ?ref= param, but also editable directly --
@@ -23,6 +23,8 @@ export default function AuthPage() {
   const [confirmedAge16, setConfirmedAge16] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [forgotBusy, setForgotBusy] = useState(false)
+  const [forgotMessage, setForgotMessage] = useState<string | null>(null)
 
   useEffect(() => {
     // On a slow connection, signInWithPassword's own request can still be
@@ -112,6 +114,23 @@ export default function AuthPage() {
     }
   }
 
+  async function handleForgotPassword() {
+    setError(null)
+    if (!email) {
+      setError('Enter your email above first, then tap "Forgot password?".')
+      return
+    }
+    setForgotBusy(true)
+    setForgotMessage(null)
+    const { error } = await sendPasswordReset(email)
+    setForgotBusy(false)
+    // Supabase's own resetPasswordForEmail doesn't reveal whether the
+    // address has an account (it "succeeds" either way) -- phrased with
+    // "if an account exists" here for the same reason, so this can't be
+    // used to check which emails are registered.
+    setForgotMessage(error ? "Couldn't send that — please try again." : `If an account exists for ${email}, a reset link is on its way.`)
+  }
+
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -189,6 +208,13 @@ export default function AuthPage() {
               placeholder="••••••••"
             />
           </label>
+
+          {mode === 'signin' && (
+            <button type="button" className="link-button" disabled={forgotBusy} onClick={handleForgotPassword}>
+              {forgotBusy ? 'Sending…' : 'Forgot password?'}
+            </button>
+          )}
+          {forgotMessage && <p className="muted small">{forgotMessage}</p>}
 
           {mode === 'signup' && (
             // GDPR Article 6/8: Ireland sets the digital age of consent at

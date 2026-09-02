@@ -73,6 +73,26 @@ a {
   font-weight: 600;
 }
 
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--green-light);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.link-button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
 .muted {
   color: var(--muted);
 }

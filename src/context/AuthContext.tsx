@@ -24,6 +24,13 @@ type AuthContextValue = {
     referralCode?: string,
   ) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
+  sendPasswordReset: (email: string) => Promise<{ error: string | null }>
+  // True the moment a password-recovery link's session lands (Supabase
+  // fires a distinct PASSWORD_RECOVERY auth event for this, separate from
+  // a normal sign-in) -- App.tsx shows a "set a new password" overlay over
+  // whatever page the redirect landed on until updatePassword() succeeds.
+  passwordRecovery: boolean
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -32,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [supportedCounty, setSupportedCounty] = useState<SupportedCounty | null>(null)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
 
   useEffect(() => {
     // Without the timeout+catch here, a hung or rejected getSession() (a
@@ -64,8 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false)
       })
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession)
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
     })
 
     return () => subscription.subscription.unsubscribe()
@@ -167,6 +176,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
+  async function sendPasswordReset(email: string) {
+    // Same redirect-to-origin-root reasoning as signUp()'s emailRedirectTo
+    // -- must be in the Redirect URLs allow-list, or Supabase silently
+    // falls back to the project's Site URL instead.
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/`,
+    })
+    return { error: error?.message ?? null }
+  }
+
+  async function updatePassword(newPassword: string) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (!error) setPasswordRecovery(false)
+    return { error: error?.message ?? null }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -178,6 +203,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithPassword,
         signUp,
         signOut,
+        sendPasswordReset,
+        passwordRecovery,
+        updatePassword,
       }}
     >
       {children}

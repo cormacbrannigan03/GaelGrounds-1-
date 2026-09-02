@@ -8,6 +8,7 @@ import { hexToRgbTriplet } from './lib/format'
 import Dashboard from './pages/Dashboard'
 import AuthPage from './pages/AuthPage'
 import ConfirmEmail from './pages/ConfirmEmail'
+import ResetPasswordOverlay from './components/ResetPasswordOverlay'
 
 // Everything below is lazy-loaded: Dashboard and AuthPage above are the two
 // pages almost every visitor lands on first (a signed-in user redirected
@@ -38,7 +39,7 @@ const DEFAULT_PRIMARY = '#0b3d2e'
 const DEFAULT_SECONDARY = '#d9a441'
 
 export default function App() {
-  const { supportedCounty } = useAuth()
+  const { supportedCounty, passwordRecovery } = useAuth()
   const { override } = useBackground()
 
   // Mirrors countyBackground(_:) in ios/GaelGrounds/Utilities/Theme.swift --
@@ -67,6 +68,7 @@ export default function App() {
           main directly, or it'd render as a boxed block rather than a
           page-wide wash. */}
       <div className="app-background" style={countyBackground} aria-hidden="true" />
+      {passwordRecovery && <ResetPasswordOverlay />}
       <Navbar />
       <main>
         <Suspense fallback={<div className="page-loading">Loading…</div>}>
