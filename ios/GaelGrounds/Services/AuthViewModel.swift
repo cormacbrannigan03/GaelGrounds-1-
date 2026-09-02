@@ -69,4 +69,24 @@ final class AuthViewModel: ObservableObject {
     func signOut() async {
         try? await Supa.client.auth.signOut()
     }
+
+    /// Points the reset link at the web app, not this app -- iOS has no
+    /// Associated Domains/universal-link handling set up, so a link that
+    /// tried to reopen GaelGrounds directly would just dead-end in Safari
+    /// with nothing to catch it. app.gaelgrounds.ie already has a working
+    /// "set a new password" screen (AuthContext.swift's PASSWORD_RECOVERY
+    /// handling), so this reuses that instead of needing new iOS
+    /// infrastructure: tap the email link, set the password on the web,
+    /// come back and sign in here with it.
+    func sendPasswordReset(email: String) async -> String? {
+        do {
+            try await Supa.client.auth.resetPasswordForEmail(
+                email,
+                redirectTo: URL(string: "https://app.gaelgrounds.ie/")
+            )
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
 }

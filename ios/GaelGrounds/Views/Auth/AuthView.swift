@@ -17,6 +17,7 @@ struct AuthView: View {
     @State private var infoMessage: String?
     @State private var isBusy = false
     @State private var confirmedAge16 = false
+    @State private var isForgotBusy = false
 
     var body: some View {
         ScrollView {
@@ -101,6 +102,23 @@ struct AuthView: View {
                     (mode == .signUp && supportedCountyId == nil) ||
                     (mode == .signUp && !confirmedAge16)
                 )
+
+                if mode == .signIn {
+                    Button {
+                        Task { await sendForgotPassword() }
+                    } label: {
+                        if isForgotBusy {
+                            ProgressView()
+                        } else {
+                            Text("Forgot password?")
+                                .font(.footnote)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.brandGreenLight)
+                    .disabled(isForgotBusy || email.isEmpty)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
             }
             .padding()
         }
@@ -141,6 +159,25 @@ struct AuthView: View {
         } else if mode == .signUp {
             infoMessage = "Account created! Check your inbox to confirm your email, then sign in."
             mode = .signIn
+        }
+    }
+
+    /// Sends the reset email via AuthViewModel.sendPasswordReset(email:),
+    /// which redirects the link to the web app's already-built
+    /// "set a new password" screen -- see that function's doc comment for
+    /// why (this app has no deep-link infrastructure to catch the link
+    /// itself).
+    private func sendForgotPassword() async {
+        errorMessage = nil
+        infoMessage = nil
+        isForgotBusy = true
+        defer { isForgotBusy = false }
+
+        let error = await auth.sendPasswordReset(email: email)
+        if let error {
+            errorMessage = error
+        } else {
+            infoMessage = "Check your inbox for a reset link. It'll open on the GaelGrounds website — set your new password there, then come back and sign in here."
         }
     }
 
