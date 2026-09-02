@@ -121,12 +121,20 @@ final class PremiumStore: ObservableObject {
         await refreshEntitlements()
     }
 
+    /// Only ever grants premium here, never revokes it. `isPremium` is
+    /// derived purely from this device's Apple StoreKit entitlements, but a
+    /// premium grant can also come from the web's Stripe subscription or an
+    /// admin comp, neither of which StoreKit has any way to know about --
+    /// writing `false` whenever StoreKit sees no Apple subscription would
+    /// silently wipe out those other legitimate grants the moment that
+    /// account opens the iOS app. Confirmed this was happening: a manually
+    /// comped account lost its premium the moment it launched the app.
     private func syncCurrentStatus() async {
-        guard let userId else { return }
+        guard let userId, isPremium else { return }
         do {
             try await Supa.client
                 .from("user_profiles")
-                .update(UserProfilePremiumUpdate(isPremium: isPremium, premiumExpiresAt: premiumExpiresAt))
+                .update(UserProfilePremiumUpdate(isPremium: true, premiumExpiresAt: premiumExpiresAt))
                 .eq("id", value: userId)
                 .execute()
         } catch {
