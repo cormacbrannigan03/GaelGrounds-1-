@@ -27,6 +27,8 @@ private enum ProfileDestination: Hashable {
     case matches
     case achievements
     case bestGame
+    case friends
+    case referral
 }
 
 private struct AchievementRow: Identifiable {
@@ -170,9 +172,7 @@ struct ProfileView: View {
                 }
                 .buttonStyle(.plain)
 
-                NavigationLink {
-                    FriendsView()
-                } label: {
+                NavigationLink(value: ProfileDestination.friends) {
                     HStack {
                         Label("Friends", systemImage: "person.2.fill")
                             .font(.subheadline.bold())
@@ -184,10 +184,8 @@ struct ProfileView: View {
                 }
                 .buttonStyle(.plain)
 
-                if let userId = auth.userId {
-                    NavigationLink {
-                        ReferralView(userId: userId)
-                    } label: {
+                if auth.userId != nil {
+                    NavigationLink(value: ProfileDestination.referral) {
                         HStack {
                             Label("Referral Code", systemImage: "gift.fill")
                                 .font(.subheadline.bold())
@@ -418,6 +416,12 @@ struct ProfileView: View {
                         if let bestMatchId { toggleBestGame(bestMatchId) }
                     }
                 )
+            case .friends:
+                FriendsView()
+            case .referral:
+                if let userId = auth.userId {
+                    ReferralView(userId: userId)
+                }
             }
         }
         .navigationDestination(for: MatchRoute.self) { route in
