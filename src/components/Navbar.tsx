@@ -49,6 +49,14 @@ export default function Navbar() {
         )}
 
         <div className="navbar-actions">
+          <a
+            href="https://apps.apple.com/app/id6799921807"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-outline btn-sm navbar-store-link"
+          >
+            iOS App
+          </a>
           {user ? (
             <button
               className="btn btn-ghost"

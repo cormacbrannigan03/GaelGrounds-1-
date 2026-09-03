@@ -145,6 +145,11 @@ h2 {
   margin-right: auto;
 }
 
+.navbar-store-link {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .brand-mark {
   display: inline-flex;
   align-items: center;
