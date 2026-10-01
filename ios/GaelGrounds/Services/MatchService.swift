@@ -260,13 +260,53 @@ enum MatchService {
             .value
     }
 
+    /// Status of the once-daily reward-ad bonus
+    /// (supabase/migrations/20261001023000_add_ad_reward_match_credits.sql):
+    /// `bonusMatchCredits` permanently raises the free-tier cap by 1 per
+    /// claim; `lastAdRewardAt` being today means today's claim already
+    /// happened.
+    struct AdRewardStatus: Decodable {
+        let bonusMatchCredits: Int
+        let lastAdRewardAt: Date?
+
+        var alreadyClaimedToday: Bool {
+            guard let lastAdRewardAt else { return false }
+            return Calendar.current.isDateInToday(lastAdRewardAt)
+        }
+    }
+
+    static func fetchAdRewardStatus(userId: UUID) async throws -> AdRewardStatus {
+        try await Supa.client
+            .from("user_profiles")
+            .select("bonus_match_credits, last_ad_reward_at")
+            .eq("id", value: userId)
+            .single()
+            .execute()
+            .value
+    }
+
+    /// Calls the `claim_ad_reward` RPC once the reward video finishes. The
+    /// database -- not this call -- is what actually enforces "once per
+    /// calendar day"; a second call the same day throws, and the caller
+    /// just surfaces that error rather than this ever double-granting.
+    @discardableResult
+    static func claimAdReward() async throws -> AdRewardStatus {
+        try await Supa.client
+            .rpc("claim_ad_reward")
+            .single()
+            .execute()
+            .value
+    }
+
     /// Client-side mirror of the RLS free-tier check, so the UI can show a
     /// paywall proactively instead of only after a failed insert. The RLS
     /// policies remain the real enforcement regardless of what this returns.
     static func canLogAnotherMatch(userId: UUID, isPremium: Bool) async -> Bool {
         guard !isPremium else { return true }
-        let count = (try? await matchCount(userId: userId)) ?? freeMatchLimit
-        return count < freeMatchLimit
+        let bonus = (try? await fetchAdRewardStatus(userId: userId))?.bonusMatchCredits ?? 0
+        let limit = freeMatchLimit + bonus
+        let count = (try? await matchCount(userId: userId)) ?? limit
+        return count < limit
     }
 
     static func isDateAllowedForFreeTier(_ date: Date) -> Bool {

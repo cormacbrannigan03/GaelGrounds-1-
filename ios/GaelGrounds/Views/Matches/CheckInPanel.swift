@@ -30,6 +30,7 @@ struct CheckInPanel: View {
     @State private var channel: RealtimeChannelV2?
     @State private var showingPaywall = false
     @State private var paywallReason: String?
+    @State private var paywallShowsAdReward = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -74,7 +75,7 @@ struct CheckInPanel: View {
         .task { await start() }
         .onDisappear { stop() }
         .sheet(isPresented: $showingPaywall) {
-            PremiumPaywallView(reason: paywallReason)
+            PremiumPaywallView(reason: paywallReason, showsAdReward: paywallShowsAdReward)
         }
         .sheet(item: $achievementPopup) { batch in
             AchievementUnlockedView(achievements: batch.achievements, progress: batch.progress)
@@ -171,6 +172,7 @@ struct CheckInPanel: View {
 
         if let matchPlayedAt, !premium.isPremium, !MatchService.isDateAllowedForFreeTier(matchPlayedAt) {
             paywallReason = "Matches before 2019 require Premium."
+            paywallShowsAdReward = false
             showingPaywall = true
             return
         }
@@ -180,6 +182,7 @@ struct CheckInPanel: View {
 
         guard await MatchService.canLogAnotherMatch(userId: userId, isPremium: premium.isPremium) else {
             paywallReason = "You've reached the 10-match free limit. Upgrade to log more."
+            paywallShowsAdReward = true
             showingPaywall = true
             return
         }

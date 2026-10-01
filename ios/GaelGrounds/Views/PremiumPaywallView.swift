@@ -5,15 +5,28 @@ import SwiftUI
 /// match, a blocked friend request, and the leaderboard's "go premium to
 /// appear here" prompt. `reason` lets each call site explain why the
 /// sheet appeared without needing its own bespoke paywall copy.
+///
+/// `showsAdReward` is only ever true for the 10-match-cap gate
+/// specifically (see MatchesView/CheckInPanel) -- watching a video to
+/// unlock 1 more match wouldn't make sense for the pre-2019, friend
+/// request, or leaderboard gates, so those call sites leave it false.
 struct PremiumPaywallView: View {
     var reason: String?
+    var showsAdReward: Bool = false
 
     @EnvironmentObject private var premium: PremiumStore
+    @EnvironmentObject private var auth: AuthViewModel
     @Environment(\.dismiss) private var dismiss
 
     @State private var isPurchasing = false
     @State private var isRestoring = false
     @State private var errorMessage: String?
+
+    @State private var adRewardStatus: MatchService.AdRewardStatus?
+    @State private var isPresentingAd = false
+    @State private var isClaimingReward = false
+    @State private var adRewardError: String?
+    @State private var adRewardClaimedJustNow = false
 
     private var priceText: String {
         premium.monthlyProduct?.displayPrice ?? "€1.99"
@@ -74,6 +87,10 @@ struct PremiumPaywallView: View {
                     .buttonStyle(.bordered)
                     .disabled(isPurchasing || isRestoring)
 
+                    if showsAdReward {
+                        adRewardSection
+                    }
+
                     Text("Cancel any time in Settings › Apple ID › Subscriptions.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -105,10 +122,77 @@ struct PremiumPaywallView: View {
                 if premium.monthlyProduct == nil {
                     await premium.loadProduct()
                 }
+                if showsAdReward {
+                    await loadAdRewardStatus()
+                }
             }
             .onChange(of: premium.isPremium) { isPremium in
                 if isPremium { dismiss() }
             }
+            .fullScreenCover(isPresented: $isPresentingAd) {
+                RewardAdView(
+                    onCompleted: { Task { await claimAdReward() } },
+                    onCancel: { isPresentingAd = false }
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var adRewardSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+
+            Text("Not ready to subscribe?")
+                .font(.subheadline.bold())
+
+            if adRewardClaimedJustNow {
+                Label("Unlocked! You can add 1 more match today.", systemImage: "checkmark.circle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.brandGreenLight)
+            } else if adRewardStatus?.alreadyClaimedToday == true {
+                Text("You've already unlocked today's bonus match. Come back tomorrow for another.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                Button {
+                    isPresentingAd = true
+                } label: {
+                    if isClaimingReward {
+                        ProgressView().frame(maxWidth: .infinity)
+                    } else {
+                        Label("Watch a video for 1 more match today", systemImage: "play.rectangle")
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .tint(.brandGold)
+                .disabled(isClaimingReward)
+            }
+
+            if let adRewardError {
+                Text(adRewardError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func loadAdRewardStatus() async {
+        guard let userId = auth.userId else { return }
+        adRewardStatus = try? await MatchService.fetchAdRewardStatus(userId: userId)
+    }
+
+    private func claimAdReward() async {
+        isPresentingAd = false
+        isClaimingReward = true
+        adRewardError = nil
+        defer { isClaimingReward = false }
+        do {
+            adRewardStatus = try await MatchService.claimAdReward()
+            adRewardClaimedJustNow = true
+        } catch {
+            adRewardError = "Couldn't unlock your bonus match — try again in a moment."
         }
     }
 

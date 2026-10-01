@@ -44,6 +44,7 @@
 		FFDAAC4530118DF200456573 /* SupabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1430118DF200456573 /* SupabaseManager.swift */; };
 		FFDAAC4630118DF200456573 /* GroundCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC1C30118DF200456573 /* GroundCardView.swift */; };
 		24A83465D56255C28494738A /* TierRoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B80E5E248C674C57C699A0F /* TierRoadmapView.swift */; };
+		11DE101416F6E8A0A8103D83 /* RewardAdView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18DFA875A56623BABD05D878 /* RewardAdView.swift */; };
 		FFDAAC4730118DF200456573 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2F30118DF200456573 /* RootView.swift */; };
 		FFDAAC4830118DF200456573 /* GaelGroundsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC0530118DF200456573 /* GaelGroundsApp.swift */; };
 		FFDAAC4930118DF200456573 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFDAAC2230118DF200456573 /* DashboardView.swift */; };
@@ -141,6 +142,7 @@
 		FFDAAC1A30118DF200456573 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		FFDAAC1C30118DF200456573 /* GroundCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroundCardView.swift; sourceTree = "<group>"; };
 		9B80E5E248C674C57C699A0F /* TierRoadmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TierRoadmapView.swift; sourceTree = "<group>"; };
+		18DFA875A56623BABD05D878 /* RewardAdView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RewardAdView.swift; sourceTree = "<group>"; };
 		FFDAAC1D30118DF200456573 /* MatchCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchCardView.swift; sourceTree = "<group>"; };
 		FFDAAC1F30118DF200456573 /* CountiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountiesView.swift; sourceTree = "<group>"; };
 		FFDAAC2030118DF200456573 /* CountyDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountyDetailView.swift; sourceTree = "<group>"; };
@@ -330,6 +332,7 @@
 				FF9438133012BB2300BCE40E /* CountyBanner.swift */,
 				FF3CA036301A47A300DE33C0 /* ConfettiView.swift */,
 				9B80E5E248C674C57C699A0F /* TierRoadmapView.swift */,
+				18DFA875A56623BABD05D878 /* RewardAdView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -625,6 +628,7 @@
 				FFDAAC4530118DF200456573 /* SupabaseManager.swift in Sources */,
 				FFDAAC4630118DF200456573 /* GroundCardView.swift in Sources */,
 				24A83465D56255C28494738A /* TierRoadmapView.swift in Sources */,
+				11DE101416F6E8A0A8103D83 /* RewardAdView.swift in Sources */,
 				FFDAAC4730118DF200456573 /* RootView.swift in Sources */,
 				FFDAAC4830118DF200456573 /* GaelGroundsApp.swift in Sources */,
 				FFDAAC4930118DF200456573 /* DashboardView.swift in Sources */,

@@ -219,7 +219,7 @@ struct MatchesView: View {
             }
         }
         .sheet(isPresented: $showingPaywall) {
-            PremiumPaywallView(reason: "You've reached the 10-match free limit. Upgrade to log more.")
+            PremiumPaywallView(reason: "You've reached the 10-match free limit. Upgrade to log more.", showsAdReward: true)
         }
         .sheet(isPresented: $showingFilters) {
             MatchFiltersView(
