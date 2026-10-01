@@ -12,5 +12,11 @@
 	<false/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>GaelGrounds uses your location to let you know when you're near a ground with a match on today, so you can check in with one tap.</string>
+	<!-- AdMob App ID, required by the Google Mobile Ads SDK once it is
+	     added as a Swift Package dependency in Xcode. See
+	     ios/GaelGrounds/Views/Components/RewardAdView.swift for the
+	     placeholder it will replace once that dependency exists. -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-9676786622570370~8274890427</string>
 </dict>
 </plist>
