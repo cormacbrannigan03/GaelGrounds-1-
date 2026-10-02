@@ -1,37 +1,26 @@
 import SwiftUI
+import GoogleMobileAds
 
-/// Presents the "watch a video, unlock 1 more match today" flow.
-///
-/// PLACEHOLDER IMPLEMENTATION: there's no AdMob (or other ad network) SDK
-/// wired into this project yet -- adding one blind, without a working
-/// Xcode toolchain to compile and test the dependency, risks breaking the
-/// build in a way nobody could catch until a real device/simulator run.
-/// So for now this simulates watching a rewarded video with a fixed
-/// countdown, then calls `onCompleted` exactly like a real ad SDK's
-/// reward callback would.
-///
-/// TO SWAP IN A REAL AD SDK LATER: once Google Mobile Ads (or similar) is
-/// added as a Swift Package dependency and an ad unit ID exists, replace
-/// this view's body with that SDK's rewarded-ad presentation call, and
-/// invoke `onCompleted` from its reward-earned callback instead of the
-/// timer below. Every call site below (RewardAdView(onCompleted:onCancel:))
-/// stays the same -- this file is the only thing that needs to change.
+/// Presents the "watch a video, unlock 1 more match today" flow using a
+/// real Google AdMob rewarded ad.
 struct RewardAdView: View {
-    /// Called once the (simulated) reward is earned.
+    /// Called once the reward is earned (AdMob's reward-earned callback fired).
     var onCompleted: () -> Void
-    /// Called if the user backs out before the reward is earned -- a real
-    /// rewarded ad grants nothing if dismissed early, so this placeholder
-    /// doesn't either.
+    /// Called if the user backs out, the ad fails to load, or is dismissed
+    /// before the reward is earned -- a rewarded ad grants nothing in that case.
     var onCancel: () -> Void
 
-    private let totalSeconds = 15
-    @State private var secondsRemaining: Int
-    @State private var timer: Timer?
+    private static let adUnitID = "ca-app-pub-9676786622570370/5265583700"
 
-    init(onCompleted: @escaping () -> Void, onCancel: @escaping () -> Void) {
-        self.onCompleted = onCompleted
-        self.onCancel = onCancel
-        self._secondsRemaining = State(initialValue: 15)
+    @State private var coordinator = Coordinator()
+    @State private var state: LoadState = .loading
+    @State private var errorMessage: String?
+
+    private enum LoadState {
+        case loading
+        case ready
+        case presenting
+        case failed
     }
 
     var body: some View {
@@ -42,49 +31,91 @@ struct RewardAdView: View {
                 .font(.system(size: 56))
                 .foregroundStyle(.brandGold)
 
-            Text("Watching ad…")
-                .font(.title3.bold())
-
-            Text("Unlocks 1 extra match once this finishes.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            ProgressView(value: Double(totalSeconds - secondsRemaining), total: Double(totalSeconds))
-                .padding(.horizontal, 40)
-
-            Text("\(secondsRemaining)s")
-                .font(.footnote.monospacedDigit())
-                .foregroundStyle(.secondary)
+            switch state {
+            case .loading:
+                Text("Loading ad…")
+                    .font(.title3.bold())
+                ProgressView()
+            case .ready, .presenting:
+                Text("Watching ad…")
+                    .font(.title3.bold())
+                Text("Unlocks 1 extra match once this finishes.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                ProgressView()
+            case .failed:
+                Text("Ad unavailable")
+                    .font(.title3.bold())
+                Text(errorMessage ?? "Couldn't load an ad right now. Please try again later.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
 
             Spacer()
 
             Button("Cancel") {
-                stopTimer()
                 onCancel()
             }
             .buttonStyle(.bordered)
             .tint(.secondary)
         }
         .padding()
-        .onAppear { startTimer() }
-        .onDisappear { stopTimer() }
-    }
-
-    private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            Task { @MainActor in
-                guard secondsRemaining > 0 else { return }
-                secondsRemaining -= 1
-                if secondsRemaining == 0 {
-                    stopTimer()
-                    onCompleted()
-                }
-            }
+        .task {
+            await loadAndPresent()
         }
     }
 
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
+    @MainActor
+    private func loadAndPresent() async {
+        coordinator.onReward = {
+            state = .presenting
+        }
+        coordinator.onDismissed = { earnedReward in
+            if earnedReward {
+                onCompleted()
+            } else {
+                onCancel()
+            }
+        }
+
+        do {
+            let request = Request()
+            let ad = try await RewardedAd.load(with: Self.adUnitID, request: request)
+            state = .ready
+            guard let rootVC = UIApplication.shared.connectedScenes
+                .compactMap({ ($0 as? UIWindowScene)?.keyWindow })
+                .first?.rootViewController
+            else {
+                state = .failed
+                errorMessage = "Couldn't present the ad right now."
+                return
+            }
+
+            ad.fullScreenContentDelegate = coordinator
+            ad.present(from: rootVC) {
+                coordinator.earnedReward = true
+                coordinator.onReward?()
+            }
+        } catch {
+            state = .failed
+            errorMessage = "Couldn't load an ad right now. Please try again later."
+        }
+    }
+}
+
+/// Bridges AdMob's delegate-based dismissal callback back into SwiftUI state.
+private final class Coordinator: NSObject, FullScreenContentDelegate {
+    var earnedReward = false
+    var onReward: (() -> Void)?
+    var onDismissed: ((_ earnedReward: Bool) -> Void)?
+
+    func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
+        onDismissed?(false)
+    }
+
+    func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
+        onDismissed?(earnedReward)
     }
 }
