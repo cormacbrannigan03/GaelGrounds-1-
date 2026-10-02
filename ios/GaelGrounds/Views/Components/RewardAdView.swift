@@ -10,7 +10,16 @@ struct RewardAdView: View {
     /// before the reward is earned -- a rewarded ad grants nothing in that case.
     var onCancel: () -> Void
 
+    /// Google's official sample rewarded ad unit -- always serves a test ad,
+    /// regardless of AdMob account config. Used for DEBUG builds (Xcode
+    /// runs on simulator/unregistered devices) so testing never risks the
+    /// AdMob account being flagged for invalid traffic. Release builds
+    /// (TestFlight/App Store) use the real ad unit.
+    #if DEBUG
+    private static let adUnitID = "ca-app-pub-3940256099942544/1712485313"
+    #else
     private static let adUnitID = "ca-app-pub-9676786622570370/5265583700"
+    #endif
 
     @State private var coordinator = Coordinator()
     @State private var state: LoadState = .loading
