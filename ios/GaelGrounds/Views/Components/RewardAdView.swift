@@ -93,17 +93,14 @@ struct RewardAdView: View {
             let request = Request()
             let ad = try await RewardedAd.load(with: Self.adUnitID, request: request)
             state = .ready
-            guard let rootVC = UIApplication.shared.connectedScenes
-                .compactMap({ ($0 as? UIWindowScene)?.keyWindow })
-                .first?.rootViewController
-            else {
+            guard let presentingVC = Self.topMostViewController() else {
                 state = .failed
                 errorMessage = "Couldn't present the ad right now."
                 return
             }
 
             ad.fullScreenContentDelegate = coordinator
-            ad.present(from: rootVC) {
+            ad.present(from: presentingVC) {
                 coordinator.earnedReward = true
                 coordinator.onReward?()
             }
@@ -111,6 +108,24 @@ struct RewardAdView: View {
             state = .failed
             errorMessage = "Couldn't load an ad right now. Please try again later."
         }
+    }
+
+    /// AdMob must present from the topmost already-presented view controller.
+    /// This view is itself shown inside a `.fullScreenCover`, so the window's
+    /// `rootViewController` already has a presented VC on top of it -- handing
+    /// that straight to AdMob silently fails to present. Walk the
+    /// `presentedViewController` chain to find the real top of the stack.
+    @MainActor
+    private static func topMostViewController() -> UIViewController? {
+        guard var top = UIApplication.shared.connectedScenes
+            .compactMap({ ($0 as? UIWindowScene)?.keyWindow })
+            .first?.rootViewController
+        else { return nil }
+
+        while let presented = top.presentedViewController {
+            top = presented
+        }
+        return top
     }
 }
 
